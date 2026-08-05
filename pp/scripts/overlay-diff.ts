@@ -53,7 +53,16 @@ interface TextBox {
   color: string;
   w: number;
   h: number;
+  x: number;
+  y: number;
+  /** 文字そのものの外接矩形。箱が同じでも中で字がずれる差はここにしか出ない */
+  inkX: number;
+  inkR: number;
 }
+
+// 日付や件数は mock と app で値が違う。数字と曜日を伏せた「型」で突き合わせないと、
+// 動的値を含む文言が丸ごと突合対象から外れ、字体差も位置差も報告されないまま消える
+const shapeOf = (text: string): string => text.replace(/[0-9]+/g, "#").replace(/[（(][日月火水木金土][）)]/g, "(曜)");
 
 // 可視文字列ごとに字体と箱を拾う。mock 側に id が無くても、突合の鍵を文言そのものにできる
 async function collectText(page: Page): Promise<TextBox[]> {
@@ -69,10 +78,17 @@ async function collectText(page: Page): Promise<TextBox[]> {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       const cs = getComputedStyle(el);
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const ink = range.getBoundingClientRect();
       out.push({
         text, tag: el.tagName.toLowerCase(), font: cs.fontFamily, size: cs.fontSize, weight: cs.fontWeight,
         tracking: cs.letterSpacing, leading: cs.lineHeight, color: cs.color,
         w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100,
+        x: Math.round(r.left * 100) / 100, y: Math.round(r.top * 100) / 100,
+        // 箱の縁からの距離で持つ。箱ごと動いた分を二重に報告しないため
+        inkX: Math.round((ink.left - r.left) * 100) / 100,
+        inkR: Math.round((r.right - ink.right) * 100) / 100,
       });
     }
     return out;
@@ -81,42 +97,43 @@ async function collectText(page: Page): Promise<TextBox[]> {
 
 const TYPO_KEYS = ["font", "size", "weight", "tracking", "leading", "color"] as const;
 
-// 片側に 1 回だけ出る文言に絞って突合する。同じ文言が複数あると、どれと比べたのか言えなくなる
+// 片側に 1 回だけ出る「型」に絞って突合する。同じ型が複数あると、どれと比べたのか言えなくなる
 function textParityRows(mock: TextBox[], app: TextBox[]): string[] {
   const index = (list: TextBox[]) => {
-    const byText = new Map<string, TextBox[]>();
-    for (const box of list) byText.set(box.text, [...(byText.get(box.text) ?? []), box]);
-    return byText;
+    const byShape = new Map<string, TextBox[]>();
+    for (const box of list) byShape.set(shapeOf(box.text), [...(byShape.get(shapeOf(box.text)) ?? []), box]);
+    return byShape;
   };
-  const mockIndex = index(mock);
   const appIndex = index(app);
   const rows: string[] = [];
-  for (const [text, mockBoxes] of mockIndex) {
-    const appBoxes = appIndex.get(text);
+  for (const [shape, mockBoxes] of index(mock)) {
+    const appBoxes = appIndex.get(shape);
     if (mockBoxes.length !== 1 || appBoxes?.length !== 1) continue;
     const m = mockBoxes[0]!;
     const a = appBoxes[0]!;
     const typo = TYPO_KEYS.filter((key) => m[key] !== a[key]).map((key) => `${key} \`${m[key]}\` → \`${a[key]}\``);
-    const widthGap = Math.round((a.w - m.w) * 10) / 10;
-    const heightGap = Math.round((a.h - m.h) * 10) / 10;
+    type Metric = "w" | "h" | "x" | "y" | "inkX" | "inkR";
+    const gap = (key: Metric) => Math.round((a[key] - m[key]) * 10) / 10;
+    const cell = (label: string, key: Metric) =>
+      Math.abs(gap(key)) >= 1 ? `${label} ${m[key]} → ${a[key]} (${gap(key) > 0 ? "+" : ""}${gap(key)})` : "";
     // 箱は同じ tag のときだけ比べる。異 tag 同士は padding の分だけ必ずずれ、本物のズレが埋もれる
     const box = m.tag !== a.tag ? [] : [
-      Math.abs(widthGap) >= 1 ? `幅 ${m.w} → ${a.w} (${widthGap > 0 ? "+" : ""}${widthGap})` : "",
-      Math.abs(heightGap) >= 1 ? `高 ${m.h} → ${a.h} (${heightGap > 0 ? "+" : ""}${heightGap})` : "",
+      cell("幅", "w"), cell("高", "h"), cell("左", "x"), cell("上", "y"),
+      cell("字の左空き", "inkX"), cell("字の右空き", "inkR"),
     ].filter(Boolean);
     if (typo.length === 0 && box.length === 0) continue;
-    rows.push(`| \`${text}\` | ${m.tag}/${a.tag} | ${typo.join("<br>") || "—"} | ${box.join("<br>") || "—"} |`);
+    rows.push(`| \`${m.text}\`${m.text === a.text ? "" : ` / \`${a.text}\``} | ${m.tag}/${a.tag} | ${typo.join("<br>") || "—"} | ${box.join("<br>") || "—"} |`);
   }
   return rows;
 }
 
 function onlyOnOneSide(mock: TextBox[], app: TextBox[]): { mockOnly: string[]; appOnly: string[] } {
-  const texts = (list: TextBox[]) => new Set(list.map((box) => box.text));
-  const mockTexts = texts(mock);
-  const appTexts = texts(app);
+  const shapes = (list: TextBox[]) => new Set(list.map((box) => shapeOf(box.text)));
+  const mockShapes = shapes(mock);
+  const appShapes = shapes(app);
   return {
-    mockOnly: [...mockTexts].filter((t) => !appTexts.has(t)),
-    appOnly: [...appTexts].filter((t) => !mockTexts.has(t)),
+    mockOnly: [...new Set(mock.filter((b) => !appShapes.has(shapeOf(b.text))).map((b) => b.text))],
+    appOnly: [...new Set(app.filter((b) => !mockShapes.has(shapeOf(b.text))).map((b) => b.text))],
   };
 }
 
@@ -192,7 +209,7 @@ async function main(): Promise<void> {
           const report = [
             `# ${tag} — 文言で突合した字体と箱の差分`,
             "",
-            "両側に 1 回だけ出る文言のみ / 箱は同 tag のときだけ比較",
+            "両側に 1 回だけ出る文言（数字・曜日は伏せた「型」で突合）のみ / 箱は同 tag のときだけ比較",
             "",
             "| 文言 | tag mock/app | 字体 | 箱 |",
             "|---|---|---|---|",
