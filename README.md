@@ -45,7 +45,7 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 
 installer は追加のみ（既存ファイルは上書きしない・冪等）。詳細は `SEED-CONTRACT.md`。
 
-導入後は target repo で Claude Code を起動し直してから（project skills を認識させる）`/fe-kickoff` で day-0 を進める。`.claude/settings.json` が既存だった場合は、hooks の手動 merge を先に行う（installer が NOTE で知らせる）。
+導入後はそのまま `/fe-kickoff` で day-0 を進める（project skills は自動 hot-reload される。認識されないときは `/reload-skills`、hooks 登録を含む settings の変更が効かないときのみ再起動）。`.claude/settings.json` が既存だった場合は、hooks の手動 merge を先に行う（installer が NOTE で知らせる）。
 
 ## mock を更新したとき
 
