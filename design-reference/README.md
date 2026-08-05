@@ -15,11 +15,12 @@ design-reference/
 1. Claude Design 上でユーザーが mock の完成を宣言する
 2. standalone HTML export を取得し（`tools/design_sync fetch` または DesignSync tool）、`export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし）
 3. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する
-4. sha256 台帳を更新する:
+4. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
    cd design-reference
-   find export -type f | sort | xargs sha256sum > mock-baseline.sha256
+   find export -type f ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > mock-baseline.sha256
+   sha256sum --check --quiet mock-baseline.sha256
    ```
 
 5. `pp/` の provenance テストで台帳と実体の一致を確認してから commit する
@@ -27,5 +28,5 @@ design-reference/
 ## 規律
 
 - `export/` 配下は凍結資産。直接編集は禁止（hook が Edit/Write を block する）。変更は Claude Design 側で行い、再 export → 再凍結する
-- 台帳と実体の不一致は「突合先のドリフト」であり、検証全体を無効化する。commit 前 hook が sha256 照合で検出する
+- 台帳と実体の不一致は「突合先のドリフト」であり、検証全体を無効化する。commit 前 hook が sha256 照合とファイル集合の突合（台帳未登録の追加・実体の欠落を含む）で検出する
 - mock は 320〜1920 で成立する単一レスポンシブ HTML を要件とする（幅別の別 mock を置かない）

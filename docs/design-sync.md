@@ -7,7 +7,7 @@
 
 ### 1.1 mock の位置付けと正本
 
-`design-reference/export/{{Screen}}.html` は画像や静的なワイヤーフレームではなく、次の要素を含む「実行可能仕様」である。
+`design-reference/export/{{SCREEN_NAME}}.html` は画像や静的なワイヤーフレームではなく、次の要素を含む「実行可能仕様」である。
 
 - React 相当の DOM 構造、表示条件、イベント結線
 - mock 内の状態機械（画面状態と遷移）
@@ -32,8 +32,7 @@ sha256 台帳は `design-reference/mock-baseline.sha256` である。
 `@media`（page shell）・`@container`（部品）・intrinsic sizing（内容）で表現する。
 
 複数画面で使う責務は共有 JavaScript module に分離する（例: 描画 util・fixture data・mock 起動支援）。
-HTML は共有 module を動的 import し、component context に接続する。
-HTML 側と共有 module 側の呼出契約は不可分である。
+HTML は共有 module を import して使い、HTML 側と共有 module 側の呼出契約は不可分である。
 共有 module の API を変えるときは、利用する全 HTML を同じ同期単位で更新し、部分的に push しない。
 
 ### 1.3 Claude Design project との同期経路
@@ -52,7 +51,8 @@ DesignSync tool では、最初に `list_files` で project の現状を確認�
 `tools/design_sync` は DesignSync セッション向けの取得・照合指示を決定的に生成する。
 project ID の固定値は script に持たない。環境変数 `DESIGN_PROJECT_ID` の指定が必須である
 （値は PJ の Claude Design project ID）。
-引数を省略すると、`design-reference/export/` 直下の追跡済み HTML と JS を既定順で対象にする。明示的な list ファイル引数で上書きでき、絶対 path と親 directory traversal は許可されない。
+引数を省略すると、`design-reference/export/` 配下（再帰）の追跡済み HTML・JS・CSS を既定順で対象にする。明示的な list ファイル引数で上書きでき、絶対 path と親 directory traversal は許可されない。
+この照合は repo 側の list を起点にするため、Claude Design 側にだけ増えたファイルは DRIFT-REPORT に現れない。remote の全量は `list_files` で別途確認する。
 既定の作業 directory は `drafts/design-sync/<UTC 日付>-<fetch|verify>/`（`drafts/` は gitignore 済み）であり、生成指示の保存先はその配下の絶対 path `fetched/`、照合結果の `DRIFT-REPORT.md` も同じ作業 directory に置く。
 
 既定対象の取得指示を生成し、表示された launch command を実行する。
@@ -102,7 +102,7 @@ pp の差分を見つけたら、次の規則で triage する。
 5. frontend 実装を実装 LLM に委譲するときは、対象 mock、観測可能な完了条件、
    変更可能範囲、必要な pp pack を同じ依頼に含める。
 6. 実装と同時に pp spec を追加または更新し、見た目と振る舞いを fixture で pin する。
-7. mock と app に同じ fixture、時計、viewport、操作列を与えて pp の全 pack を通す。
+7. mock 内の表示データと app 側 fixture を同じ値に揃え（mock 発注時に fixture 値を与えておく）、同じ時計、viewport、操作列で pp の全 pack を通す。
 8. artifact と差分をレビューし、未登録差分は直し、登録済み差分は台帳の裁定と突合する。
 9. app の通常の build、lint、対象 test を通し、レビュー後に変更を land する。
 
@@ -130,7 +130,8 @@ app の改善を理由に、裁定なしで KEEP_IMPL 台帳へ新規登録し�
 
 pixel-perfect 検証の実装と pack 一覧は `pp/README.md` を正とする。
 完了条件は、対象として map された全要素で computed-style diff が 0、
-geometry diff が 0、対象 canvas または SVG の pixel diff が 0 であることとする。
+geometry diff が 0、対象 canvas の pixel diff が 0 であることとする
+（SVG は computed-style/geometry と self-baseline スクショの側で検証する）。
 
 visual spec と behavioral spec は mock/app 対称にする。
 両 target に同じ決定的 fixture を与え、同じ操作を行い、表示 text、要素の有無、disabled 状態、

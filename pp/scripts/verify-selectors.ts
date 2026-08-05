@@ -15,8 +15,9 @@ async function main(): Promise<void> {
   const browser = await chromium.launch(PP_LAUNCH_OPTIONS);
   const context = await browser.newContext(MOBILE_CONTEXT_OPTIONS);
   await installNetworkGuard(context);
-  const first = entries[0]![1];
-  const page = await openMock(context, MOCK_ENTRY_FILE, first.mockSel);
+  // 待ち受けは中立な body にする — 先頭 entry を待つと、まさに診断したい MISS で計測前に crash する
+  const page = await openMock(context, MOCK_ENTRY_FILE, "body");
+  await page.waitForLoadState("networkidle");
 
   for (const [visualId, pair] of entries) {
     const n = await page.locator(pair.mockSel).count().catch((e: Error) => {

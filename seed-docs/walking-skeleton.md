@@ -34,7 +34,8 @@
 
 - 基準 viewport 2 点: mobile 390×844 (第一正本・DPR 2–3・touch) / desktop 1280×800 (第二正本)。数値は例 — 各 PJ が pp/src/config.ts で確定する
 - 基準 2 点の間と外側 (320〜1920) は連続幅スイープで invariant 検証する
-- フォント同梱 (システムフォント依存を排除)・時計固定・locale / DPR / touch を Playwright の device emulation で固定する
+- フォント同梱 (実体 = pp/vendor に取得記録つきで置き、frontend/src/ui/tokens/tokens.css の --font-sans を差し替える)
+- 時計・locale・DPR・touch は pp/src/config.ts の context options で明示固定する (UA まで固定したい場合は devices preset に置き換える)
 
 ### 2. repo 骨格の確認
 
@@ -73,7 +74,7 @@ seed-docs/          本書ほかプロセス文書
 3. **部品実装**: frontend/src/ui/components/ に、token (frontend/src/ui/tokens/tokens.css) 参照で実装する
 4. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
 5. **parity**: pp の SELECTOR_MAP に部品を登録し、sample-parity spec を緑にする
-6. **sweep + 回帰**: width-sweep / poststate-sweep / self-baseline / mock-provenance を全て実行して緑にする
+6. **sweep + 回帰**: width-sweep / poststate-sweep / self-baseline / mock-provenance を全て実行して緑にする (self-baseline は初回 `--update-snapshots` で baseline を生成し、再実行で緑を確認する)
 
 完了条件: 全 gate が「skip ではなく実行されて緑」。1 spec でも skip のまま「一周した」と宣言しない。ここまで緑になって初めて画面量産 (seed-docs/screen-loop.md) に入る。
 
@@ -83,4 +84,4 @@ seed-docs/          本書ほかプロセス文書
 2. **mock は単一レスポンシブ HTML**: 幅別に別 mock を作らせない。幅別 2 mock 体制は二重管理ドリフト (轍 #8 と同型) の再発源。「320〜1920 で成立させる」を発注要件に含める (seed-docs/design-order-template.md 項目 1)
 3. **CSS 規約**: page shell = @media (viewport 基準) / 部品 = @container (置かれた幅基準) / 内容 = intrinsic sizing。breakpoint 急変点は境界 ±1px のスイープで検証する
 4. **入力モダリティを fixture の軸に**: touch target 44px・hover 非存在でも操作完結・safe area。hover 依存 UI は部品単体 fixture の段階で検出する
-5. **device emulation を機械 gate に**: DPR 2–3・touch・UA を devices preset で固定して pp を回す。実機確認は受入段 (screen-loop.md ⑦) のみ
+5. **device emulation を機械 gate に**: DPR・touch を pp/src/config.ts の context options で明示固定して pp を回す (UA 固定が要るなら devices preset に置き換える)。実機確認は受入段 (screen-loop.md ⑦) のみ

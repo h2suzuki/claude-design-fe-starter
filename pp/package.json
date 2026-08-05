@@ -14,6 +14,7 @@
     "lint:mock": "node scripts/mock-lint.mjs",
     "test:mock-lint": "node scripts/mock-lint.mjs --self-test",
     "verify-selectors": "tsx scripts/verify-selectors.ts",
+    "overlay-diff": "tsx scripts/overlay-diff.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

@@ -107,6 +107,7 @@ function main(args) {
   const violations = files.flatMap(lintFile);
   for (const item of violations) console.log(`${item.file}:${item.line} ${item.id} ${item.message}`);
   if (violations.length) process.exitCode = 1;
+  else console.log(`mock-lint: ${files.length} file(s) OK`);
 }
 
 main(process.argv.slice(2));

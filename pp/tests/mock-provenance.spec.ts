@@ -23,7 +23,8 @@ function listExportFiles(dir: string, prefix = ""): string[] {
 test.describe("design-reference — provenance", () => {
   test("export/ matches mock-baseline.sha256", async () => {
     const files = existsSync(EXPORT_DIR) ? listExportFiles(EXPORT_DIR) : [];
-    test.skip(files.length === 0, "design-reference/export/ が空 — 最初の /mock-freeze 後にこの gate が有効化される");
+    // 台帳が既に在るのに export が空なのは「未凍結」ではなく「凍結資産の喪失」— skip せず失敗させる
+    test.skip(files.length === 0 && !existsSync(BASELINE_PATH), "design-reference/export/ が空 — 最初の /mock-freeze 後にこの gate が有効化される");
     expect(existsSync(BASELINE_PATH), "mock-baseline.sha256 が無い — /mock-freeze で台帳を生成する").toBe(true);
 
     const entries = new Map<string, string>();

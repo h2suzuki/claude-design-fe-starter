@@ -12,7 +12,7 @@
 | `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_APP_URL` |
 | `self-baseline` | 自分の過去 baseline とのスクショ比較 | （回帰網） | `PP_APP_URL` |
 
-未充足の条件がある spec は理由付きで skip される。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。
+未充足の条件がある spec は理由付きで skip される（端末の list reporter には理由が出ない — 理由は `artifacts/playwright-report.json` の annotations か、spec 冒頭の skip 条件で確認する）。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。
 
 ## setup
 
@@ -28,10 +28,10 @@ PLAYWRIGHT_BROWSERS_PATH="$(git rev-parse --show-toplevel)/drafts/pw-browsers" \
 
 ## 実行
 
-app 側 spec は dev server の URL を明示的に渡したときだけ走る。server とテストは同一 shell invocation で動かす（sandbox では invocation ごとに network namespace が分かれるため）:
+app 側 spec は dev server の URL を明示的に渡したときだけ走る。sandbox 環境では server とテストを同一 shell invocation で動かす（invocation ごとに network namespace が分かれる環境があるため。通常環境なら別 terminal でも良い）:
 
 ```bash
-cd frontend
+cd "$(git rev-parse --show-toplevel)/frontend"
 npx vite --host 127.0.0.1 --port 5173 --strictPort &
 VITE_PID=$!
 until curl -sf http://127.0.0.1:5173 >/dev/null; do sleep 1; done
@@ -56,11 +56,13 @@ npm run lint:mock && npm test
 - `src/config.ts` — 基準 viewport 2 点・スイープ幅・locale/timezone・固定時刻・self-baseline 対象 path
 - `src/selector-map.ts` — visual id ↔ selector 対応（app 側は `data-visual-id` 属性を部品に付与する）
 - `src/net-block.ts` — vendor 資産の URL 対応表（`vendor/README.md`）
-- 各 spec 冒頭の `READY_SELECTOR` — app の描画完了セレクタ
+- `src/fixtures/route-intercept.ts` + `tests/sample-parity.spec.ts` の `APP_API_FIXTURES` — app が読む API の fixture（空でも 404 fallback が実 BE への素通りを塞ぐ）
+- 各 spec 冒頭の `READY_SELECTOR`（width-sweep は `APP_MOUNT_SELECTOR` も） — app の描画完了セレクタ
 
 ## 使い方の型
 
 - mock 側 selector は `npm run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
+- `npm run overlay-diff` で mock/app の全画面オーバーレイ（mock=赤・app=シアン・一致=灰）と文言キーの字体/箱突合を出す。SELECTOR_MAP に載せ忘れた箇所のズレを面で検出する補完で、map が空の序盤から使える
 - 失敗時は `artifacts/<suite>/` の summary/style/geometry JSON を見る。selector・fixture の不一致と実際の parity regression を分けて診断する
 - 意図的差分は `design-reference/DESIGN-POLICY.md`（KEEP_IMPL 台帳）に裁定を登録し、spec 側の delta pin で吸収する（`docs/pixel-perfect.md`）
 - 実測 px を app の CSS へ転記しない。合わせるのは CSS 契約（clamp/%/flex）の構造（`docs/pixel-perfect.md`）

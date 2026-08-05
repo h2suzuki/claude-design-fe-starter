@@ -57,6 +57,7 @@ export async function dumpVisualIds(
       locator.evaluate(dumpStyleInPage, { allowlist: allowlistArr, pseudo: "::after" }),
       locator.boundingBox(),
     ]);
+    // anchor 不在時も絶対座標を残す（診断用）。比較としては無意味なので writeRunSummary が anchorFound で run を落とす
     const rect =
       box == null
         ? null

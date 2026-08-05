@@ -6,7 +6,8 @@ import { APP_CONFIGURED, MOBILE_CONTEXT_OPTIONS } from "../src/config";
 import { installNetworkGuard } from "../src/net-block";
 import { openApp } from "../src/targets/app-target";
 
-const FORBIDDEN_LITERAL = /\b(?:undefined|null|NaN|\[object Object\])\b/;
+// \b は "[" の外側に word 文字を要求するため、bracket 形はグループから分離する（混ぜると素の "[object Object]" を取りこぼす）
+const FORBIDDEN_LITERAL = /\b(?:undefined|null|NaN)\b|\[object Object\]/;
 
 // app の描画完了を示すセレクタに差し替える
 const READY_SELECTOR = "body";

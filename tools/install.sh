@@ -31,13 +31,25 @@ die() {
   exit "${2:-64}"
 }
 
-# seed の追跡ファイルだけを対象にする（node_modules 等の混入防止）。.git の無いコピーでは find で代替
+# seed の追跡ファイルだけを NUL 区切りで列挙する（node_modules 等の混入防止・非 ASCII 名安全）。
+# .git の無いコピーでは find で代替。親 repo の中に置かれた .git 無しコピーを git 経路と誤認しないよう、
+# rev-parse の toplevel が SEED_ROOT 自身であることまで確認する
+seed_is_git_root() {
+  command -v git >/dev/null 2>&1 || return 1
+  local toplevel
+  toplevel=$(git -C "$SEED_ROOT" rev-parse --show-toplevel 2>/dev/null) || return 1
+  [[ $toplevel == "$SEED_ROOT" ]]
+}
+
 list_seed_files() {
   local dir=$1
-  if command -v git >/dev/null 2>&1 && git -C "$SEED_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git -C "$SEED_ROOT" ls-files -- "$dir"
+  if seed_is_git_root; then
+    git -C "$SEED_ROOT" -c core.quotePath=false ls-files -z -- "$dir"
   else
-    (cd -- "$SEED_ROOT" && find "$dir" -type f -not -path '*/node_modules/*' -not -path 'pp/artifacts/*')
+    (cd -- "$SEED_ROOT" && find "$dir" -type f \
+      -not -path '*/node_modules/*' -not -path 'pp/artifacts/*' -not -path '*/dist/*' \
+      -not -path '*/.cc-writes/*' -not -name 'settings.local.json' \
+      \( -not -path 'pp/vendor/*' -o -path 'pp/vendor/README.md' \) -print0)
   fi
 }
 
@@ -73,7 +85,7 @@ main() {
   local skipped_files=()
   local dir rel src dst
   for dir in "${COPY_DIRS[@]}"; do
-    while IFS= read -r rel; do
+    while IFS= read -r -d '' rel; do
       [[ -n $rel ]] || continue
       src=$SEED_ROOT/$rel
       dst=$target/$rel
@@ -88,11 +100,14 @@ main() {
       created=$((created + 1))
     done < <(list_seed_files "$dir")
   done
+  # 1 件も見つからないのは列挙の失敗（不完全な seed コピー等）— 半端な marker だけ残して成功と偽らない
+  (( created + skipped > 0 )) || die "no seed files found under $SEED_ROOT — incomplete seed copy?" 70
 
   append_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END"
   append_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END"
 
   printf '\n%s: %d file(s) copied, %d existing file(s) left untouched\n' "$PROG" "$created" "$skipped"
+  printf 'NOTE: seed の README.md / SEED-CONTRACT.md は copy 対象外 (PJ 所有物のため)。契約と使い方は seed checkout 側で参照する\n'
   if ((skipped > 0)); then
     printf '  untouched: %s\n' "${skipped_files[@]}"
     case " ${skipped_files[*]} " in

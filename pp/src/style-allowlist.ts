@@ -4,8 +4,8 @@ export const STYLE_ALLOWLIST: readonly string[] = [
   // typography
   "fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing",
   "textAlign", "textTransform", "textDecorationLine", "whiteSpace", "fontVariantNumeric",
-  // color / bg
-  "color", "backgroundColor", "backgroundImage", "opacity",
+  // color / bg / 可視性（visibility:hidden は layout box を保つため geometry では捕まらない）
+  "color", "backgroundColor", "backgroundImage", "opacity", "visibility",
   // border / radius
   "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
   "borderTopStyle", "borderRightStyle", "borderBottomStyle", "borderLeftStyle",

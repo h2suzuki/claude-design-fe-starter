@@ -14,7 +14,14 @@ when_to_use: TRIGGER when the user declares a mock complete, when an export need
 2. export を取得する: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool。byte を逐語保存する（整形・切詰め・末尾改行の増減なし）
 3. 取得物を `design-reference/export/` へ配置する。編集 gate が Edit/Write を block するため、配置は cp 等の Bash で行う
 4. 基準 viewport ごとの参照スクショを `design-reference/screenshots/` へ保存する
-5. 台帳を更新する: `cd design-reference && find export -type f | sort | xargs sha256sum > mock-baseline.sha256`
+5. 台帳を更新する（.gitkeep 除外・空白名安全）:
+
+   ```bash
+   cd design-reference
+   find export -type f ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > mock-baseline.sha256
+   sha256sum --check --quiet mock-baseline.sha256
+   ```
+
 6. `pp/` で `npm run lint:mock` と `npm run test:provenance` を実行し、緑を確認してから export と台帳を同一 commit にする
 
 ## Rules

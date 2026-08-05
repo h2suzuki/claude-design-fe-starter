@@ -13,7 +13,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 3. 機械 gate（structural parity・幅スイープ・状態スイープ・スクショ自己回帰・出所照合）で mock へ収束
 4. LLM スクショ一次レビュー + 人間受入を機械 gate と別立てで常設
 
-という順序を day-0 から強制するための seed。前プロジェクトで実証済みの検証ハーネスと規約文書から、ドメイン固有部を除去して汎用化した。前提はモバイルファースト（基準 viewport = mobile 390×844 + desktop 1280×800 の 2 点、320〜1920 は連続スイープで invariant 検証）。
+という順序を day-0 から強制するための seed。前プロジェクトで実証済みの検証ハーネスと規約文書から、ドメイン固有部を除去して汎用化した。前提はモバイルファースト（基準 viewport = mobile 390×844 + desktop 1280×800 の 2 点、320〜1920 は幅スイープ = 多点サンプリング + breakpoint 境界で invariant 検証）。
 
 ## 構成
 
@@ -44,6 +44,8 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 ```
 
 installer は追加のみ（既存ファイルは上書きしない・冪等）。詳細は `SEED-CONTRACT.md`。
+
+生成後に seed 側の改善を取り込むときは installer を再実行するのではなく、`git remote add seed <この repo の URL>` して必要 commit を `git cherry-pick` する（PJ 側で placeholder を差し替えている前提のため、一括上書きの機構は持たない）。
 
 ## 設計原則: 強制の階層
 

@@ -15,7 +15,7 @@
 |---|---|---|
 | `docs/` | `ui-quality-policy.md` `pixel-perfect.md` `design-sync.md` `ui-caveats.md` | file 単位の add-only |
 | `tools/` | `design_sync` `install.sh` | file 単位の add-only |
-| `.claude/skills/` | `fe-kickoff/` `design-order/` `mock-freeze/` | dir 単位の add-only |
+| `.claude/skills/` | `fe-kickoff/` `design-order/` `mock-freeze/` | file 単位の add-only（新規 dir として追加される） |
 | `.claude/hooks/` | `block-frozen-mock-edit.sh` `check-mock-baseline.sh` | file 単位の add-only |
 | `.claude/settings.json` | hooks 登録 | 無ければ作成・有れば手動 merge を案内（上書きしない） |
 | `CLAUDE.md` | 行動規範ブロック | `<!-- fe-starter:begin/end -->` マーカー区間の追記（既存なら skip） |
@@ -27,7 +27,7 @@
 
 | placeholder / 差し替え点 | 場所 |
 |---|---|
-| `{{PRODUCT_NAME}}` などの `{{...}}` トークン | `docs/` `seed-docs/` 内の各所（grep で列挙できる） |
+| `{{PRODUCT_NAME}}` などの `{{...}}` トークン | `docs/` `seed-docs/` `frontend/index.html` の各所（grep で列挙できる） |
 | 基準 viewport・locale・timezone・固定時刻 | `pp/src/config.ts` |
 | mock の entry ファイル名・SELECTOR_MAP | `pp/src/config.ts` `pp/src/selector-map.ts` |
 | design token の実値 | `frontend/src/ui/tokens/tokens.css` |

@@ -41,7 +41,11 @@ export function writeRunSummary(
     }
   }
 
+  // anchor 不在時の rect は viewport 絶対値へ fallback しており比較として無意味 — run ごと失敗させる
+  const anchorFound = { mock: mockDump.anchorFound, app: appDump.anchorFound };
   const pass =
+    anchorFound.mock &&
+    anchorFound.app &&
     missing.length === 0 &&
     reports.every((r) => r.styleDiffs.length === 0 && r.geometryDiffs.length === 0 && (!r.canvas || r.canvas.matched));
 
@@ -51,6 +55,7 @@ export function writeRunSummary(
     JSON.stringify(
       {
         pass,
+        anchorFound,
         missing,
         perVisualId: reports.map((r) => ({
           visualId: r.visualId,
