@@ -34,15 +34,16 @@ app 側 spec は dev server の URL を明示的に渡したときだけ走る�
 cd "$(git rev-parse --show-toplevel)/frontend"
 npx vite --host 127.0.0.1 --port 5173 --strictPort &
 VITE_PID=$!
+# 起動した PID だけを止める（pkill/fuser/port 指定 kill は使わない）。trap は crash/中断で発火し、
+# hang は下の timeout が有限化して EXIT へ到達させる — この 2 段で server を残さない
+trap 'kill "$VITE_PID" 2>/dev/null' EXIT INT TERM
 until curl -sf http://127.0.0.1:5173 >/dev/null; do sleep 1; done
 
 cd ../pp
 PLAYWRIGHT_BROWSERS_PATH="$(git rev-parse --show-toplevel)/drafts/pw-browsers" \
 PP_APP_URL="http://127.0.0.1:5173" \
 PP_MOCK_FILE="your-screen.html" \
-  npm test
-
-kill "$VITE_PID"   # 起動した PID だけを止める。pkill/fuser/port 指定 kill は使わない
+  timeout 600 npm test
 ```
 
 mock を変更（再凍結）したら必須 gate:
@@ -69,6 +70,8 @@ pgrep -af "drafts/pw-browsers"
 ```
 
 残っていたら **表示された PID を個別に kill** する。`pkill chrome` / port 指定 kill は host の browser や他プロセスを巻き込むため使わない。dev server（vite）も同じ規律で、起動した shell が記録した PID だけを止める。
+
+滞留の典型は「cleanup trap はあるのに、hang した step が終わらず trap の発火点に到達しない」形（前プロジェクトの codex 委譲 run で実測）。trap は crash 用、hang は `timeout` で有限化する — の 2 段を実行レシピの既定にする。検証 run を別 agent（codex 等）へ委譲するときは、終了後に worktree path で scope した `pgrep -af "$PWD"` の残存検査まで task の完了条件に含める。
 
 ## 使い方の型
 
