@@ -45,7 +45,22 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 
 installer は追加のみ（既存ファイルは上書きしない・冪等）。詳細は `SEED-CONTRACT.md`。
 
-生成後に seed 側の改善を取り込むときは installer を再実行するのではなく、`git remote add seed <この repo の URL>` して必要 commit を `git cherry-pick` する（PJ 側で placeholder を差し替えている前提のため、一括上書きの機構は持たない）。
+導入後は target repo で Claude Code を起動し直してから（project skills を認識させる）`/fe-kickoff` で day-0 を進める。`.claude/settings.json` が既存だった場合は、hooks の手動 merge を先に行う（installer が NOTE で知らせる）。
+
+## mock を更新したとき
+
+1. 修正は Claude Design 側で行う（構造変更 = chat / 部品単位の指摘 = inline comment / 微調整 = canvas 直接編集）
+2. 完成宣言 → `/mock-freeze` で再凍結する（export 差し替えと sha256 台帳更新を同一 commit に）
+3. 対象画面の KEEP_IMPL 台帳（`design-reference/DESIGN-POLICY.md`）を走査し、裁定済みの実装表示を mock へ反映して entry を閉じる — 台帳は縮小方向が定常（放置すると mock と実装が乖離し続ける）
+4. pp を再実行して新 mock 基準で全 gate を緑へ（SELECTOR_MAP・spec の追随を含む）。残る差分は実装修正か新規裁定の 2 択
+
+詳細は `docs/design-sync.md`（同期経路・台帳運用）。
+
+## seed との往復（更新の運び方）
+
+- **seed → PJ**: `git remote add seed <この repo の URL>` して必要 commit を `git cherry-pick` する（PJ 側で placeholder を差し替えている前提のため、一括上書きの機構は持たない）
+- **PJ → seed**: pp harness 等の汎用部を強化・修正したら seed へ back-port する。運ぶのは機構（`pp/src`・spec の骨格・`pp/scripts`・`tools/`）だけで、PJ 固有物（SELECTOR_MAP の中身・fixture・screen 定義・差し替え済み placeholder）は運ばない。cherry-pick がそのまま当たらない場合は手動で port し、出典 commit を message に記す
+- 共通部の package 化（npm 等）は 3 プロジェクト目まで見送る（rule of three）
 
 ## 設計原則: 強制の階層
 

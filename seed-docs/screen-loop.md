@@ -58,12 +58,14 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - 機械 gate とは別立ての段であり、省略しない
 - LLM 一次: 全状態のスクショを「発注どおりか」ではなく「値は整合しているか・表示は意味が通るか・ユーザーがこの画面で迷わないか」で判定させる
 - 人間受入: 実データで動線を歩く。実機確認を行うのはこの段のみ (機械 gate は device emulation で回す)
+- 動線歩き・スクショ採取には環境で利用可能な browser 自動化 tool (agent-browser 等) を使ってよい。決定性が要る機械 gate (⑥) は Playwright 固定で、ここは置き換えない
 - 完了条件: 指摘ゼロ、または全指摘が⑧の裁定に載っていること
 
 ### ⑧ 差分の裁定
 
 - mock と実装の差分の扱いは 2 択のみ: (a) 実装を直す / (b) KEEP_IMPL 裁定として残す。口頭運用は禁止
 - KEEP_IMPL は日付付き裁定として design-reference/DESIGN-POLICY.md に記録する
+- (b) の entry は恒久例外ではなく「mock へ還流待ち」— 次にその画面の mock を更新するとき、裁定内容を mock へ反映して entry を閉じる (docs/design-sync.md §1.4)
 - 完了条件: 未裁定の差分がゼロ
 
 ## 機械 gate 緑 = 完成ではない
