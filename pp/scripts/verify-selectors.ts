@@ -13,21 +13,25 @@ async function main(): Promise<void> {
     return;
   }
   const browser = await chromium.launch(PP_LAUNCH_OPTIONS);
-  const context = await browser.newContext(MOBILE_CONTEXT_OPTIONS);
-  await installNetworkGuard(context);
-  // 待ち受けは中立な body にする — 先頭 entry を待つと、まさに診断したい MISS で計測前に crash する
-  const page = await openMock(context, MOCK_ENTRY_FILE, "body");
-  await page.waitForLoadState("networkidle");
+  try {
+    const context = await browser.newContext(MOBILE_CONTEXT_OPTIONS);
+    await installNetworkGuard(context);
+    // 待ち受けは中立な body にする — 先頭 entry を待つと、まさに診断したい MISS で計測前に crash する
+    const page = await openMock(context, MOCK_ENTRY_FILE, "body");
+    await page.waitForLoadState("networkidle");
 
-  for (const [visualId, pair] of entries) {
-    const n = await page.locator(pair.mockSel).count().catch((e: Error) => {
-      console.error(`ERR  ${visualId}: ${e.message}`);
-      return -1;
-    });
-    const flag = n === 1 ? "OK  " : n === 0 ? "MISS" : "AMBI";
-    console.log(`${flag} ${visualId} (${n}) <- ${pair.mockSel}`);
+    for (const [visualId, pair] of entries) {
+      const n = await page.locator(pair.mockSel).count().catch((e: Error) => {
+        console.error(`ERR  ${visualId}: ${e.message}`);
+        return -1;
+      });
+      const flag = n === 1 ? "OK  " : n === 0 ? "MISS" : "AMBI";
+      console.log(`${flag} ${visualId} (${n}) <- ${pair.mockSel}`);
+    }
+  } finally {
+    // どの経路で抜けても browser process を残さない
+    await browser.close();
   }
-  await browser.close();
   console.log("\nNOTE: 特定状態でだけ存在する要素の MISS は正常。期待状態での MISS/AMBI だけを直す");
 }
 

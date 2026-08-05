@@ -59,6 +59,17 @@ npm run lint:mock && npm test
 - `src/fixtures/route-intercept.ts` + `tests/sample-parity.spec.ts` の `APP_API_FIXTURES` — app が読む API の fixture（空でも 404 fallback が実 BE への素通りを塞ぐ）
 - 各 spec 冒頭の `READY_SELECTOR`（width-sweep は `APP_MOUNT_SELECTOR` も） — app の描画完了セレクタ
 
+## browser process の残存に注意
+
+前プロジェクトで、親から切り離された chromium が 100 以上滞留する事象が観測された（原因は未特定）。この harness 側は browser を残さない設計にしてある — script は try/finally で `browser.close()` し、Playwright の signal handler（SIGINT/SIGTERM）と pipe 切断時の chromium 自己終了が中断時の網になる — が、繰り返し実行・強制中断の多い運用では定期的に残存を確認する:
+
+```bash
+# この repo の pinned browser だけを path で特定する（普段使いの Chrome を誤爆しない）
+pgrep -af "drafts/pw-browsers"
+```
+
+残っていたら **表示された PID を個別に kill** する。`pkill chrome` / port 指定 kill は host の browser や他プロセスを巻き込むため使わない。dev server（vite）も同じ規律で、起動した shell が記録した PID だけを止める。
+
 ## 使い方の型
 
 - mock 側 selector は `npm run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
