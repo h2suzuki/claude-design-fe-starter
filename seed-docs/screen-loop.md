@@ -1,0 +1,71 @@
+# 画面追加の定常ループ
+
+walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 1 枚追加するたびに回す手順。①〜⑧を順に踏む。
+
+```text
+① mock (部品→状態→画面) → ② export 凍結 + provenance pin → ③ 部品候補 3 分類
+→ ④ 新部品の単体実装 (states 込み) → ⑤ page composition
+→ ⑥ 機械 gate → ⑦ LLM 一次レビュー + 人間受入 → ⑧ 差分の裁定
+```
+
+## DoD 3 分類
+
+各段の完了条件は、この 3 分類のいずれかに紐付く。
+
+| 分類 | 検証内容 | gate |
+|---|---|---|
+| 基準幅 | structural pixel 一致 (token / clamp / % の構造契約で mock と一致) | sample-parity |
+| 中間幅 | invariant (320〜1920 で崩れ・衝突・欠落・横スクロールが無い) | width-sweep |
+| 状態 | 挙動一致 (全状態の表示と、状態遷移後のレイアウト安定) | states fixture + poststate-sweep |
+
+## 各段の手順と完了条件
+
+### ① mock (Claude Design)
+
+- 部品 → 状態 → 画面の順で発注する。ライブラリ (design system) の部品を参照して組み、新部品が要るなら先に states 込みの部品として提示させてから画面に合成する (プロンプト例: seed-docs/first-prompts.md)
+- 完了条件: mock 上でフィードバックが収束し、完成宣言が出ていること。壊れた実装ではなく品質の良い mock にフィードバックを収束させるのがレビュー速度の要
+
+### ② export 凍結 + provenance pin
+
+- /mock-freeze で standalone HTML export を design-reference/export/ へ置き、sha256 を design-reference/mock-baseline.sha256 に pin する (手順詳細: design-reference/README.md)
+- 完了条件: mock-provenance spec が緑 (検証 gate が今回凍結した正本を向いている証明)。凍結せずに実装へ入らない — 突合先ドリフトの再発源になる
+
+### ③ 部品候補 3 分類
+
+- mock 内の構成要素を「既存部品の再利用 / 新規部品 / ページ固有」に分類する
+- 判定規準: 同じ見た目 = 同じ部品。既存と似て非なる部品を新設しない
+- 完了条件: 分類が発注書 (または PR 説明) に列挙されていること
+
+### ④ 新部品の単体実装 (states 込み)
+
+- frontend/src/ui/components/ に、token (frontend/src/ui/tokens/tokens.css) 参照で実装する。直書きの色・寸法を持ち込まない
+- states fixture を部品の完成条件にする: default / empty / loading / error / 長文、加えて touch (hover 非存在で操作完結・target 44px)
+- fixture データは API schema 派生の単一データセットとし、mock と test が同源を参照する (二重管理はドリフト源)
+- 完了条件: 基準幅 = SELECTOR_MAP 登録 + sample-parity 緑 / 状態 = 全 fixture 状態で挙動一致
+
+### ⑤ page composition
+
+- frontend/src/pages/ は部品の薄い合成に留める。ページにロジックや見た目の実装を書き始めたら、③に戻って部品化する
+- 完了条件: page が部品参照のみで組めていること
+
+### ⑥ 機械 gate
+
+- sample-parity (structural parity) + width-sweep + poststate-sweep + self-baseline スクショ回帰 + mock-provenance を全て実行する
+- 完了条件: DoD 3 分類の機械側が全て「実行されて緑」。skip 混じりを緑と報告しない
+
+### ⑦ LLM スクショ一次レビュー + 人間受入
+
+- 機械 gate とは別立ての段であり、省略しない
+- LLM 一次: 全状態のスクショを「発注どおりか」ではなく「値は整合しているか・表示は意味が通るか・ユーザーがこの画面で迷わないか」で判定させる
+- 人間受入: 実データで動線を歩く。実機確認を行うのはこの段のみ (機械 gate は device emulation で回す)
+- 完了条件: 指摘ゼロ、または全指摘が⑧の裁定に載っていること
+
+### ⑧ 差分の裁定
+
+- mock と実装の差分の扱いは 2 択のみ: (a) 実装を直す / (b) KEEP_IMPL 裁定として残す。口頭運用は禁止
+- KEEP_IMPL は日付付き裁定として design-reference/DESIGN-POLICY.md に記録する
+- 完了条件: 未裁定の差分がゼロ
+
+## 機械 gate 緑 = 完成ではない
+
+⑥が全緑でも⑦は省略できない。意味論バグ — 値の不整合、意味の通らない表示、押しても機能しない操作 — は structural diff もスクショ回帰もすり抜ける。だから⑦は臨時の追加検査ではなく、ループに常設された段である。

@@ -1,0 +1,31 @@
+/* design token の単一定義点 — 色コード・寸法をここ以外に直書きしない（docs/ui-caveats.md 配色） */
+:root {
+  /* 意味色: mock の palette 確定後に実値を差し替える。同じ色でも意味が違えば別名を切る */
+  --color-bg: #ffffff;
+  --color-text: #1b1f27;
+  --color-text-subtle: #667085;
+  --color-accent: #2f6fed;
+  --color-warn: #b42318;
+  --color-surface: #f2f4f7;
+  --color-border: #d0d5dd;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius-1: 6px;
+
+  /* mock 確定後にフォントを同梱して差し替える（pp/vendor/README.md） */
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* touch target 下限 — mock 発注規約（seed-docs/design-order-template.md）と同値に保つ */
+  --touch-target-min: 44px;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}

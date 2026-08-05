@@ -1,0 +1,28 @@
+{
+  "name": "pp",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "mock/app parity harness — renders the frozen Claude Design mock and the real frontend under identical conditions and machine-diffs them",
+  "scripts": {
+    "test": "playwright test",
+    "test:provenance": "playwright test tests/mock-provenance.spec.ts",
+    "test:parity": "playwright test tests/sample-parity.spec.ts",
+    "test:sweep": "playwright test tests/width-sweep.spec.ts",
+    "test:poststate": "playwright test tests/poststate-sweep.spec.ts",
+    "test:self-baseline": "playwright test tests/self-baseline.spec.ts",
+    "lint:mock": "node scripts/mock-lint.mjs",
+    "test:mock-lint": "node scripts/mock-lint.mjs --self-test",
+    "verify-selectors": "tsx scripts/verify-selectors.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/node": "^24.13.2",
+    "@types/pngjs": "^6.0.5",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3"
+  }
+}

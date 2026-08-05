@@ -1,0 +1,53 @@
+/* 部品は @container で自分の置かれた幅に応答する — viewport（@media）は page shell だけが見る */
+.empty-state-band {
+  container-type: inline-size;
+}
+
+.esb-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  /* 状態間で外形寸法を変えない — 最長文言 + action ボタンでも収まる高さを確保する */
+  min-height: 120px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  text-align: center;
+}
+
+@container (min-width: 480px) {
+  .esb-inner {
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: start;
+  }
+}
+
+.esb-icon {
+  font-size: 24px;
+  color: var(--color-text-subtle);
+}
+
+.empty-state-band[data-variant="error"] .esb-icon {
+  color: var(--color-warn);
+}
+
+.esb-message {
+  margin: 0;
+  color: var(--color-text-subtle);
+}
+
+.esb-action {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+}

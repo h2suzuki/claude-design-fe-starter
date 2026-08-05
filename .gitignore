@@ -1,0 +1,13 @@
+# fe-starter:begin
+node_modules/
+dist/
+drafts/
+pp/artifacts/
+pp/vendor/*
+!pp/vendor/README.md
+.claude/.cc-writes/
+# fe-starter:end
+
+# seed bootstrap materials (local-only, not for publication)
+/PLAN.md
+/reference/
