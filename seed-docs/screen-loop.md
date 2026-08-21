@@ -3,7 +3,7 @@
 walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 1 枚追加するたびに回す手順。①〜⑧を順に踏む。
 
 ```text
-① mock (部品→状態→画面) → ② export 凍結 + provenance pin → ③ 部品候補 3 分類
+① mock (部品→状態→画面) → ② export 凍結 + provenance pin → ③ AST 抽出 + 部品候補 3 分類
 → ④ 新部品の単体実装 (states 込み) → ⑤ page composition
 → ⑥ 機械 gate → ⑦ LLM 一次レビュー + 人間受入 → ⑧ 差分の裁定
 ```
@@ -30,11 +30,12 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - /mock-freeze で standalone HTML export を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する (手順詳細: docs/presentation/ui-mock/README.md)
 - 完了条件: mock-provenance spec が緑 (検証 gate が今回凍結した正本を向いている証明)。凍結せずに実装へ入らない — 突合先ドリフトの再発源になる
 
-### ③ 部品候補 3 分類
+### ③ AST 抽出 + 部品候補 3 分類
 
-- mock 内の構成要素を「既存部品の再利用 / 新規部品 / ページ固有」に分類する
+- /ast-extract で凍結 export から docs/presentation/ui-ast/screens/<slug>.ui-ast.json を起こす (層の位置付けと運用: docs/ast-layer.md)
+- mock 内の構成要素を「既存部品の再利用 / 新規部品 / ページ固有」に分類する。AST の kind census と registry.json の突合が分類の機械化入力 (tools/ast-viewer の部品一覧が同じ census を描く)
 - 判定規準: 同じ見た目 = 同じ部品。既存と似て非なる部品を新設しない
-- 完了条件: 分類が発注書 (または PR 説明) に列挙されていること
+- 完了条件: tools/ast_validate が緑で、分類と uncertainNodes の裁定が発注書 (または PR 説明) に列挙されていること
 
 ### ④ 新部品の単体実装 (states 込み)
 

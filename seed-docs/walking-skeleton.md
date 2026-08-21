@@ -44,10 +44,12 @@ docs/presentation/ui-mock/   mock 正本。export/ (凍結 export)・mock-baseli
                     DESIGN-POLICY.md (KEEP_IMPL 台帳)・README.md (凍結手順)
 frontend/           vite app。src/ui/tokens/tokens.css・src/ui/components/・src/pages/
 pp/                 parity harness。基準 viewport は pp/src/config.ts で差し替え
-docs/               規約 4 本 (ui-quality-policy / pixel-perfect / design-sync / ui-caveats)
+docs/presentation/ui-ast/    UI AST 正本。schema 2 本・registry.json (共通語彙)・screens/ (画面別)
+docs/               規約 5 本 (ui-quality-policy / pixel-perfect / design-sync / ui-caveats / ast-layer)
 tools/design_sync   Claude Design との同期 (環境変数 DESIGN_PROJECT_ID で project 指定)
+tools/ast_validate  AST の機械 gate。ast-tree / ast-viewer は裁定用の可視化
 seed-docs/          本書ほかプロセス文書
-.claude/            project skills (/fe-kickoff・/design-order・/mock-freeze)
+.claude/            project skills (/fe-kickoff・/design-order・/mock-freeze・/ast-extract)
 ```
 
 ### 3. Claude Design 2 project 体制

@@ -1,0 +1,132 @@
+#!/usr/bin/env node
+// v0.2 の screen ui-ast を CLI 向け ASCII tree に決定的に描画する。schema の正は docs/presentation/ui-ast/ui-ast.schema.json
+// 拡張子なし entry point は package.json の type 次第で ESM/CJS 判定が割れる (type=commonjs では static import が無言 no-op) ため dynamic import で受ける
+import("node:fs").then((fs) => main(fs.readFileSync));
+
+const PROG = (process.argv[1] ?? "ast-tree").split("/").pop();
+const LOW_CONFIDENCE = 0.6; // tools/ast_validate の LOW_CONFIDENCE_THRESHOLD と同値
+const LABEL_W = 54;
+
+const USAGE = `Usage:
+    ${PROG} {-h|--help}
+    ${PROG} <ui-ast.json>
+    ${PROG} -                    # stdin から読む
+
+v0.2 の screen ui-ast を ASCII tree + overlays + uncertainNodes として表示する。`;
+
+function die(message) {
+  process.stderr.write(`${PROG}: ${message}\n${USAGE}\n`);
+  process.exit(2);
+}
+
+function walk(node) {
+  const acc = [node];
+  for (const child of node.children ?? []) acc.push(...walk(child));
+  return acc;
+}
+
+function label(node) {
+  const kind = `${node.kind ?? "?"}${node.variant ? `:${node.variant}` : ""}`;
+  const head = `${kind} #${node.id}`;
+  return node.state?.stateName ? `[${node.state.stateName}] ${head}` : head;
+}
+
+function marks(node, uncertain) {
+  const low = typeof node.confidence === "number" && node.confidence < LOW_CONFIDENCE;
+  return `${uncertain.has(node.id) ? "⚑" : " "}${low ? "!" : " "}`;
+}
+
+function confidence(node) {
+  if (typeof node.confidence !== "number") return " --";
+  return String(Math.round(node.confidence * 100)).padStart(3);
+}
+
+function detail(node) {
+  const parts = [];
+  if (node.logicalId && node.logicalId !== node.id) parts.push(`≡${node.logicalId}`);
+  if (node.role) parts.push(`role=${node.role}`);
+  if (node.binding?.visualId) parts.push(`vid:${node.binding.visualId}`);
+  if (node.binding?.codeComponent) parts.push(`→ ${node.binding.codeComponent}`);
+  if (node.state?.initiallyVisible === false) parts.push("init:hidden");
+  if (node.state?.visibility) parts.push(`vis:${node.state.visibility}`);
+  for (const interaction of node.interactions ?? []) parts.push(`⚡${interaction.type}→${interaction.targetId}`);
+  return parts.join("  ");
+}
+
+function renderNode(node, prefix, isLast, out, uncertain) {
+  const branch = prefix + (isLast ? "└─ " : "├─ ");
+  out.push(
+    `${(branch + label(node)).padEnd(LABEL_W)} ${marks(node, uncertain)}${confidence(node)}  ${detail(node)}`.trimEnd(),
+  );
+  const childPrefix = prefix + (isLast ? "   " : "│  ");
+  if (node.triggerNodeIds?.length) out.push(`${childPrefix}   ⚓ triggers: ${node.triggerNodeIds.join(", ")}`);
+  if (node.responsive) {
+    const overrides = Object.entries(node.responsive)
+      .map(([bp, o]) => `${bp}: ${o.hidden ? "hidden" : (o.kind ?? o.variant ?? "(layout)")}`)
+      .join(" ⇄ ");
+    out.push(`${childPrefix}   ⇄ responsive { ${overrides} }`);
+  }
+  const kids = node.children ?? [];
+  kids.forEach((child, i) => renderNode(child, childPrefix, i === kids.length - 1, out, uncertain));
+}
+
+function header(ast, screen, allNodes, overlays, uncertain, out) {
+  const provenance = screen.provenance ?? {};
+  const viewport = screen.viewport;
+  const size = viewport ? `  ${viewport.width}×${viewport.height} ${viewport.breakpoint}` : "";
+  const low = allNodes.filter((n) => typeof n.confidence === "number" && n.confidence < LOW_CONFIDENCE).length;
+  out.push(`⧉ ${screen.name} [${screen.platform}]${size}  (ui-ast ${ast.version ?? "?"})`);
+  out.push(
+    `│  mock: ${provenance.mockFile ?? "?"}  sha:${(provenance.sha256 ?? "").slice(0, 8)}…  extracted: ${provenance.extractedAt ?? "?"}`,
+  );
+  if (ast.coverage) out.push(`│  coverage: visual ${ast.coverage.visual} / semantic ${ast.coverage.semantic}`);
+  out.push(
+    `│  nodes: ${allNodes.length} (overlays ${overlays.length}, confidence<${LOW_CONFIDENCE} ${low}, uncertain ${uncertain.size})`,
+  );
+  out.push("│  凡例: ⚑uncertain  !低confidence  kind:variant  ≡logicalId  vid:visualId  ⚡interaction  ⇄responsive  ⚓trigger");
+}
+
+function main(readFileSync) {
+  const args = process.argv.slice(2);
+  if (args.includes("-h") || args.includes("--help")) {
+    process.stdout.write(`${USAGE}\n`);
+    return;
+  }
+  if (args.length !== 1) die("expected exactly one ui-ast.json argument");
+
+  let ast;
+  try {
+    ast = JSON.parse(readFileSync(args[0] === "-" ? 0 : args[0], "utf8"));
+  } catch (error) {
+    die(`cannot load ${args[0]}: ${error.message}`);
+  }
+  const screen = ast.screen;
+  if (!screen || !Array.isArray(screen.children)) die(`not a screen ui-ast: ${args[0]}`);
+
+  const uncertain = new Map((ast.uncertainNodes ?? []).map((entry) => [entry.id, entry]));
+  const overlays = screen.overlays ?? [];
+  const allNodes = [...screen.children, ...overlays].flatMap(walk);
+  const ids = new Set(allNodes.map((n) => n.id));
+
+  const out = [];
+  header(ast, screen, allNodes, overlays, uncertain, out);
+  out.push("");
+  screen.children.forEach((child, i) => renderNode(child, "", i === screen.children.length - 1, out, uncertain));
+
+  if (overlays.length) {
+    out.push("");
+    out.push("◈ overlays (base tree から分離)");
+    overlays.forEach((overlay, i) => renderNode(overlay, "", i === overlays.length - 1, out, uncertain));
+  }
+
+  if (uncertain.size) {
+    out.push("");
+    out.push("⚑ uncertainNodes");
+    for (const [id, entry] of uncertain) {
+      const alternatives = entry.alternatives?.length ? `  (alt: ${entry.alternatives.join(", ")})` : "";
+      out.push(`   #${id}: ${entry.reason}${alternatives}${ids.has(id) ? "" : "  [tree に不在]"}`);
+    }
+  }
+
+  process.stdout.write(`${out.join("\n")}\n`);
+}

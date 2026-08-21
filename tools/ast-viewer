@@ -1,0 +1,651 @@
+#!/usr/bin/env node
+// screens/<slug>.ui-ast.json + registry.json + 任意のスクショから自己完結 HTML viewer を 1 file 生成する
+"use strict";
+
+const { existsSync, readFileSync, readdirSync, writeFileSync } = require("node:fs");
+const { basename, dirname, extname, join, resolve } = require("node:path");
+
+const PROG = "ast-viewer";
+const AST_VERSION = "0.2.0";
+const IMAGE_MIME = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+};
+
+const USAGE = [
+  "Usage:",
+  "    " + PROG + " {-h|--help}",
+  "    " + PROG + " <screen.ui-ast.json> [--registry <file>] [--screenshots <dir>] [-o <out.html>]",
+  "",
+  "Defaults:",
+  "    --registry     <screen dir>/../registry.json  (存在する場合のみ)",
+  "    --screenshots  <screen dir>/../../ui-mock/screenshots  (存在する場合のみ)",
+  "    -o             ./<slug>.viewer.html",
+  "",
+  "スクショが無い場合は region 枠面と crop を省略し、残りの面だけを描画する。",
+].join("\n");
+
+function die(message, code = 64) {
+  process.stderr.write(PROG + ": " + message + "\n");
+  process.exit(code);
+}
+
+function warn(message) {
+  process.stderr.write(PROG + ": warning: " + message + "\n");
+}
+
+function loadJson(path) {
+  let text;
+  try {
+    text = readFileSync(path, "utf8");
+  } catch (error) {
+    die("cannot read " + path + ": " + error.message, 66);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    die("invalid JSON in " + path + ": " + error.message, 65);
+  }
+}
+
+function parseArgs(argv) {
+  const opts = { screen: "", registry: "", screenshots: "", out: "" };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    const value = () => {
+      const v = argv[++i];
+      if (v === undefined) die("missing value for " + arg);
+      return v;
+    };
+    if (arg === "-h" || arg === "--help") {
+      process.stdout.write(USAGE + "\n");
+      process.exit(0);
+    } else if (arg === "--registry") opts.registry = value();
+    else if (arg === "--screenshots") opts.screenshots = value();
+    else if (arg === "-o" || arg === "--out") opts.out = value();
+    else if (arg.startsWith("-")) die("unknown option: " + arg);
+    else if (!opts.screen) opts.screen = arg;
+    else die("unexpected argument: " + arg);
+  }
+  if (!opts.screen) die("screen ui-ast.json is required\n" + USAGE);
+  return opts;
+}
+
+// crop の背景倍率に実寸が要るので画像 header から直接読む
+function imageSize(buf) {
+  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47) {
+    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+  }
+  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) return jpegSize(buf);
+  if (buf.length > 30 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") {
+    return webpSize(buf);
+  }
+  return null;
+}
+
+function jpegSize(buf) {
+  let i = 2;
+  while (i + 9 < buf.length) {
+    if (buf[i] !== 0xff) {
+      i++;
+      continue;
+    }
+    const marker = buf[i + 1];
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      i += 2;
+      continue;
+    }
+    const isFrame = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+    if (isFrame) return { h: buf.readUInt16BE(i + 5), w: buf.readUInt16BE(i + 7) };
+    i += 2 + buf.readUInt16BE(i + 2);
+  }
+  return null;
+}
+
+function webpSize(buf) {
+  const format = buf.toString("ascii", 12, 16);
+  if (format === "VP8X") return { w: buf.readUIntLE(24, 3) + 1, h: buf.readUIntLE(27, 3) + 1 };
+  if (format === "VP8 ") return { w: buf.readUInt16LE(26) & 0x3fff, h: buf.readUInt16LE(28) & 0x3fff };
+  if (format === "VP8L") {
+    const bits = buf.readUInt32LE(21);
+    return { w: (bits & 0x3fff) + 1, h: ((bits >> 14) & 0x3fff) + 1 };
+  }
+  return null;
+}
+
+function indexNodes(screen) {
+  const list = [];
+  const walk = (node) => {
+    list.push(node);
+    for (const child of node.children || []) walk(child);
+  };
+  for (const node of screen.children || []) walk(node);
+  for (const node of screen.overlays || []) walk(node);
+  return list;
+}
+
+// source.region (0..1 正規化) を参照先スクショごとに束ねる = 原型の regions.states 相当
+function buildShots(nodes, dir) {
+  if (!dir) return [];
+  let entries;
+  try {
+    entries = readdirSync(dir).sort();
+  } catch (error) {
+    die("cannot read screenshots dir " + dir + ": " + error.message, 66);
+  }
+  const images = entries.filter((name) => IMAGE_MIME[extname(name).toLowerCase()]);
+  if (!images.length) {
+    warn("no image file in " + dir + " (region 枠面を省略)");
+    return [];
+  }
+  const byImage = new Map();
+  const missing = new Set();
+  for (const node of nodes) {
+    const region = node.source && node.source.region;
+    if (!Array.isArray(region) || region.length !== 4) continue;
+    const named = node.source.file ? basename(node.source.file) : "";
+    const isImageRef = Boolean(IMAGE_MIME[extname(named).toLowerCase()]);
+    const ref = isImageRef ? named : images.length === 1 ? images[0] : "";
+    if (!ref) continue;
+    if (!images.includes(ref)) {
+      missing.add(ref);
+      continue;
+    }
+    if (!byImage.has(ref)) byImage.set(ref, {});
+    byImage.get(ref)[node.id] = region;
+  }
+  for (const name of [...missing].sort()) warn("source.file not found in screenshots dir: " + name);
+
+  const shots = [];
+  for (const name of [...byImage.keys()].sort()) {
+    const buf = readFileSync(join(dir, name));
+    const size = imageSize(buf);
+    if (!size || !size.w || !size.h) {
+      warn("unreadable image header, skipped: " + name);
+      continue;
+    }
+    shots.push({
+      name: name.replace(/\.[^.]+$/, ""),
+      w: size.w,
+      h: size.h,
+      nodes: byImage.get(name),
+      dataUri: "data:" + IMAGE_MIME[extname(name).toLowerCase()] + ";base64," + buf.toString("base64"),
+    });
+  }
+  return shots;
+}
+
+function renderHtml(doc, registry, shots) {
+  const payload = {
+    ast: doc,
+    registry,
+    shots: shots.map((s) => ({ name: s.name, w: s.w, h: s.h, nodes: s.nodes })),
+  };
+  const data = JSON.stringify(payload).replace(/<\//g, "<\\/");
+  const cropCss = shots.map((s, i) => ".img-" + i + "{background-image:url(" + s.dataUri + ")}").join("\n");
+  const title = "UI AST Inspector — " + (doc.screen.name || "screen");
+  return `<title>${title}</title>
+<style>
+:root{
+  --bg:#f7f4ee; --surface:#ffffff; --surface2:#efe9dd; --ink:#2c2822; --soft:#756957;
+  --line:#e2d8c4; --accent:#b3542a; --accent-soft:rgba(179,84,42,.10); --ok:#5c7a44; --warn:#b23a2e;
+  --sel:rgba(179,84,42,.16);
+  --sans:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',system-ui,sans-serif;
+  --mono:'JetBrains Mono',SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#211f1c; --surface:#2b2823; --surface2:#353128; --ink:#ece5d8; --soft:#a99e8a;
+    --line:#443e33; --accent:#e08a55; --accent-soft:rgba(224,138,85,.14); --ok:#a4bd85; --warn:#e2826f;
+    --sel:rgba(224,138,85,.22);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#211f1c; --surface:#2b2823; --surface2:#353128; --ink:#ece5d8; --soft:#a99e8a;
+  --line:#443e33; --accent:#e08a55; --accent-soft:rgba(224,138,85,.14); --ok:#a4bd85; --warn:#e2826f;
+  --sel:rgba(224,138,85,.22);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.02em}
+header .meta{font-family:var(--mono);font-size:11px;color:var(--soft)}
+.chip{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:1px 10px;font-size:11px;font-weight:700}
+.app{display:grid;grid-template-columns:minmax(340px,430px) 1fr;height:calc(100vh - 54px)}
+@media (max-width:900px){.app{display:block;height:auto}}
+.pane{overflow:auto;padding:14px 16px}
+.tree-pane{border-right:1px solid var(--line)}
+.node{cursor:pointer;border-radius:8px;padding:2px 8px;display:flex;gap:8px;align-items:baseline;white-space:nowrap}
+.node:hover{background:var(--accent-soft)}
+.node.sel{background:var(--sel)}
+.node .k{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.node .id{font-family:var(--mono);font-size:11px;color:var(--soft)}
+.node .conf{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ok)}
+.node .conf.low{color:var(--warn)}
+.badge{font-size:9.5px;font-weight:700;border-radius:4px;padding:0 5px;letter-spacing:.05em}
+.badge.state{background:var(--surface2);color:var(--soft)}
+.badge.resp{background:var(--accent-soft);color:var(--accent)}
+.badge.unc{background:var(--warn);color:var(--bg)}
+.badge.ov{background:var(--ink);color:var(--bg)}
+.badge.sc{background:transparent;border:1px solid var(--line);color:var(--soft);font-family:var(--mono);font-weight:400}
+.st{display:inline-block;border-radius:999px;padding:0 10px;font-size:10.5px;font-weight:700}
+.st.primitive{background:var(--ok);color:var(--bg)}
+.st.composed{background:var(--accent);color:var(--bg)}
+.st.custom{background:var(--surface2);color:var(--soft)}
+.kids{margin-left:14px;border-left:1px dashed var(--line);padding-left:6px}
+.sect{margin:14px 0 6px;font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--soft)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{border:1px solid var(--line);background:var(--surface);color:var(--soft);border-radius:999px;padding:5px 14px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.tab.on{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:700}
+.shot{position:relative;border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:56vh;background:var(--surface)}
+.inner{position:relative;width:100%;background-size:100% auto;background-repeat:no-repeat}
+.box{position:absolute;border:1.5px solid var(--accent);border-radius:4px;opacity:.28;cursor:pointer}
+.box:hover{opacity:.75;background:var(--accent-soft)}
+.box.sel{opacity:1;background:var(--sel);box-shadow:0 0 0 2px var(--accent)}
+.box.sel::after{content:attr(data-label);position:absolute;top:-20px;left:-2px;background:var(--accent);color:var(--bg);
+  font-family:var(--mono);font-size:10px;font-weight:600;padding:1px 7px;border-radius:4px;white-space:nowrap}
+.insp{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.card h3{margin:0 0 8px;font-size:10.5px;font-weight:700;letter-spacing:.18em;color:var(--soft)}
+.card .mono{font-family:var(--mono);font-size:11.5px;white-space:pre-wrap;word-break:break-word}
+.card .big{font-size:14px;font-weight:700}
+.hint{color:var(--soft);font-size:12px;margin:8px 0 0}
+.legend{font-size:11px;color:var(--soft);margin-top:6px}
+[hidden]{display:none!important}
+.pages{display:flex;gap:6px;margin-left:auto}
+.pagebtn{border:1px solid var(--line);background:var(--surface);color:var(--soft);border-radius:999px;padding:5px 16px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.pagebtn.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.sheet{padding:16px 20px;overflow:auto;height:calc(100vh - 54px)}
+.sheet-head{font-size:12px;color:var(--soft);margin:0 0 14px;max-width:960px}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(370px,1fr));gap:12px;align-items:start}
+.kind-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.kind-card h2{margin:0;font-family:var(--mono);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kind-card .cnt{color:var(--soft);font-size:11px;font-weight:400}
+.kind-card .comp{font-family:var(--mono);font-size:10.5px;color:var(--soft);margin:6px 0 10px;white-space:pre-wrap;word-break:break-word}
+.inst-row{display:flex;gap:10px;flex-wrap:wrap}
+.inst{cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--bg);max-width:100%}
+.inst:hover{border-color:var(--accent)}
+.inst.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--sel)}
+.crop{background-repeat:no-repeat;border-radius:6px;outline:1px solid var(--line);max-width:100%}
+.inst .cap{font-family:var(--mono);font-size:10px;color:var(--soft);margin-top:5px;max-width:240px;white-space:normal}
+.idchip{cursor:pointer;font-family:var(--mono);font-size:10.5px;border:1px solid var(--line);border-radius:999px;padding:1px 9px;color:var(--soft)}
+.idchip:hover{border-color:var(--accent);color:var(--accent)}
+.idchip.sel{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+${cropCss}
+</style>
+<header>
+  <h1>UI AST Inspector</h1>
+  <span class="chip" id="ver"></span>
+  <span class="meta" id="prov"></span>
+  <span class="meta" id="cov"></span>
+  <nav class="pages">
+    <button class="pagebtn on" id="pb-tree">ツリー</button>
+    <button class="pagebtn" id="pb-cat">部品一覧</button>
+    <button class="pagebtn" id="pb-reg">registry</button>
+  </nav>
+</header>
+<div class="app" id="page-tree">
+  <div class="pane tree-pane" id="tree"></div>
+  <div class="pane">
+    <div id="shotwrap">
+      <div class="tabs" id="tabs"></div>
+      <div class="shot"><div class="inner" id="shot"></div></div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="insp" id="insp"></div>
+  </div>
+</div>
+<div class="sheet" id="page-catalog" hidden>
+  <p class="sheet-head" id="cat-head"></p>
+  <div class="cat-grid" id="cat-grid"></div>
+</div>
+<div class="sheet" id="page-registry" hidden>
+  <p class="sheet-head" id="reg-head"></p>
+  <div class="cat-grid" id="reg-grid"></div>
+</div>
+<script>
+const DATA = ${data};
+const { ast, registry, shots } = DATA;
+const screen = ast.screen;
+const RANK = { primitive: 0, composed: 1, custom: 2 };
+let curShot = shots.length ? 0 : -1;
+let selId = null;
+
+const H = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const uncertain = {};
+for (const u of ast.uncertainNodes || []) uncertain[u.id] = u;
+const nodesById = {};
+const overlayIds = {};
+(function index(n){ if (n.id) nodesById[n.id] = n; (n.children || []).forEach(index); })(
+  { children: [...(screen.children || []), ...(screen.overlays || [])] });
+(function mark(n){ if (n.id) overlayIds[n.id] = true; (n.children || []).forEach(mark); })(
+  { children: screen.overlays || [] });
+
+const regByKind = {};
+for (const item of registry.items || []) (regByKind[item.kind] = regByKind[item.kind] || []).push(item);
+const regOf = (kind) => (regByKind[kind] || [])[0] || null;
+const rankOf = (kind) => { const r = regOf(kind); return r ? RANK[r.status] : 3; };
+const shotsWith = (id) => shots.map((s, i) => i).filter((i) => shots[i].nodes[id]);
+const deps = (item) => ((item.registryItem || {}).registryDependencies || []);
+
+const prov = screen.provenance || {};
+document.getElementById("ver").textContent = "ui-ast v" + (ast.version || "?");
+document.getElementById("prov").textContent =
+  prov.mockFile + "  sha:" + String(prov.sha256 || "").slice(0, 8) + "…  extracted:" + prov.extractedAt +
+  (screen.viewport ? "  " + screen.viewport.width + "×" + screen.viewport.height + " @" + screen.viewport.breakpoint : "");
+document.getElementById("cov").textContent = ast.coverage
+  ? "coverage visual " + ast.coverage.visual + " / semantic " + ast.coverage.semantic : "coverage 未記載";
+document.getElementById("shotwrap").hidden = shots.length === 0;
+document.getElementById("legend").textContent = shots.length
+  ? "枠 = node.source.region (0..1 正規化) をスクショ実寸に焼き直したもの。クリックで選択、tree と双方向同期。tree 行・枠とも Ctrl+クリックで部品一覧の該当 instance へ。"
+  : "スクショ未指定 (または source.region 不在) のため region 枠面は省略。tree 行 Ctrl+クリックで部品一覧へ。";
+
+function nodeRow(n){
+  const div = document.createElement("div");
+  div.className = "node"; div.dataset.id = n.id;
+  const conf = Math.round((n.confidence ?? 0) * 100);
+  let badges = "";
+  if (overlayIds[n.id]) badges += '<span class="badge ov">overlay</span>';
+  if (n.state && n.state.stateName) badges += '<span class="badge state">' + H(n.state.stateName) + '</span>';
+  if (n.responsive) badges += '<span class="badge resp">⇄ responsive</span>';
+  if (uncertain[n.id]) badges += '<span class="badge unc">⚑</span>';
+  const reg = regOf(n.kind);
+  if (reg && deps(reg).length) badges += '<span class="badge sc">' + H(deps(reg).join("·")) + '</span>';
+  div.innerHTML = '<span class="k">' + H(n.kind) + '</span><span class="id">#' + H(n.id) + '</span>' + badges +
+    '<span class="conf' + (conf < 90 ? ' low' : '') + '">●' + conf + '</span>';
+  div.onclick = (e) => (e.ctrlKey || e.metaKey) ? jumpToCatalog(n.id) : select(n.id, true);
+  return div;
+}
+function renderTree(){
+  const root = document.getElementById("tree");
+  root.innerHTML = "";
+  const add = (n, parent) => {
+    parent.appendChild(nodeRow(n));
+    if ((n.children || []).length){
+      const k = document.createElement("div"); k.className = "kids"; parent.appendChild(k);
+      n.children.forEach(c => add(c, k));
+    }
+  };
+  const s1 = document.createElement("div"); s1.className = "sect";
+  s1.textContent = "SCREEN — " + screen.name + " (" + ((screen.layout || {}).type || "?") + ")";
+  root.appendChild(s1);
+  (screen.children || []).forEach(n => add(n, root));
+  if ((screen.overlays || []).length){
+    const s2 = document.createElement("div"); s2.className = "sect";
+    s2.textContent = "OVERLAYS (base tree から分離)"; root.appendChild(s2);
+    screen.overlays.forEach(n => add(n, root));
+  }
+}
+function renderTabs(){
+  const el = document.getElementById("tabs");
+  el.innerHTML = "";
+  shots.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.className = "tab" + (i === curShot ? " on" : ""); b.textContent = s.name;
+    b.onclick = () => { curShot = i; renderTabs(); renderShot(); };
+    el.appendChild(b);
+  });
+}
+function renderShot(){
+  if (curShot < 0) return;
+  const s = shots[curShot];
+  const el = document.getElementById("shot");
+  el.className = "inner img-" + curShot;
+  el.style.aspectRatio = s.w + " / " + s.h;
+  el.innerHTML = "";
+  for (const [id, r] of Object.entries(s.nodes)){
+    const b = document.createElement("div");
+    b.className = "box" + (id === selId ? " sel" : "");
+    b.dataset.label = ((nodesById[id] || {}).kind || "") + " #" + id;
+    b.style.left = (r[0] * 100) + "%";
+    b.style.top = (r[1] * 100) + "%";
+    b.style.width = (r[2] * 100) + "%";
+    b.style.height = (r[3] * 100) + "%";
+    b.onclick = (e) => (e.ctrlKey || e.metaKey) ? jumpToCatalog(id) : select(id, false);
+    el.appendChild(b);
+  }
+  const sel = el.querySelector(".box.sel");
+  if (sel) sel.scrollIntoView({ block: "center" });
+}
+function renderInsp(){
+  const el = document.getElementById("insp");
+  const n = selId ? nodesById[selId] : null;
+  if (!n){
+    el.innerHTML = '<div class="hint">tree の node' + (shots.length ? "、またはスクショ上の枠" : "") +
+      'をクリックすると 3 面 (mock / IR / FE) の対応を表示します。</div>';
+    return;
+  }
+  const src = n.source || {};
+  const b = n.binding || {};
+  const u = uncertain[n.id];
+  const hits = shotsWith(n.id).map(i => shots[i].name);
+  el.innerHTML =
+    '<div class="card"><h3>MOCK 側 (正本)</h3><div class="mono">' + H(prov.mockFile) +
+      (src.nodeRef ? "\\nnodeRef: " + H(src.nodeRef) : "") +
+      (src.file ? "\\nfile: " + H(src.file) : "") +
+      (src.region ? "\\nregion: [" + src.region.map(v => v.toFixed(4)).join(", ") + "]" : "") +
+      "\\n実測 region: " + H(hits.join(", ") || "(このスクショ集合には不在)") + '</div></div>' +
+    '<div class="card"><h3>IR NODE</h3><div class="big">' + H(n.kind) + ' <span style="color:var(--soft)">#' + H(n.id) + '</span></div>' +
+      '<div class="mono">confidence: ' + (n.confidence ?? 0) +
+      (n.logicalId ? "\\nlogicalId: " + H(n.logicalId) : "") +
+      (n.role ? "\\nrole: " + H(n.role) : "") +
+      (n.variant ? "\\nvariant: " + H(n.variant) : "") +
+      (n.state ? "\\nstate: " + H(JSON.stringify(n.state)) : "") +
+      (n.responsive ? "\\nresponsive: " + H(Object.entries(n.responsive)
+        .map(([bp, o]) => bp + "→" + (o.hidden ? "hidden" : (o.kind || o.variant || "layout"))).join(" / ")) : "") +
+      ((n.interactions || []).length ? "\\ninteractions: " + H(n.interactions
+        .map(x => x.type + "→" + x.targetId + (x.event ? " (" + x.event + ")" : "")).join(", ")) : "") +
+      ((n.triggerNodeIds || []).length ? "\\ntriggers: " + H(n.triggerNodeIds.join(", ")) : "") +
+      "\\nprops: " + H(n.props ? JSON.stringify(n.props, null, 1) : "(なし)") +
+      ((n.evidence || []).length ? "\\n根拠: " + H(n.evidence.join(" / ")) : "") +
+      ((n.alternatives || []).length ? "\\n候補: " + H(n.alternatives.join(" / ")) : "") +
+      (u ? "\\n⚑ " + H(u.reason) : "") + '</div></div>' +
+    '<div class="card"><h3>FE 側 (SvelteKit)</h3><div class="mono">' +
+      H(b.codeComponent || "(wrapper 内部 — registry 側で解決)") +
+      "\\ndata-visual-id: " + H(b.visualId || "(親 wrapper に包含)") +
+      ((b.tokenRefs || []).length ? "\\ntokenRefs: " + H(b.tokenRefs.join(", ")) : "") +
+      "\\n→ SELECTOR_MAP / ast-conformance の突合キー" + '</div></div>' +
+    registryCard(n.kind);
+}
+function registryCard(kind){
+  const r = regOf(kind);
+  if (!r) return '<div class="card"><h3>REGISTRY (共通語彙)</h3><div class="mono">(registry 未定義の kind: ' + H(kind) + ')</div></div>';
+  return '<div class="card"><h3>REGISTRY (共通語彙)</h3>' +
+    '<div><span class="st ' + H(r.status) + '">' + H(r.status) + '</span> <span class="mono">' + H(r.name) + '</span></div>' +
+    '<div class="mono" style="margin-top:6px">' + regDetail(r) + '</div></div>';
+}
+function regDetail(r){
+  const ri = r.registryItem || {};
+  return H(r.codeComponent || "(codeComponent 未記載)") +
+    (ri.type ? "\\n" + H(ri.type) : "") +
+    (deps(r).length ? "\\nregistry: " + H(deps(r).join(" + ")) : "") +
+    ((ri.dependencies || []).length ? "\\nnpm: " + H(ri.dependencies.join(", ")) : "") +
+    ((ri.files || []).length ? "\\nfiles: " + H(ri.files.join(", ")) : "") +
+    ((r.variants || []).length ? "\\nvariants: " + H(r.variants.join(" / ")) : "") +
+    ((r.states || []).length ? "\\nstates: " + H(r.states.join(" / ")) : "") +
+    ((r.notes || []).length ? "\\n※ " + H(r.notes.join("\\n※ ")) : "");
+}
+function jumpToCatalog(id){
+  select(id, true);
+  showPage("cat");
+  const el = document.querySelector('.inst[data-id="' + id + '"]');
+  if (el) el.scrollIntoView({ block: "center" });
+}
+function jumpToTree(id){
+  showPage("tree");
+  select(id, false);
+}
+function select(id, fromTree){
+  selId = id;
+  document.querySelectorAll(".node").forEach(e => e.classList.toggle("sel", e.dataset.id === id));
+  document.querySelectorAll(".inst").forEach(e => e.classList.toggle("sel", e.dataset.id === id));
+  document.querySelectorAll(".idchip").forEach(e => e.classList.toggle("sel", e.dataset.id === id));
+  if (curShot >= 0 && !shots[curShot].nodes[id]){
+    const hit = shotsWith(id)[0];
+    if (hit !== undefined){ curShot = hit; renderTabs(); }
+  }
+  renderShot(); renderInsp();
+  if (!fromTree){
+    const row = document.querySelector('.node[data-id="' + id + '"]');
+    if (row) row.scrollIntoView({ block: "nearest" });
+  }
+}
+// crop はスクショごとの CSS class を background-position でずらす (data URI の展開は 1 回だけ)
+function cropEl(id, si, boxW){
+  const s = shots[si], r = s.nodes[id];
+  const bgw = Math.min(boxW / Math.max(r[2], 0.001), 6000);
+  const bgh = bgw * (s.h / s.w);
+  const d = document.createElement("div");
+  d.className = "crop img-" + si;
+  d.style.width = boxW + "px";
+  d.style.height = Math.min(r[3] * bgh, 190) + "px";
+  d.style.backgroundSize = bgw + "px auto";
+  d.style.backgroundPosition = "-" + (r[0] * bgw) + "px -" + (r[1] * bgh) + "px";
+  return d;
+}
+function renderCatalog(){
+  const byKind = {};
+  for (const n of Object.values(nodesById)) (byKind[n.kind] = byKind[n.kind] || []).push(n);
+  const kinds = Object.keys(byKind).sort((a, b) => rankOf(a) - rankOf(b) || a.localeCompare(b));
+  const c = { primitive: 0, composed: 0, custom: 0, undef: 0 };
+  for (const k of kinds){ const r = regOf(k); if (r) c[r.status]++; else c.undef++; }
+  document.getElementById("cat-head").textContent =
+    "語彙 " + kinds.length + " 種 / instance " + Object.keys(nodesById).length + " — primitive " + c.primitive +
+    " · composed " + c.composed + " · custom " + c.custom + " · registry 未定義 " + c.undef +
+    "。この一覧の正体は screen AST の kind census で、screen-loop ③ (部品 3 分類) の機械化入力に相当する。instance クリック = 選択同期、Ctrl+クリック = tree の該当 node へ。";
+  const grid = document.getElementById("cat-grid");
+  grid.innerHTML = "";
+  for (const k of kinds){
+    const reg = regOf(k);
+    const nodes = byKind[k];
+    const card = document.createElement("div");
+    card.className = "kind-card";
+    card.innerHTML = '<h2>' + H(k) + ' <span class="cnt">×' + nodes.length + '</span>' +
+      (reg ? '<span class="st ' + H(reg.status) + '">' + H(reg.status) + '</span>' +
+        (deps(reg).length ? '<span class="badge sc">' + H(deps(reg).join("·")) + '</span>' : "")
+        : '<span class="st custom">registry 未定義</span>') + '</h2>' +
+      '<div class="comp">' + (reg ? regDetail(reg) : "") + '</div>';
+    const row = document.createElement("div");
+    row.className = "inst-row";
+    for (const n of nodes){
+      const hits = shotsWith(n.id);
+      const shown = n.responsive ? hits.slice(0, 2) : hits.slice(0, 1);
+      const inst = document.createElement("div");
+      inst.className = "inst" + (n.id === selId ? " sel" : "");
+      inst.dataset.id = n.id;
+      if (shown.length){
+        const wrap = document.createElement("div");
+        wrap.style.display = "flex";
+        wrap.style.gap = "6px";
+        for (const si of shown) wrap.appendChild(cropEl(n.id, si, shown.length > 1 ? 150 : 220));
+        inst.appendChild(wrap);
+      }
+      const cap = document.createElement("div");
+      cap.className = "cap";
+      cap.textContent = "#" + n.id + (n.variant ? " · " + n.variant : "") +
+        ((n.state && n.state.stateName) ? " · [" + n.state.stateName + "]" : "") +
+        (n.responsive ? " · ⇄ " + Object.entries(n.responsive).map(([bp, o]) => bp + ":" + (o.kind || "layout")).join(" ") : "") +
+        " · ●" + Math.round((n.confidence ?? 0) * 100) +
+        (shown.length === 0 ? (shots.length ? " · (実測 region なし — 親 wrapper 内包)" : " · (スクショ未指定)") : "");
+      inst.appendChild(cap);
+      inst.onclick = (e) => (e.ctrlKey || e.metaKey) ? jumpToTree(n.id) : select(n.id, true);
+      row.appendChild(inst);
+    }
+    card.appendChild(row);
+    grid.appendChild(card);
+  }
+}
+function renderRegistry(){
+  const byKind = {};
+  for (const n of Object.values(nodesById)) (byKind[n.kind] = byKind[n.kind] || []).push(n);
+  const items = (registry.items || []).slice()
+    .sort((a, b) => RANK[a.status] - RANK[b.status] || a.name.localeCompare(b.name));
+  const used = items.filter(i => byKind[i.kind]).length;
+  const undef = Object.keys(byKind).filter(k => !regOf(k)).sort();
+  document.getElementById("reg-head").textContent =
+    "共通語彙 registry v" + (registry.version || "?") + " — 定義 " + items.length + " 件 / 本画面に出現 " + used +
+    " 件 / 本画面にあって registry 未定義 " + undef.length + " kind。ここが shadcn 構成 (registryDependencies) と FE component path の正本で、id chip クリックで tree の該当 node へ戻る。";
+  const grid = document.getElementById("reg-grid");
+  grid.innerHTML = "";
+  for (const item of items){
+    const nodes = byKind[item.kind] || [];
+    const card = document.createElement("div");
+    card.className = "kind-card";
+    card.innerHTML = '<h2>' + H(item.name) + ' <span class="cnt">kind=' + H(item.kind) + ' ×' + nodes.length + '</span>' +
+      '<span class="st ' + H(item.status) + '">' + H(item.status) + '</span></h2>' +
+      '<div class="comp">' + regDetail(item) + '</div>';
+    const row = document.createElement("div");
+    row.className = "inst-row";
+    for (const n of nodes) row.appendChild(idChip(n.id));
+    card.appendChild(row);
+    grid.appendChild(card);
+  }
+  if (undef.length){
+    const card = document.createElement("div");
+    card.className = "kind-card";
+    card.innerHTML = '<h2>registry 未定義 <span class="cnt">×' + undef.length + ' kind</span>' +
+      '<span class="st custom">要 registry 起票</span></h2><div class="comp">' + H(undef.join(", ")) + '</div>';
+    const row = document.createElement("div");
+    row.className = "inst-row";
+    for (const k of undef) for (const n of byKind[k]) row.appendChild(idChip(n.id));
+    card.appendChild(row);
+    grid.appendChild(card);
+  }
+}
+function idChip(id){
+  const chip = document.createElement("span");
+  chip.className = "idchip" + (id === selId ? " sel" : "");
+  chip.dataset.id = id;
+  chip.textContent = "#" + id;
+  chip.onclick = (e) => (e.ctrlKey || e.metaKey) ? jumpToCatalog(id) : jumpToTree(id);
+  return chip;
+}
+function showPage(p){
+  document.getElementById("page-tree").hidden = p !== "tree";
+  document.getElementById("page-catalog").hidden = p !== "cat";
+  document.getElementById("page-registry").hidden = p !== "reg";
+  document.getElementById("pb-tree").classList.toggle("on", p === "tree");
+  document.getElementById("pb-cat").classList.toggle("on", p === "cat");
+  document.getElementById("pb-reg").classList.toggle("on", p === "reg");
+}
+document.getElementById("pb-tree").onclick = () => showPage("tree");
+document.getElementById("pb-cat").onclick = () => showPage("cat");
+document.getElementById("pb-reg").onclick = () => showPage("reg");
+
+renderTree(); renderTabs(); renderShot(); renderInsp(); renderCatalog(); renderRegistry();
+</script>
+`;
+}
+
+function main(argv) {
+  const opts = parseArgs(argv);
+  const screenPath = resolve(opts.screen);
+  const doc = loadJson(screenPath);
+  if (!doc || typeof doc !== "object" || !doc.screen) die("not a ui-ast document: " + screenPath, 65);
+  if (doc.version !== AST_VERSION) warn("ui-ast version is " + doc.version + " (expected " + AST_VERSION + ")");
+  const astDir = dirname(screenPath);
+
+  const registryPath = opts.registry ? resolve(opts.registry) : join(astDir, "..", "registry.json");
+  let registry = { version: AST_VERSION, items: [] };
+  if (opts.registry || existsSync(registryPath)) registry = loadJson(registryPath);
+  else warn("registry not found: " + registryPath + " (registry 面は空で描画)");
+  if (!Array.isArray(registry.items)) die("registry has no items[]: " + registryPath, 65);
+
+  let shotsDir = opts.screenshots ? resolve(opts.screenshots) : join(astDir, "..", "..", "ui-mock", "screenshots");
+  if (!opts.screenshots && !existsSync(shotsDir)) shotsDir = "";
+  const shots = buildShots(indexNodes(doc.screen), shotsDir);
+  if (shotsDir && !shots.length) warn("no node carries a resolvable source.region (region 枠面を省略)");
+
+  const slug = doc.screen.name || basename(screenPath).replace(/\.ui-ast\.json$/, "");
+  const outPath = opts.out ? resolve(opts.out) : resolve(process.cwd(), slug + ".viewer.html");
+  const html = renderHtml(doc, registry, shots);
+  writeFileSync(outPath, html);
+  const bytes = Buffer.byteLength(html);
+  process.stdout.write(outPath + "  " + bytes + " bytes (" + (bytes / 1024).toFixed(1) + " KB, shots " + shots.length + ")\n");
+  return 0;
+}
+
+process.exit(main(process.argv.slice(2)));

@@ -3,6 +3,7 @@ node_modules/
 dist/
 drafts/
 pp/artifacts/
+__pycache__/
 pp/vendor/*
 !pp/vendor/README.md
 .claude/.cc-writes/
