@@ -20,7 +20,8 @@ Exit Criteria:
 
 進捗:
 
-- [x] design 資産の移設と参照張り替え (473edcf: git mv 4 file + 参照 21 file、gates 緑、凍結 hook の新 path 陽性対照済み)。stack 置換の残 = SvelteKit + Bun skeleton (Bun install 待ち)
+- [x] design 資産の移設と参照張り替え (473edcf: git mv 4 file + 参照 21 file、gates 緑、凍結 hook の新 path 陽性対照済み)。stack 置換の残 = SvelteKit + Bun skeleton (Bun install は terminal-configs へ依頼済み)
+- [x] AST 基盤の第 1 増分: ui-ast schema v0.2 + ui-registry schema + tools/ast_validate (5db755c: self-test rc=0・SCHEMA/AST101..106 各 1 発火・ruff/ty 緑)。残 = ast-tree / ast-viewer / ast-extract skill / docs/ast-layer.md — opus workflow で実装中・受け入れレビューと commit は未了
 
 ## Medium
 
