@@ -3,7 +3,7 @@
 本書は、mock と app の視覚一致（pixel-perfect、以下 pp）を合わせ込む際の手法を定める。
 読者は、pp 整合の発注書を書く者と、それを実行する実装者である。
 pp 検証の実行手順は `pp/README.md` を、
-意図的差分の台帳は `design-reference/DESIGN-POLICY.md` を正とする（§4）。
+意図的差分の台帳は `docs/presentation/ui-mock/DESIGN-POLICY.md` を正とする（§4）。
 
 ## 1. 失敗事例: 圧縮された mock 描画への合わせ込み
 
@@ -42,7 +42,7 @@ diff に端数ピクセル（例: `120.21875px`）が現れたら、計測値転
 ### 2.3 KEEP_IMPL 経路
 
 app 側がユーザー指示で mock より良くなっている箇所は、黙って mock へ戻さない。
-`design-reference/DESIGN-POLICY.md` の KEEP_IMPL 台帳へ登録し、
+`docs/presentation/ui-mock/DESIGN-POLICY.md` の KEEP_IMPL 台帳へ登録し、
 pp テストは delta pin（既知差分を期待値としてテスト側に固定する手法）で吸収する。
 前 PJ ではパネル差分の維持や固定 delta の pin がこの経路で台帳へ登録され、
 §1 の列幅契約も同じ経路で登録された。
@@ -66,7 +66,7 @@ pp 整合を委譲する際は、次を発注書へそのまま転記する。
 
 - 実測ピクセル値の CSS への転記
 - ユーザー指示契約（`clamp`・fluid 等）の縮退
-- `design-reference/DESIGN-POLICY.md` 未照合の mock 追随
+- `docs/presentation/ui-mock/DESIGN-POLICY.md` 未照合の mock 追随
 - 「テスト緑 = 完了」判定（緑でも意匠破壊はあり得る）
 
 必須証跡:
@@ -85,6 +85,6 @@ pp 整合を委譲する際は、次を発注書へそのまま転記する。
 
 | 文書 | 役割 |
 | --- | --- |
-| `design-reference/DESIGN-POLICY.md` | 意図的差分の台帳（what） |
+| `docs/presentation/ui-mock/DESIGN-POLICY.md` | 意図的差分の台帳（what） |
 | 本書 | 合わせ込みの手法（how） |
 | `pp/README.md` | pp 実行の正規手順 |

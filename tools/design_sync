@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Claude Design project と design-reference/export/ の同期指示を決定的に生成・照合する。運用手順の正は docs/design-sync.md
+# Claude Design project と docs/presentation/ui-mock/export/ の同期指示を決定的に生成・照合する。運用手順の正は docs/design-sync.md
 set -euo pipefail
 
 PROG=$(basename "$0")
 SCRIPT_PATH=$(realpath -e "$0")
 TOOLS_DIR=$(dirname "$SCRIPT_PATH")
 TOP_DIR=$(dirname "$TOOLS_DIR")
-EXPORT_DIR=$TOP_DIR/design-reference/export
+EXPORT_DIR=$TOP_DIR/docs/presentation/ui-mock/export
 PROJECT_ID=${DESIGN_PROJECT_ID:-}
 readonly PROG SCRIPT_PATH TOOLS_DIR TOP_DIR EXPORT_DIR PROJECT_ID
 
@@ -72,7 +72,7 @@ read_file_list() {
   ((${#FILE_PATHS[@]} > 0)) || die "file list is empty"
 }
 
-# 既定対象 = design-reference/export/ 配下の追跡済み mock 資産
+# 既定対象 = docs/presentation/ui-mock/export/ 配下の追跡済み mock 資産
 write_default_file_list() {
   local list_file=$1
   local path
@@ -80,12 +80,12 @@ write_default_file_list() {
   : > "$list_file"
   while IFS= read -r -d '' path; do
     [[ -n $path ]] || continue
-    path=${path#design-reference/export/}
+    path=${path#docs/presentation/ui-mock/export/}
     case $path in
       *.html|*.js|*.css) printf '%s\n' "$path" >> "$list_file" ;;
     esac
-  done < <(git -C "$TOP_DIR" -c core.quotePath=false ls-files -z -- 'design-reference/export/')
-  [[ -s $list_file ]] || die "no tracked mock assets under design-reference/export/ (freeze a mock first)" 66
+  done < <(git -C "$TOP_DIR" -c core.quotePath=false ls-files -z -- 'docs/presentation/ui-mock/export/')
+  [[ -s $list_file ]] || die "no tracked mock assets under docs/presentation/ui-mock/export/ (freeze a mock first)" 66
 }
 
 write_scoped_file_list() {

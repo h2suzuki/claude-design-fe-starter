@@ -52,7 +52,7 @@ export const PP_LAUNCH_OPTIONS: LaunchOptions = { args: PP_LAUNCH_ARGS, headless
 export const APP_BASE_URL = process.env.PP_APP_URL ?? "";
 export const APP_CONFIGURED = APP_BASE_URL !== "";
 
-// design-reference/export/ 内の parity 突合先ファイル。walking skeleton の凍結第 1 号で確定する
+// docs/presentation/ui-mock/export/ 内の parity 突合先ファイル。walking skeleton の凍結第 1 号で確定する
 export const MOCK_ENTRY_FILE = process.env.PP_MOCK_FILE ?? "";
 export const MOCK_CONFIGURED = MOCK_ENTRY_FILE !== "";
 

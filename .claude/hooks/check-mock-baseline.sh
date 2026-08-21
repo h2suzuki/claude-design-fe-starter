@@ -8,10 +8,10 @@ CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 grep -qE '\bgit\b[^;|&]*\bcommit\b' <<<"$CMD" || exit 0
 
 ROOT=${CLAUDE_PROJECT_DIR:-$PWD}
-BASELINE=$ROOT/design-reference/mock-baseline.sha256
+BASELINE=$ROOT/docs/presentation/ui-mock/mock-baseline.sha256
 [[ -f $BASELINE ]] || exit 0
 
-cd "$ROOT/design-reference"
+cd "$ROOT/docs/presentation/ui-mock"
 actual=""
 if [[ -d export ]]; then
   actual=$(find export -type f ! -name .gitkeep | sort)
@@ -37,7 +37,7 @@ fi
   [[ -z $content_out ]] || printf '%s\n' "$content_out"
   # 文面は意図的に冗長 — 誤読防止のため trim せず維持する
   cat <<'MSG'
-凍結 mock (design-reference/export/) と mock-baseline.sha256 が一致しないため commit を止めました
+凍結 mock (docs/presentation/ui-mock/export/) と mock-baseline.sha256 が一致しないため commit を止めました
 (検査 = sha256 照合 + ファイル集合の突合。台帳が空・不正形式の場合もここに該当します。
 hook 自身はファイルを変更しません)。意図した再凍結なら /mock-freeze の手順で台帳を更新し、
 意図しない変更なら export/ を復元してください。台帳と実体を同一 commit に揃えれば、

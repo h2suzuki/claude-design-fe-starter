@@ -8,7 +8,7 @@ UI の新設・改造は次の順で行う。バグ単位の実装 batch を重�
 
 1. **mock を先に直す**: 変更後の画面・モーダル・動線を Claude Design mock 上に作る。mock が壊れている領域は、壊れる前の正 mock を起点に復元してから直す
 2. **mock でユーザー承認**: ローカル描画（pp の mock 配信 / ブラウザ）でユーザーが見た目・動線・文言を承認してから先に進む
-3. **export を凍結する**: 承認済み mock を standalone HTML で export して `design-reference/export/` へ置き、`design-reference/mock-baseline.sha256` に sha256 を pin する。以後この凍結 export が突合先の正本であり、無断変更を禁ずる
+3. **export を凍結する**: 承認済み mock を standalone HTML で export して `docs/presentation/ui-mock/export/` へ置き、`docs/presentation/ui-mock/mock-baseline.sha256` に sha256 を pin する。以後この凍結 export が突合先の正本であり、無断変更を禁ずる
 4. **実装は mock 整合 + 動線 pin つき**: mock との整合は下記「mock 整合と pixel-perfect 検証」の構造一致で機械検証し、画面遷移・行 focus・並び順などのユーザー動線契約は behavioral テストで pin する
 5. **検証は実データ・基準 viewport で行う**: 発注 scope の確認に加えて隣接動線を最低 1 つ歩く
 
@@ -19,7 +19,7 @@ UI の新設・改造は次の順で行う。バグ単位の実装 batch を重�
 mock-first を運転するときの役割分担・作業場・検分手順を定める。
 
 - **mock 編集は司令塔が直接行う**: デザイン判断・具体値の確定（寸法・色・文言）・スクショ検分は編集と不可分のため、mock の編集を実装 LLM へ委譲しない。委譲してよいのは機械的な大量変換のみで、その場合も 1 編集ごとに司令塔がスクショを検分する。
-- **正本と作業場**: 突合先の正本は `design-reference/export/` の凍結 export（sha256 台帳 = `design-reference/mock-baseline.sha256`）。mock の編集は Claude Design 上で行い、承認のたびに export を凍結し直して台帳を更新する。ローカルに作業コピーが要る場合は `drafts/` 配下（gitignore 済み）に置き、正本を直接編集しない。
+- **正本と作業場**: 突合先の正本は `docs/presentation/ui-mock/export/` の凍結 export（sha256 台帳 = `docs/presentation/ui-mock/mock-baseline.sha256`）。mock の編集は Claude Design 上で行い、承認のたびに export を凍結し直して台帳を更新する。ローカルに作業コピーが要る場合は `drafts/` 配下（gitignore 済み）に置き、正本を直接編集しない。
 - **描画・検分パイプライン**: 検分は pp harness の描画経路（HTTP 配信 + vendored asset + headless ブラウザ。手順は `pp/README.md` が正）で、基準 viewport で行う。walkthrough script（対象フローの全状態 — 既定・空・モーダル・確定後・取消後・他画面 — を順に描画してスクショする script）で撮影し、司令塔が数値整合まで目視してからユーザーへ提示する。
 - **承認単位はフロー単位**: 例: 一覧画面 → 詳細画面 → モーダル群。ユーザー承認後に実装 batch へ進む。実装 batch には、上記原則「実装は mock 整合 + 動線 pin つき」のとおり構造一致の機械検証と behavioral pin を必須で含める。
 - **フィードバックは mock 上で収束させる**: ユーザーの指摘は mock に即反映し、全状態を再検分してから再提示する。実装に入るのは mock 上で収束した後。壊れた UI ではなく品質の良い mock にフィードバックしてもらうことが、レビュー体験と作業速度の要（前 PJ のユーザー所感）。
@@ -55,7 +55,7 @@ mock-first を運転するときの役割分担・作業場・検分手順を定
 
 ## mock 整合と pixel-perfect 検証
 
-- 意匠の SSOT（唯一の正）は Claude Design mock。mock と app の意図的差分は、ユーザー裁定を伴う `design-reference/DESIGN-POLICY.md`（KEEP_IMPL 台帳）への登録のみ許す。
+- 意匠の SSOT（唯一の正）は Claude Design mock。mock と app の意図的差分は、ユーザー裁定を伴う `docs/presentation/ui-mock/DESIGN-POLICY.md`（KEEP_IMPL 台帳）への登録のみ許す。
 - pixel-perfect 機械検証で mock と整合を取るときは、mock 描画がデザイン意匠と一致することを参照スクショで先に検証し、整合は CSS 契約（clamp / fluid）の構造一致で取る。
 - 圧縮描画から実測した端数ピクセル（前 PJ の実例: 120.21875px）を app に固定しない — 壊れた rendering への合わせ込みになる。app 側の改善は KEEP_IMPL 裁定経由で行う。手法の詳細は docs/pixel-perfect.md を正とする。
 

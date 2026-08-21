@@ -6,7 +6,7 @@
 
 - `frontend/`
 - `pp/`
-- `design-reference/`
+- `docs/presentation/ui-mock/`
 - `seed-docs/`
 
 ## merge 領域への寄与（file/dir 単位の追加のみ・既存は上書きしない）

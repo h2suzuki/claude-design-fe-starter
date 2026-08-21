@@ -21,7 +21,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 ├── CLAUDE.md          mock-first 行動規範（数行・outcome 原則のみ）
 ├── docs/              規約 4 docs（ui-quality-policy / pixel-perfect / design-sync / ui-caveats）
 ├── .claude/           project skills（/fe-kickoff・/design-order・/mock-freeze）+ 機械判定 hook 2 本
-├── design-reference/  mock 凍結置き場（export + screenshots + sha256 台帳 + KEEP_IMPL 台帳）
+├── docs/presentation/ui-mock/  mock 凍結置き場（export + screenshots + sha256 台帳 + KEEP_IMPL 台帳）
 ├── frontend/          vite skeleton（src/ui/{tokens,components} + src/pages）
 ├── pp/                parity harness（dump / diff / sweep / self-baseline / provenance）
 ├── tools/             design_sync（Claude Design 同期）+ install.sh（既存 repo への copy-in）
@@ -51,7 +51,7 @@ installer は追加のみ（既存ファイルは上書きしない・冪等）�
 
 1. 修正は Claude Design 側で行う（構造変更 = chat / 部品単位の指摘 = inline comment / 微調整 = canvas 直接編集）
 2. 完成宣言 → `/mock-freeze` で再凍結する（export 差し替えと sha256 台帳更新を同一 commit に）
-3. 対象画面の KEEP_IMPL 台帳（`design-reference/DESIGN-POLICY.md`）を走査し、裁定済みの実装表示を mock へ反映して entry を閉じる — 台帳は縮小方向が定常（放置すると mock と実装が乖離し続ける）
+3. 対象画面の KEEP_IMPL 台帳（`docs/presentation/ui-mock/DESIGN-POLICY.md`）を走査し、裁定済みの実装表示を mock へ反映して entry を閉じる — 台帳は縮小方向が定常（放置すると mock と実装が乖離し続ける）
 4. pp を再実行して新 mock 基準で全 gate を緑へ（SELECTOR_MAP・spec の追随を含む）。残る差分は実装修正か新規裁定の 2 択
 
 詳細は `docs/design-sync.md`（同期経路・台帳運用）。

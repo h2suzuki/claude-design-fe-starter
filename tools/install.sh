@@ -8,7 +8,7 @@ SCRIPT_PATH=$(realpath -e "$0")
 SEED_ROOT=$(dirname "$(dirname "$SCRIPT_PATH")")
 readonly PROG SCRIPT_PATH SEED_ROOT
 
-COPY_DIRS=(frontend pp design-reference docs seed-docs tools .claude)
+COPY_DIRS=(frontend pp docs seed-docs tools .claude)
 CLAUDE_BEGIN='<!-- fe-starter:begin -->'
 CLAUDE_END='<!-- fe-starter:end -->'
 GITIGNORE_BEGIN='# fe-starter:begin'

@@ -23,7 +23,7 @@ design-system 型 project を新規作成して投げる。publish すると org
 | 場面 | やり方 |
 |---|---|
 | mock 修正 | 構造変更 = chat / 部品単位の指摘 = inline comment / 微調整 = canvas 直接編集。公式の 3 手段を使い分ける |
-| 完成 | 完成宣言 → standalone HTML export → /mock-freeze で design-reference/ へ凍結 + sha256 pin → FE 実装 → parity (seed-docs/screen-loop.md) |
+| 完成 | 完成宣言 → standalone HTML export → /mock-freeze で docs/presentation/ui-mock/ へ凍結 + sha256 pin → FE 実装 → parity (seed-docs/screen-loop.md) |
 | 新部品の昇格 | mock 中に生まれた新部品は design system 側へ登録させる。mock project 内に孤立させない |
 | 実装済み部品への置換 | FE 実装が確定した部品は、実装から生成した preview HTML を tools/design_sync でライブラリへ書き戻し、Design 生成の「想像部品」を「実装済み部品」へ順次置換する。以後 Claude Design は実物部品で新画面を組む = mock と実装の乖離が構造的に縮む |
 | push 後の検証 | ライブラリへ push したら再取得して SHA-256 照合 (docs/design-sync.md の fetch / verify 運用。対象 project は環境変数 DESIGN_PROJECT_ID で指定) |

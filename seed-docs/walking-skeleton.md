@@ -6,7 +6,7 @@
 
 この seed は次の構成を前提とする。
 
-- web FE (vite・frontend/) + Claude Design mock 正本 (design-reference/) + Playwright 検証 harness (pp/)
+- web FE (vite・frontend/) + Claude Design mock 正本 (docs/presentation/ui-mock/) + Playwright 検証 harness (pp/)
 - モバイルファースト: mobile viewport が第一正本、desktop が第二正本
 
 ## 轍 → day-0 対策
@@ -19,9 +19,9 @@
 | 2 | 検証 harness を後付けし、実装収束後に篩を新設する羽目になった | walking skeleton: 最初の 1 部品で全経路を一周してから量産 (本書後半) |
 | 3 | ページ単位実装で同一部品が複数実装に分裂し、色が重複定義された | 部品先行: frontend/src/ui/ + 単体 fixture。page は薄い composition (frontend/src/pages/) |
 | 4 | 描画から実測した端数 px を実装に固定し、壊れた描画への合わせ込みになった | 構造契約 (token / clamp / %) を最初から規約に (docs/pixel-perfect.md) |
-| 5 | 検証 gate の突合先が旧 mock・古いデータへドリフトし、その間の逸脱を検出できなかった | export 凍結 + sha256 provenance pin + mock-provenance spec を画面 1 枚目から (design-reference/) |
+| 5 | 検証 gate の突合先が旧 mock・古いデータへドリフトし、その間の逸脱を検出できなかった | export 凍結 + sha256 provenance pin + mock-provenance spec を画面 1 枚目から (docs/presentation/ui-mock/) |
 | 6 | 既定状態しか見ず、空状態・操作後・長文のバグ群を見逃した | states fixture を部品の完成条件に + width-sweep / poststate-sweep を定常 gate に (pp/) |
-| 7 | mock との意図的差分を口頭運用し、裁定が失われて再発した | KEEP_IMPL 台帳を空で設置し、日付付き裁定のみ記録 (design-reference/DESIGN-POLICY.md) |
+| 7 | mock との意図的差分を口頭運用し、裁定が失われて再発した | KEEP_IMPL 台帳を空で設置し、日付付き裁定のみ記録 (docs/presentation/ui-mock/DESIGN-POLICY.md) |
 | 8 | mock と検証データの二重管理でフィールド欠落・ドリフトが起きた | fixture は API schema 派生の単一データセット。mock と test が同源参照 (seed-docs/screen-loop.md ④) |
 | 9 | 意味論バグ (値の不整合・機能しない操作) が機械検証をすり抜けた | LLM スクショ一次レビュー + 人間受入を機械 gate と別立てで常設 (seed-docs/screen-loop.md ⑦) |
 | 10 | 完成後の部品化・ライブラリ分離は高コストだった | design-system project を PJ 開始時に新設し、mock を最初から部品ライブラリで組む (下記「Claude Design 2 project 体制」) |
@@ -40,7 +40,7 @@
 ### 2. repo 骨格の確認
 
 ```text
-design-reference/   mock 正本。export/ (凍結 export)・mock-baseline.sha256 (台帳)・
+docs/presentation/ui-mock/   mock 正本。export/ (凍結 export)・mock-baseline.sha256 (台帳)・
                     DESIGN-POLICY.md (KEEP_IMPL 台帳)・README.md (凍結手順)
 frontend/           vite app。src/ui/tokens/tokens.css・src/ui/components/・src/pages/
 pp/                 parity harness。基準 viewport は pp/src/config.ts で差し替え
@@ -58,7 +58,7 @@ seed-docs/          本書ほかプロセス文書
 
 ### 4. 台帳・規約 docs の確認
 
-- KEEP_IMPL 台帳 (design-reference/DESIGN-POLICY.md) が空台帳として在ること
+- KEEP_IMPL 台帳 (docs/presentation/ui-mock/DESIGN-POLICY.md) が空台帳として在ること
 - docs/ の 4 本を読み、PJ 固有の差し替え点 (意味色の名前・語彙など) を埋めること
 
 ### 5. 発注規約 1 枚の準備
@@ -70,7 +70,7 @@ seed-docs/          本書ほかプロセス文書
 最初の 1 部品で mock → 実装 → 検証の全経路を通し、harness が本当に動くことを証明する。
 
 1. **mock**: design system の基礎部品 1 つを含む最小画面を Claude Design で作る (seed-docs/first-prompts.md)
-2. **凍結**: /mock-freeze で standalone HTML export を design-reference/export/ へ置き、sha256 を design-reference/mock-baseline.sha256 に pin する
+2. **凍結**: /mock-freeze で standalone HTML export を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する
 3. **部品実装**: frontend/src/ui/components/ に、token (frontend/src/ui/tokens/tokens.css) 参照で実装する
 4. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
 5. **parity**: pp の SELECTOR_MAP に部品を登録し、sample-parity spec を緑にする

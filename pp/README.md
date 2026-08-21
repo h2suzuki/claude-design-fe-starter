@@ -1,6 +1,6 @@
 # pp — mock/app parity harness
 
-凍結済み Claude Design mock（`design-reference/export/`）と実 frontend を同一条件で描画し、computed-style・geometry・（canvas 部品があれば）pixel を機械 diff する検証ハーネス。DoD 3 分類（`docs/ui-quality-policy.md`）の機械判定部を担う。
+凍結済み Claude Design mock（`docs/presentation/ui-mock/export/`）と実 frontend を同一条件で描画し、computed-style・geometry・（canvas 部品があれば）pixel を機械 diff する検証ハーネス。DoD 3 分類（`docs/ui-quality-policy.md`）の機械判定部を担う。
 
 ## spec 一覧と DoD 対応
 
@@ -81,5 +81,5 @@ pgrep -af "drafts/pw-browsers"
 - mock 側 selector は `npm run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
 - `npm run overlay-diff` で mock/app の全画面オーバーレイ（mock=赤・app=シアン・一致=灰）と文言キーの字体/箱突合を出す。SELECTOR_MAP に載せ忘れた箇所のズレを面で検出する補完で、map が空の序盤から使える
 - 失敗時は `artifacts/<suite>/` の summary/style/geometry JSON を見る。selector・fixture の不一致と実際の parity regression を分けて診断する
-- 意図的差分は `design-reference/DESIGN-POLICY.md`（KEEP_IMPL 台帳）に裁定を登録し、spec 側の delta pin で吸収する（`docs/pixel-perfect.md`）
+- 意図的差分は `docs/presentation/ui-mock/DESIGN-POLICY.md`（KEEP_IMPL 台帳）に裁定を登録し、spec 側の delta pin で吸収する（`docs/pixel-perfect.md`）
 - 実測 px を app の CSS へ転記しない。合わせるのは CSS 契約（clamp/%/flex）の構造（`docs/pixel-perfect.md`）

@@ -1,4 +1,4 @@
-// design-reference/export/ を配る極小 static server。
+// docs/presentation/ui-mock/export/ を配る極小 static server。
 // file:// 直開きは fetch/dynamic import の制約で壊れるため、mock には実 http origin を与える
 import { createServer } from "node:http";
 import type { Server } from "node:http";
@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = process.env.PP_REPO_ROOT ?? path.resolve(HERE, "..", "..");
-export const EXPORT_DIR = path.join(REPO_ROOT, "design-reference", "export");
+export const EXPORT_DIR = path.join(REPO_ROOT, "docs/presentation/ui-mock", "export");
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",

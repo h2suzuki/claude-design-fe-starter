@@ -27,7 +27,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 
 ### ② export 凍結 + provenance pin
 
-- /mock-freeze で standalone HTML export を design-reference/export/ へ置き、sha256 を design-reference/mock-baseline.sha256 に pin する (手順詳細: design-reference/README.md)
+- /mock-freeze で standalone HTML export を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する (手順詳細: docs/presentation/ui-mock/README.md)
 - 完了条件: mock-provenance spec が緑 (検証 gate が今回凍結した正本を向いている証明)。凍結せずに実装へ入らない — 突合先ドリフトの再発源になる
 
 ### ③ 部品候補 3 分類
@@ -64,7 +64,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 ### ⑧ 差分の裁定
 
 - mock と実装の差分の扱いは 2 択のみ: (a) 実装を直す / (b) KEEP_IMPL 裁定として残す。口頭運用は禁止
-- KEEP_IMPL は日付付き裁定として design-reference/DESIGN-POLICY.md に記録する
+- KEEP_IMPL は日付付き裁定として docs/presentation/ui-mock/DESIGN-POLICY.md に記録する
 - (b) の entry は恒久例外ではなく「mock へ還流待ち」— 次にその画面の mock を更新するとき、裁定内容を mock へ反映して entry を閉じる (docs/design-sync.md §1.4)
 - 完了条件: 未裁定の差分がゼロ
 

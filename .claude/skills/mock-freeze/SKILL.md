@@ -1,23 +1,23 @@
 ---
 name: mock-freeze
-description: Freeze an approved Claude Design export into design-reference with a sha256 provenance pin.
+description: Freeze an approved Claude Design export into docs/presentation/ui-mock with a sha256 provenance pin.
 when_to_use: TRIGGER when the user declares a mock complete, when an export needs re-freezing, or when a provenance/baseline mismatch is reported. SKIP while the mock is still under revision in Claude Design.
 ---
 
 # Mock Freeze
 
-承認済み mock export を `design-reference/export/` へ凍結し、sha256 台帳で出所を pin する。手順の正は `design-reference/README.md`。
+承認済み mock export を `docs/presentation/ui-mock/export/` へ凍結し、sha256 台帳で出所を pin する。手順の正は `docs/presentation/ui-mock/README.md`。
 
 ## Process
 
 1. ユーザーの完成宣言を確認する（宣言前に凍結しない）
 2. export を取得する: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool。byte を逐語保存する（整形・切詰め・末尾改行の増減なし）
-3. 取得物を `design-reference/export/` へ配置する。編集 gate が Edit/Write を block するため、配置は cp 等の Bash で行う
-4. 基準 viewport ごとの参照スクショを `design-reference/screenshots/` へ保存する
+3. 取得物を `docs/presentation/ui-mock/export/` へ配置する。編集 gate が Edit/Write を block するため、配置は cp 等の Bash で行う
+4. 基準 viewport ごとの参照スクショを `docs/presentation/ui-mock/screenshots/` へ保存する
 5. 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
-   cd design-reference
+   cd docs/presentation/ui-mock
    find export -type f ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > mock-baseline.sha256
    sha256sum --check --quiet mock-baseline.sha256
    ```

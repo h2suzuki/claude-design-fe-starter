@@ -1,13 +1,13 @@
 # デザインとコードの同期
 
 本書は、Claude Design project、リポジトリの mock、実アプリを同期するための恒久的な運用手順を定める。
-対象は `design-reference/export/` の実行可能仕様と `frontend/` の実装である。
+対象は `docs/presentation/ui-mock/export/` の実行可能仕様と `frontend/` の実装である。
 
 ## 1. 仕組み（アーキテクチャ）
 
 ### 1.1 mock の位置付けと正本
 
-`design-reference/export/{{SCREEN_NAME}}.html` は画像や静的なワイヤーフレームではなく、次の要素を含む「実行可能仕様」である。
+`docs/presentation/ui-mock/export/{{SCREEN_NAME}}.html` は画像や静的なワイヤーフレームではなく、次の要素を含む「実行可能仕様」である。
 
 - React 相当の DOM 構造、表示条件、イベント結線
 - mock 内の状態機械（画面状態と遷移）
@@ -22,8 +22,8 @@ mock の正本要件: **1 画面 = 320〜1920 で成立する単一レスポン�
 同一 mock を各基準幅で描画したものを、幅別の正本とする。
 
 デザインの単一の正本（SSOT）は Claude Design project とする。
-リポジトリの `design-reference/export/` は、レビュー、検証、app 実装に使う追跡可能な凍結鏡像であり、
-sha256 台帳は `design-reference/mock-baseline.sha256` である。
+リポジトリの `docs/presentation/ui-mock/export/` は、レビュー、検証、app 実装に使う追跡可能な凍結鏡像であり、
+sha256 台帳は `docs/presentation/ui-mock/mock-baseline.sha256` である。
 同期完了はファイル名や見た目の類似ではなく、対象ファイルの byte 単位の一致で判定する。
 
 ### 1.2 単一レスポンシブ mock と共有 module
@@ -40,7 +40,7 @@ HTML は共有 module を import して使い、HTML 側と共有 module 側の�
 同期経路は次の双方向である。
 
 ```text
-Claude Design project ⇄ DesignSync tool ⇄ repo の design-reference/export/ ⇄ frontend/
+Claude Design project ⇄ DesignSync tool ⇄ repo の docs/presentation/ui-mock/export/ ⇄ frontend/
 ```
 
 DesignSync tool では、最初に `list_files` で project の現状を確認し、`get_file` で対象の現行 byte を読む。
@@ -51,7 +51,7 @@ DesignSync tool では、最初に `list_files` で project の現状を確認�
 `tools/design_sync` は DesignSync セッション向けの取得・照合指示を決定的に生成する。
 project ID の固定値は script に持たない。環境変数 `DESIGN_PROJECT_ID` の指定が必須である
 （値は PJ の Claude Design project ID）。
-引数を省略すると、`design-reference/export/` 配下（再帰）の追跡済み HTML・JS・CSS を既定順で対象にする。明示的な list ファイル引数で上書きでき、絶対 path と親 directory traversal は許可されない。
+引数を省略すると、`docs/presentation/ui-mock/export/` 配下（再帰）の追跡済み HTML・JS・CSS を既定順で対象にする。明示的な list ファイル引数で上書きでき、絶対 path と親 directory traversal は許可されない。
 この照合は repo 側の list を起点にするため、Claude Design 側にだけ増えたファイルは DRIFT-REPORT に現れない。remote の全量は `list_files` で別途確認する。
 既定の作業 directory は `drafts/design-sync/<UTC 日付>-<fetch|verify>/`（`drafts/` は gitignore 済み）であり、生成指示の保存先はその配下の絶対 path `fetched/`、照合結果の `DRIFT-REPORT.md` も同じ作業 directory に置く。
 
@@ -80,7 +80,7 @@ DESIGN_PROJECT_ID={{DESIGN_PROJECT_ID}} tools/design_sync verify --check <work-d
 
 ### 1.4 意図的差分の台帳
 
-`design-reference/DESIGN-POLICY.md` は、mock と app の意図的な差分を記録する
+`docs/presentation/ui-mock/DESIGN-POLICY.md` は、mock と app の意図的な差分を記録する
 KEEP_IMPL ポリシー台帳である。
 pp の差分を見つけたら、次の規則で triage する。
 
@@ -98,7 +98,7 @@ pp の差分を見つけたら、次の規則で triage する。
 ### 2.1 mock から code へ新しい UI を取り込む
 
 1. `list_files` と `get_file` で Claude Design project の対象と依存 module を取得する。
-2. 取得 byte を `tools/design_sync verify --check <fetched-dir>` で確認し、repo の `design-reference/export/` に安全に反映する。
+2. 取得 byte を `tools/design_sync verify --check <fetched-dir>` で確認し、repo の `docs/presentation/ui-mock/export/` に安全に反映する。
 3. state 所有、handler、fixture、共有 module の API、表示条件を mock から読み解く。
 4. app 側の既存 component と責務境界を確認し、実装範囲を小さく分ける。
 5. frontend 実装を実装 LLM に委譲するときは、対象 mock、観測可能な完了条件、
@@ -117,13 +117,13 @@ drag など状態遷移の前後を対称に検証する。
 この経路は、ユーザーが app を目視して app 側を正と確定した変更に限って使う。
 
 1. ユーザーの日付付き裁定と、app で正となる表示・振る舞いを明文化する。
-2. `design-reference/DESIGN-POLICY.md` を確認し、意図的差分か通常の鏡映かを triage する。
+2. `docs/presentation/ui-mock/DESIGN-POLICY.md` を確認し、意図的差分か通常の鏡映かを triage する。
 3. 通常の鏡映なら app の DOM、寸法、文言、状態遷移を対応する export HTML と共有 module に移す。
 4. fixture を app と同じ意味に揃え、単一レスポンシブ mock が全基準幅で成立する状態を保つ。
 5. mock lint と pp の全 pack を通す。
 6. DesignSync tool の `list_files`、`get_file` で push 直前の remote を確認する。
 7. 対象ファイルを `finalize_plan` に列挙し、承認された一単位を `write_files` で push する。
-8. verify 指示で全対象を再取得し、repo の `design-reference/export/` と SHA-256 が一致するまで照合する。
+8. verify 指示で全対象を再取得し、repo の `docs/presentation/ui-mock/export/` と SHA-256 が一致するまで照合する。
 
 共有 module の契約変更、fixture schema の変更は関連ファイルを一括して扱う。
 app の改善を理由に、裁定なしで KEEP_IMPL 台帳へ新規登録してはならない。
@@ -158,7 +158,7 @@ selector や fixture の不一致と実際の parity regression を分けて診�
 
 ## 3. 運用上の要点
 
-- `design-reference/export/` の HTML または共有 mock module を変えたら、`lint:mock` と pp 全 pack を必須 gate とする。
+- `docs/presentation/ui-mock/export/` の HTML または共有 mock module を変えたら、`lint:mock` と pp 全 pack を必須 gate とする。
 - Claude Design project へ push したら、必ず再取得し、repo と SHA-256 の byte 一致を確認する。
 - KEEP_IMPL 台帳のエントリを追加、変更、削除できるのは、日付付きユーザー裁定がある場合だけである。
 - 未登録の mock/app 差分は放置せず、確定済みの app を mock に鏡映して push back する。

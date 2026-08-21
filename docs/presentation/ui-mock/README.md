@@ -1,9 +1,9 @@
-# design-reference — mock 凍結置き場
+# docs/presentation/ui-mock — mock 凍結置き場
 
 Claude Design で承認された mock の凍結コピーと、その出所を機械照合するための sha256 台帳を置く。ここが FE 実装と parity 検証の唯一の突合先。運用の背景は `docs/design-sync.md`。
 
 ```text
-design-reference/
+docs/presentation/ui-mock/
 ├── export/               凍結した standalone HTML export（+ 共有 JS/CSS/フォント）
 ├── screenshots/          承認時点の参照スクリーンショット（基準 viewport ごと）
 ├── mock-baseline.sha256  export/ 全ファイルの sha256 台帳（provenance pin）
@@ -18,7 +18,7 @@ design-reference/
 4. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
-   cd design-reference
+   cd docs/presentation/ui-mock
    find export -type f ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > mock-baseline.sha256
    sha256sum --check --quiet mock-baseline.sha256
    ```

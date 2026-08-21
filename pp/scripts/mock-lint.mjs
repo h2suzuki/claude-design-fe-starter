@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-const EXPORT_DIR = path.resolve(SCRIPT_DIR, '../../design-reference/export');
+const EXPORT_DIR = path.resolve(SCRIPT_DIR, '../../docs/presentation/ui-mock/export');
 const CAP_BYTES = 1_048_576; // standalone export 1 枚の上限目安。PJ で調整可
 // vendor 同梱済みで net-block の VENDOR_ROUTES が握る URL prefix はここで許可する
 const ALLOWED_EXTERNAL = [];
@@ -101,7 +101,7 @@ function main(args) {
   }
   const files = args.length ? args.map((file) => path.resolve(process.cwd(), file)) : defaultTargets();
   if (files.length === 0) {
-    console.log('mock-lint: no targets (design-reference/export/ is empty)');
+    console.log('mock-lint: no targets (docs/presentation/ui-mock/export/ is empty)');
     return;
   }
   const violations = files.flatMap(lintFile);

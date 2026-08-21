@@ -20,11 +20,11 @@ function listExportFiles(dir: string, prefix = ""): string[] {
   return out;
 }
 
-test.describe("design-reference — provenance", () => {
+test.describe("docs/presentation/ui-mock — provenance", () => {
   test("export/ matches mock-baseline.sha256", async () => {
     const files = existsSync(EXPORT_DIR) ? listExportFiles(EXPORT_DIR) : [];
     // 台帳が既に在るのに export が空なのは「未凍結」ではなく「凍結資産の喪失」— skip せず失敗させる
-    test.skip(files.length === 0 && !existsSync(BASELINE_PATH), "design-reference/export/ が空 — 最初の /mock-freeze 後にこの gate が有効化される");
+    test.skip(files.length === 0 && !existsSync(BASELINE_PATH), "docs/presentation/ui-mock/export/ が空 — 最初の /mock-freeze 後にこの gate が有効化される");
     expect(existsSync(BASELINE_PATH), "mock-baseline.sha256 が無い — /mock-freeze で台帳を生成する").toBe(true);
 
     const entries = new Map<string, string>();
@@ -33,7 +33,7 @@ test.describe("design-reference — provenance", () => {
       if (m) entries.set(m[2] as string, m[1] as string);
     }
 
-    // 台帳の path は design-reference/ からの相対（export/...）— 凍結手順の sha256sum 出力と一致する形
+    // 台帳の path は docs/presentation/ui-mock/ からの相対（export/...）— 凍結手順の sha256sum 出力と一致する形
     const mismatches: string[] = [];
     for (const rel of files) {
       const key = `export/${rel}`;
