@@ -12,11 +12,11 @@ Work file: drafts/foundation-upgrade-handoff.md / drafts/research/foundation-upg
 
 Exit Criteria:
 
-- [ ] 提案 §5 の残裁定 6 点 (AST 置き場と凍結規律 / AST 管理単位 / shadcn-svelte を実装依存に入れるか / Vercel runtime 既定 / stitch repo の扱い / doc-conventions 採否) + §3.2 構成 A/B と §4 導入順序 (S0 先行) の受諾にユーザー裁定が付く
-- [ ] S0: frontend/ が SvelteKit + Bun skeleton に置換され、npm 前提 4 file (README.md・docs/design-sync.md・.claude/skills/fe-kickoff/SKILL.md・.claude/skills/mock-freeze/SKILL.md) と design-sync.md:12 の React 記述が更新される。pp は Node + Playwright 固定のまま全 spec が理由付き skip または緑
-- [ ] S1: ui-ast schema v0.2 + validate gate + 抽出 pass prompts + ast-tree / ast-viewer が seed に同梱される
-- [ ] S2: SELECTOR_MAP の AST 導出・ast-provenance・ast-conformance が pp に結線される
-- [ ] S3: walking skeleton 一周を AST 経由で完走し、全 gate が skip でなく実行されて緑
+- [ ] 提案 §5 の裁定 6 点 + 構成 A/B と導入順序の受諾にユーザー裁定が付く。確定済み (2026-08-22): 管理単位 = 語彙 + 画面の 2 層 / shadcn-svelte 採用 / Vercel Node runtime 既定 / stitch repo アーカイブ済 / doc-conventions 採用 / 構成 A 既定 (B は Rust BE 用) / stack 置換の先行。残 = AST 置き場と凍結規律
+- [ ] stack 置換: frontend/ が SvelteKit + Bun skeleton に置換され、npm 前提 4 file (README.md・docs/design-sync.md・.claude/skills/fe-kickoff/SKILL.md・.claude/skills/mock-freeze/SKILL.md) と design-sync.md:12 の React 記述が更新される。pp は Node + Playwright 固定のまま全 spec が理由付き skip または緑
+- [ ] AST 基盤: ui-ast schema v0.2 + validate gate + 抽出 pass prompts + ast-tree / ast-viewer が seed に同梱される (管理単位 = 共通語彙 registry + 画面別 ui-ast の 2 層)。docs/ast-layer.md に背景節 (UI AST の why を研究 repo から輸入 + 将来コモディティ IR への置換可能性) を含む (ユーザー裁定 2026-08-22)
+- [ ] pp 結線: SELECTOR_MAP の AST 導出・ast-provenance・ast-conformance が pp に結線される
+- [ ] 一周実証: walking skeleton 一周を AST 経由で完走し、全 gate が skip でなく実行されて緑
 
 ## Medium
 
