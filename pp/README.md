@@ -10,6 +10,8 @@
 | `sample-parity` | 全 visual id の style/geometry diff = 0（基準 2 viewport） | 基準幅 | `SELECTOR_MAP` + `PP_MOCK_FILE` + `PP_APP_URL` |
 | `width-sweep` | 320〜1920 連続スイープの invariant | 中間幅 | `PP_APP_URL` |
 | `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_APP_URL` |
+| `modal-geometry-sweep` | モーダルの viewport 収まりと操作要素の箱内収まり（基準 2 viewport） | 状態 | `MODALS` + `PP_APP_URL` |
+| `list-identity-sweep` | 状態変更操作後の選択・詳細キー・行順序の不変 | 状態 | `EDGES` + `PP_APP_URL` |
 | `self-baseline` | 自分の過去 baseline とのスクショ比較 | （回帰網） | `PP_APP_URL` |
 
 未充足の条件がある spec は理由付きで skip される（端末の list reporter には理由が出ない — 理由は `artifacts/playwright-report.json` の annotations か、spec 冒頭の skip 条件で確認する）。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。
@@ -59,6 +61,7 @@ npm run lint:mock && npm test
 - `src/net-block.ts` — vendor 資産の URL 対応表（`vendor/README.md`）
 - `src/fixtures/route-intercept.ts` + `tests/sample-parity.spec.ts` の `APP_API_FIXTURES` — app が読む API の fixture（空でも 404 fallback が実 BE への素通りを塞ぐ）
 - 各 spec 冒頭の `READY_SELECTOR`（width-sweep は `APP_MOUNT_SELECTOR` も） — app の描画完了セレクタ
+- `tests/modal-geometry-sweep.spec.ts` の `MODALS` + `DIALOG_SELECTOR` / `tests/list-identity-sweep.spec.ts` の `EDGES` + 行・詳細キーのセレクタ — 状態系 sweep の登録点（空のうちは理由付き skip）
 
 ## browser process の残存に注意
 

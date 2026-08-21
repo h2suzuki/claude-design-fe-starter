@@ -36,8 +36,12 @@ export function writeRunSummary(
       JSON.stringify({ mock: mockDump.elements[r.visualId], app: appDump.elements[r.visualId] }, null, 2),
     );
     if (r.canvas) {
-      writeFileSync(path.join(idDir, "canvas-diff.json"), JSON.stringify({ ...r.canvas, diffPng: undefined }, null, 2));
+      writeFileSync(path.join(idDir, "canvas-diff.json"), JSON.stringify({ ...r.canvas, diffPng: undefined, raw: undefined }, null, 2));
       if (r.canvas.diffPng) writeFileSync(path.join(idDir, "canvas-diff.png"), r.canvas.diffPng);
+      if (r.canvas.raw) {
+        writeFileSync(path.join(idDir, "mock.png"), r.canvas.raw.mock);
+        writeFileSync(path.join(idDir, "app.png"), r.canvas.raw.app);
+      }
     }
   }
 
