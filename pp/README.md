@@ -7,6 +7,7 @@
 | spec | 検証内容 | DoD 分類 | 有効化条件 |
 |---|---|---|---|
 | `mock-provenance` | 凍結 export と sha256 台帳の一致 | （前提: 突合先の出所） | export が 1 ファイル以上 |
+| `ast-provenance` | screen AST の provenance と凍結 export の一致 | （前提: 突合先の出所） | `docs/presentation/ui-ast/screens/` に AST が 1 件以上 |
 | `sample-parity` | 全 visual id の style/geometry diff = 0（基準 2 viewport） | 基準幅 | `SELECTOR_MAP` + `PP_MOCK_FILE` + `PP_APP_URL` |
 | `width-sweep` | 320〜1920 連続スイープの invariant | 中間幅 | `PP_APP_URL` |
 | `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_APP_URL` |
