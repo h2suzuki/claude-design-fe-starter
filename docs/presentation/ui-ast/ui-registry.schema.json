@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ui-registry.schema.json",
+  "title": "UI wrapper registry (shared vocabulary)",
+  "type": "object",
+  "required": ["version", "items"],
+  "properties": {
+    "version": { "type": "string", "const": "0.2.0" },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "required": ["name", "kind", "status"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+        "kind": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["primitive", "composed", "custom"] },
+        "codeComponent": { "type": "string", "minLength": 1 },
+        "variants": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "states": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "registryItem": { "$ref": "#/$defs/registryItem" },
+        "notes": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "registryItem": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["registry:ui", "registry:component", "registry:block"] },
+        "dependencies": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "registryDependencies": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "files": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

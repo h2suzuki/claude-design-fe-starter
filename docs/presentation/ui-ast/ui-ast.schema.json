@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ui-ast.schema.json",
+  "title": "UI AST (screen)",
+  "type": "object",
+  "required": ["version", "screen"],
+  "properties": {
+    "version": { "type": "string", "const": "0.2.0" },
+    "screen": { "$ref": "#/$defs/screen" },
+    "coverage": { "$ref": "#/$defs/coverage" },
+    "uncertainNodes": { "type": "array", "items": { "$ref": "#/$defs/uncertainNode" }, "default": [] },
+    "notes": { "type": "array", "items": { "type": "string" }, "default": [] }
+  },
+  "$defs": {
+    "screen": {
+      "type": "object",
+      "required": ["name", "platform", "provenance", "layout", "children"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "platform": { "type": "string", "enum": ["web", "unknown"] },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "viewport": { "$ref": "#/$defs/viewport" },
+        "breakpoints": { "type": "array", "items": { "$ref": "#/$defs/breakpointName" }, "default": ["base", "sm", "md", "lg", "xl"] },
+        "layout": { "$ref": "#/$defs/layout" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "overlays": { "type": "array", "items": { "$ref": "#/$defs/node" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["mockFile", "sha256", "extractedAt"],
+      "properties": {
+        "mockFile": { "type": "string", "pattern": "^export/.+\\.html$" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "extractedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+      },
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "kind", "confidence"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "logicalId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "role": { "type": "string" },
+        "variant": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" },
+        "layout": { "$ref": "#/$defs/layout" },
+        "responsive": { "$ref": "#/$defs/responsive" },
+        "props": { "type": "object", "additionalProperties": true, "default": {} },
+        "binding": {
+          "type": "object",
+          "properties": {
+            "codeComponent": { "type": "string", "minLength": 1 },
+            "visualId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "tokenRefs": { "type": "array", "items": { "type": "string" }, "default": [] }
+          },
+          "additionalProperties": false
+        },
+        "state": { "$ref": "#/$defs/state" },
+        "interactions": { "type": "array", "items": { "$ref": "#/$defs/interaction" }, "default": [] },
+        "triggerNodeIds": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" }, "default": [] },
+        "alternatives": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "evidence": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "viewport": {
+      "type": "object",
+      "required": ["width", "height", "breakpoint"],
+      "properties": {
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 },
+        "breakpoint": { "$ref": "#/$defs/breakpointName" },
+        "orientation": { "type": "string", "enum": ["portrait", "landscape", "unknown"] }
+      },
+      "additionalProperties": false
+    },
+    "breakpointName": { "type": "string", "enum": ["base", "xs", "sm", "md", "lg", "xl", "2xl", "unknown"] },
+    "responsive": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/responsiveOverride" }
+    },
+    "responsiveOverride": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string" },
+        "variant": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout" },
+        "props": { "type": "object", "additionalProperties": true },
+        "state": { "$ref": "#/$defs/state" },
+        "hidden": { "type": "boolean" },
+        "notes": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["page", "row", "column", "stack", "grid", "form", "overlay", "unknown"] },
+        "direction": { "type": "string", "enum": ["horizontal", "vertical"] },
+        "justify": { "type": "string" },
+        "align": { "type": "string" },
+        "gap": { "type": "string", "minLength": 1 },
+        "maxWidth": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["mock", "screenshot", "unknown"] },
+        "region": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "number", "minimum": 0, "maximum": 1 } },
+        "file": { "type": "string" },
+        "nodeRef": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "initiallyVisible": { "type": "boolean" },
+        "visibility": { "type": "string", "enum": ["visible", "hidden", "conditional", "unknown"] },
+        "stateName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "interaction": {
+      "type": "object",
+      "required": ["type", "targetId"],
+      "properties": {
+        "type": { "type": "string", "enum": ["openOverlay", "closeOverlay", "toggleOverlay", "navigate", "submit", "custom"] },
+        "targetId": { "type": "string" },
+        "event": { "type": "string", "enum": ["click", "submit", "hover", "focus", "change", "unknown"] },
+        "notes": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["visual", "semantic"],
+      "properties": {
+        "visual": { "type": "number", "minimum": 0, "maximum": 1 },
+        "semantic": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "uncertainNode": {
+      "type": "object",
+      "required": ["id", "reason"],
+      "properties": {
+        "id": { "type": "string" },
+        "reason": { "type": "string" },
+        "alternatives": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+# UI AST / registry の機械 gate。schema 検証 + 構造契約 (coverage/重複 id/px 禁止/参照解決/slug 一致) を決定的に検査する
+import argparse
+import copy
+import json
+import re
+import sys
+from pathlib import Path
+
+try:
+    import jsonschema
+except ImportError:
+    print(
+        "ERROR: jsonschema is required. Install with: pip install jsonschema",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_DIR = REPO_ROOT / "docs" / "presentation" / "ui-ast"
+
+MIN_VISUAL_COVERAGE = 0.70
+MIN_SEMANTIC_COVERAGE = 0.50
+MAX_LOW_CONFIDENCE = 12
+LOW_CONFIDENCE_THRESHOLD = 0.60
+PX_RE = re.compile(r"\b\d+(?:\.\d+)?px\b")
+
+
+def load_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        print(f"ERROR: file not found: {path}", file=sys.stderr)
+        sys.exit(2)
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: invalid JSON in {path}: {exc}", file=sys.stderr)
+        sys.exit(2)
+
+
+def walk_nodes(node: dict):
+    yield node
+    for child in node.get("children", []):
+        yield from walk_nodes(child)
+
+
+def iter_roots(screen: dict):
+    yield from screen.get("children", [])
+    yield from screen.get("overlays", [])
+
+
+def schema_errors(data: dict, schema_file: str) -> list[str]:
+    schema = load_json(SCHEMA_DIR / schema_file)
+    try:
+        jsonschema.validate(instance=data, schema=schema)
+        return []
+    except jsonschema.ValidationError as exc:
+        where = "/".join(str(p) for p in exc.absolute_path) or "<root>"
+        return [f"SCHEMA ERROR at {where}: {exc.message}"]
+
+
+def structural_errors(data: dict) -> list[str]:
+    errors: list[str] = []
+    screen = data.get("screen", {})
+
+    coverage = data.get("coverage", {})
+    visual = float(coverage.get("visual", 0.0))
+    semantic = float(coverage.get("semantic", 0.0))
+    if visual < MIN_VISUAL_COVERAGE or semantic < MIN_SEMANTIC_COVERAGE:
+        errors.append(
+            f"AST101 coverage below threshold: visual={visual:.2f} semantic={semantic:.2f}"
+        )
+
+    ids: set[str] = set()
+    duplicates: set[str] = set()
+    low_confidence: list[str] = []
+    px_hits: list[str] = []
+    refs: list[tuple[str, str]] = []
+
+    def scan_layout(owner_id: str, layout: dict):
+        for key in ("gap", "maxWidth"):
+            value = layout.get(key)
+            if isinstance(value, str) and PX_RE.search(value):
+                px_hits.append(f"{owner_id}.{key}={value}")
+
+    scan_layout("screen", screen.get("layout", {}))
+    for root in iter_roots(screen):
+        for node in walk_nodes(root):
+            node_id = node["id"]
+            if node_id in ids:
+                duplicates.add(node_id)
+            ids.add(node_id)
+            if float(node.get("confidence", 0.0)) < LOW_CONFIDENCE_THRESHOLD:
+                low_confidence.append(node_id)
+            scan_layout(node_id, node.get("layout", {}))
+            for override in node.get("responsive", {}).values():
+                scan_layout(node_id, override.get("layout", {}))
+            for interaction in node.get("interactions", []):
+                refs.append((node_id, interaction["targetId"]))
+            for trigger in node.get("triggerNodeIds", []):
+                refs.append((node_id, trigger))
+
+    if duplicates:
+        errors.append("AST102 duplicate node ids: " + ", ".join(sorted(duplicates)))
+    if len(low_confidence) > MAX_LOW_CONFIDENCE:
+        errors.append(
+            f"AST103 too many low-confidence nodes ({len(low_confidence)} > {MAX_LOW_CONFIDENCE})"
+        )
+    if px_hits:
+        errors.append("AST104 raw px in layout contract: " + ", ".join(sorted(px_hits)))
+    dangling = sorted({target for _, target in refs if target not in ids})
+    if dangling:
+        errors.append("AST105 dangling node reference: " + ", ".join(dangling))
+
+    mock_file = screen.get("provenance", {}).get("mockFile", "")
+    slug = screen.get("name", "")
+    if mock_file and slug and mock_file != f"export/{slug}.html":
+        errors.append(
+            f"AST106 slug mismatch: name={slug} vs provenance.mockFile={mock_file}"
+        )
+    return errors
+
+
+def validate_screen(data: dict) -> list[str]:
+    errors = schema_errors(data, "ui-ast.schema.json")
+    return errors if errors else structural_errors(data)
+
+
+def validate_registry(data: dict) -> list[str]:
+    return schema_errors(data, "ui-registry.schema.json")
+
+
+def good_screen() -> dict:
+    body = {
+        "id": "n-open",
+        "kind": "button",
+        "confidence": 0.95,
+        "logicalId": "open-modal",
+        "binding": {"visualId": "open-modal"},
+        "layout": {"type": "row", "gap": "var(--space-2)"},
+        "interactions": [{"type": "openOverlay", "targetId": "n-modal"}],
+    }
+    modal = {
+        "id": "n-modal",
+        "kind": "modal",
+        "confidence": 0.9,
+        "triggerNodeIds": ["n-open"],
+        "state": {"initiallyVisible": False},
+    }
+    return {
+        "version": "0.2.0",
+        "screen": {
+            "name": "sample",
+            "platform": "web",
+            "provenance": {
+                "mockFile": "export/sample.html",
+                "sha256": "0" * 64,
+                "extractedAt": "2026-08-22",
+            },
+            "layout": {"type": "page"},
+            "children": [body],
+            "overlays": [modal],
+        },
+        "coverage": {"visual": 0.9, "semantic": 0.8},
+    }
+
+
+def good_registry() -> dict:
+    return {
+        "version": "0.2.0",
+        "items": [
+            {
+                "name": "AppButton",
+                "kind": "button",
+                "status": "composed",
+                "codeComponent": "$lib/ui/AppButton.svelte",
+                "registryItem": {
+                    "type": "registry:ui",
+                    "registryDependencies": ["button"],
+                },
+            }
+        ],
+    }
+
+
+def self_test() -> int:
+    # 陽性対照: 正常系 clean + 各検査コードが 1 回ずつ発火することを確認する
+    failures: list[str] = []
+    if validate_screen(good_screen()):
+        failures.append("clean screen unexpectedly failed")
+    if validate_registry(good_registry()):
+        failures.append("clean registry unexpectedly failed")
+
+    def expect(label: str, mutate, code: str):
+        data = copy.deepcopy(good_screen())
+        mutate(data)
+        found = validate_screen(data)
+        if not any(code in message for message in found):
+            failures.append(f"{label}: expected {code}, got {found}")
+
+    expect("schema", lambda d: d.update(version="9.9.9"), "SCHEMA ERROR")
+    expect("coverage", lambda d: d["coverage"].update(visual=0.1), "AST101")
+    expect(
+        "dup-id",
+        lambda d: d["screen"]["children"].append(dict(d["screen"]["children"][0])),
+        "AST102",
+    )
+    expect(
+        "low-conf",
+        lambda d: d["screen"]["children"].extend(
+            {"id": f"n-x{i}", "kind": "text", "confidence": 0.1} for i in range(13)
+        ),
+        "AST103",
+    )
+    expect(
+        "px",
+        lambda d: d["screen"]["children"][0]["layout"].update(gap="16px"),
+        "AST104",
+    )
+    expect(
+        "dangling",
+        lambda d: d["screen"]["children"][0]["interactions"].append(
+            {"type": "navigate", "targetId": "n-ghost"}
+        ),
+        "AST105",
+    )
+    expect(
+        "slug",
+        lambda d: d["screen"]["provenance"].update(mockFile="export/other.html"),
+        "AST106",
+    )
+
+    bad_registry = good_registry()
+    bad_registry["items"][0]["status"] = "magic"
+    if not validate_registry(bad_registry):
+        failures.append("registry: expected SCHEMA ERROR for bad status")
+
+    if failures:
+        print("ast-validate self-test FAILED:", file=sys.stderr)
+        for failure in failures:
+            print(f"  - {failure}", file=sys.stderr)
+        return 1
+    print("ast-validate self-test: clean passes; SCHEMA/AST101..AST106 each fire once")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate UI AST / registry files")
+    parser.add_argument("file", nargs="?", help="ui-ast.json or registry.json")
+    parser.add_argument(
+        "--registry", action="store_true", help="validate as wrapper registry"
+    )
+    parser.add_argument(
+        "--self-test", action="store_true", help="run built-in positive controls"
+    )
+    args = parser.parse_args()
+
+    if args.self_test:
+        return self_test()
+    if not args.file:
+        parser.error("file is required unless --self-test")
+
+    data = load_json(Path(args.file))
+    errors = validate_registry(data) if args.registry else validate_screen(data)
+    if errors:
+        for message in errors:
+            print(message, file=sys.stderr)
+        return 1
+    print(f"OK: {args.file}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
