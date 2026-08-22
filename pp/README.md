@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `mock-provenance` | 凍結 export と sha256 台帳の一致 | （前提: 突合先の出所） | export が 1 ファイル以上 |
 | `ast-provenance` | screen AST の provenance と凍結 export の一致 | （前提: 突合先の出所） | `docs/presentation/ui-ast/screens/` に AST が 1 件以上 |
-| `sample-parity` | 全 visual id の style/geometry diff = 0（基準 2 viewport） | 基準幅 | `SELECTOR_MAP` + `PP_MOCK_FILE` + `PP_APP_URL` |
+| `sample-parity` | 全 visual id の style/geometry diff = 0（基準 2 viewport） | 基準幅 | screen AST（または `MANUAL_PAIRS`）+ `PP_MOCK_FILE` + `PP_APP_URL` |
 | `width-sweep` | 320〜1920 連続スイープの invariant | 中間幅 | `PP_APP_URL` |
 | `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_APP_URL` |
 | `modal-geometry-sweep` | モーダルの viewport 収まりと操作要素の箱内収まり（基準 2 viewport） | 状態 | `MODALS` + `PP_APP_URL` |
@@ -58,7 +58,7 @@ npm run lint:mock && npm test
 ## 差し替え点（PJ 開始時に確定する）
 
 - `src/config.ts` — 基準 viewport 2 点・スイープ幅・locale/timezone・固定時刻・self-baseline 対象 path
-- `src/selector-map.ts` — visual id ↔ selector 対応（app 側は `data-visual-id` 属性を部品に付与する）
+- `src/selector-map.ts` — visual id ↔ selector 対応。既定は `PP_MOCK_FILE` に対応する screen AST からの導出（mock 側 = `source.nodeRef`、app 側 = `data-visual-id` 属性）で、AST から導けない対だけ `MANUAL_PAIRS` に手書きする
 - `src/net-block.ts` — vendor 資産の URL 対応表（`vendor/README.md`）
 - `src/fixtures/route-intercept.ts` + `tests/sample-parity.spec.ts` の `APP_API_FIXTURES` — app が読む API の fixture（空でも 404 fallback が実 BE への素通りを塞ぐ）
 - 各 spec 冒頭の `READY_SELECTOR`（width-sweep は `APP_MOUNT_SELECTOR` も） — app の描画完了セレクタ

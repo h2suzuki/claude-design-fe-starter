@@ -34,7 +34,7 @@ const BASES = [
 for (const [label, contextOptions] of BASES) {
   test.describe(`structural parity — ${label}`, () => {
     test("all mapped visual ids: style/geometry diff = 0", async ({ browser }) => {
-      test.skip(IDS.length === 0, "SELECTOR_MAP が空 — walking skeleton の部品第 1 号で登録すると有効化される");
+      test.skip(IDS.length === 0, "対応表が空 — PP_MOCK_FILE に対応する screen AST を /ast-extract で起こすか MANUAL_PAIRS に書くと有効化される");
       test.skip(!MOCK_CONFIGURED, "PP_MOCK_FILE 未設定 — docs/presentation/ui-mock/export/ 内の突合先ファイル名を渡す");
       test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
 

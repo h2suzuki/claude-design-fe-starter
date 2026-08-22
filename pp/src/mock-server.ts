@@ -8,7 +8,9 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = process.env.PP_REPO_ROOT ?? path.resolve(HERE, "..", "..");
-export const EXPORT_DIR = path.join(REPO_ROOT, "docs/presentation/ui-mock", "export");
+export const MOCK_ROOT = path.join(REPO_ROOT, "docs/presentation/ui-mock");
+export const EXPORT_DIR = path.join(MOCK_ROOT, "export");
+export const UI_AST_SCREENS_DIR = path.join(REPO_ROOT, "docs/presentation/ui-ast", "screens");
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",

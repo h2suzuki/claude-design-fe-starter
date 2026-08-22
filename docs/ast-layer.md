@@ -163,7 +163,14 @@ python3 tools/ast_validate --self-test
 `ast-conformance` は pixel ではなく構造を見る。`sample-parity`（基準 2 viewport での style/geometry diff = 0）
 の手前に置く網であり、pixel を合わせる前に「木の形そのものが違う」を落とす。
 
-### 3.4 可視化
+### 3.4 pp への結線
+
+`pp/src/selector-map.ts` の `SELECTOR_MAP` は、`PP_MOCK_FILE` が指す export に対応する screen AST から導出する。
+mock 側 selector は `source.nodeRef`、app 側は `binding.visualId` から `[data-visual-id="…"]` を組む。
+同じ `visualId` に別 selector が付いた場合はどちらが正か機械には決まらないため、両方を導出から外して報告する。
+AST から導けない対だけを `MANUAL_PAIRS` に手書きし、手書きは導出より優先する。
+
+### 3.5 可視化
 
 `tools/ast-tree` は screen AST を CLI の ASCII tree として描画し、低 confidence node と
 `uncertainNodes` を併記する。

@@ -4,12 +4,13 @@ import { chromium } from "@playwright/test";
 import { MOBILE_CONTEXT_OPTIONS, MOCK_CONFIGURED, MOCK_ENTRY_FILE, PP_LAUNCH_OPTIONS } from "../src/config";
 import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
-import { SELECTOR_MAP } from "../src/selector-map";
+import { SELECTOR_MAP, SELECTOR_MAP_ISSUES } from "../src/selector-map";
 
 async function main(): Promise<void> {
   const entries = Object.entries(SELECTOR_MAP);
+  for (const issue of SELECTOR_MAP_ISSUES) console.error(`AST  ${issue}`);
   if (!MOCK_CONFIGURED || entries.length === 0) {
-    console.log("verify-selectors: PP_MOCK_FILE と SELECTOR_MAP を設定してから実行する");
+    console.log("verify-selectors: PP_MOCK_FILE と、AST 抽出または MANUAL_PAIRS による対応表が要る");
     return;
   }
   const browser = await chromium.launch(PP_LAUNCH_OPTIONS);
