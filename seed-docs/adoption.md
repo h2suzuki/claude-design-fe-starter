@@ -28,6 +28,8 @@ tools/install.sh ../<repo>-fe-rebuild
 
 `drafts/` は gitignore 対象なので worktree には materialize されない。新しい worktree で browser や bun が「無い」ように見えたら、まず上表の引き方を疑う。
 
+同じ理由で `node_modules/` も worktree には無い。**依存の導入は worktree ごとに 1 回必要**で、これを飛ばすと `ERR_MODULE_NOT_FOUND` が出る。共有できるのは gitignore 下でも main repo 側に実体を置いた toolchain（`drafts/`）だけで、`node_modules` は各 worktree が持つ。
+
 ## 2. 既存実装の役割 — 正本ではなく参照資料
 
 意匠の正本は Claude Design mock（`CLAUDE.md`）であり、既存実装ではない。既存実装から引き継ぐのは次に限る。
