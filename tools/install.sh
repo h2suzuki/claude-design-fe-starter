@@ -74,25 +74,60 @@ append_marker_block() {
   printf 'append: %s\n' "$(basename "$target_file")"
 }
 
-# 文面は意図的に冗長 — 誤読防止のため trim せず維持する
-report_collisions() {
-  local target=$1 shown=0 rel
-  shift
-  printf '%s: stopping before writing anything — %d file(s) already exist in the target.\n\n' "$PROG" "$#" >&2
+print_paths() {
+  local shown=0 rel
   for rel in "$@"; do
     if ((shown >= 20)); then
       printf '  ... and %d more\n' "$(($# - shown))" >&2
-      break
+      return
     fi
     printf '  %s\n' "$rel" >&2
     shown=$((shown + 1))
   done
+}
+
+# git が版を持っている file だけが上書き後に戻せる。untracked と未 commit の変更は消えたら終わり
+list_unrecoverable() {
+  local target=$1 entry
+  shift
+  command -v git >/dev/null 2>&1 || { printf '%s\0' "$@"; return; }
+  if ! git -C "$target" rev-parse --git-dir >/dev/null 2>&1; then
+    printf '%s\0' "$@"
+    return
+  fi
+  # porcelain -z の 1 entry は "XY <path>"。status に現れる = untracked か未 commit の変更あり
+  while IFS= read -r -d '' entry; do
+    printf '%s\0' "${entry:3}"
+  done < <(git -C "$target" status --porcelain -z -- "$@")
+}
+
+# 文面は意図的に冗長 — 誤読防止のため trim せず維持する
+report_collisions() {
+  local target=$1 count=$2
+  shift 2
+  printf '%s: stopping before writing anything — %d file(s) already exist in the target.\n\n' "$PROG" "$count" >&2
+  print_paths "${@:1:$count}"
   cat >&2 <<EOF
 
 Nothing was copied. The seed does not replace existing files by default, because
 these paths often hold state the project owns: pp/src/config.ts (viewports,
 locale, pinned clock), pp/src/selector-map.ts (MANUAL_PAIRS), .claude/settings.json
 (hook registrations belonging to other tools), and anything already adapted here.
+EOF
+  if (($# > count)); then
+    printf '\ngit cannot restore %d of them after --overwrite. They are untracked, or they\n' "$(($# - count))" >&2
+    printf 'carry uncommitted changes, so no copy exists to go back to:\n\n' >&2
+    print_paths "${@:count+1}"
+    cat >&2 <<'EOF'
+
+Commit or stash those first. Once git holds them, --overwrite costs a git restore
+to undo instead of being final.
+EOF
+  else
+    printf '\nAll of them are tracked and clean here, so --overwrite is undoable with\n' >&2
+    printf 'git restore.\n' >&2
+  fi
+  cat >&2 <<EOF
 
 To replace them with the seed's versions, re-run with --overwrite:
 
@@ -139,10 +174,23 @@ main() {
   # 1 件も見つからないのは列挙の失敗（不完全な seed コピー等）— 半端な marker だけ残して成功と偽らない
   ((${#rels[@]} > 0)) || die "no seed files found under $SEED_ROOT — incomplete seed copy?" 70
 
+  local -a unrecoverable=()
+  if ((${#collisions[@]} > 0)); then
+    while IFS= read -r -d '' rel; do
+      unrecoverable+=("$rel")
+    done < <(list_unrecoverable "$target" "${collisions[@]}")
+  fi
+
   # 衝突が 1 件でもあれば 1 file も書かずに止める。部分適用したうえで問い直すと、状態が説明できなくなる
   if ((${#collisions[@]} > 0)) && ((overwrite == 0)); then
-    report_collisions "$target" "${collisions[@]}"
+    report_collisions "$target" "${#collisions[@]}" "${collisions[@]}" ${unrecoverable[@]+"${unrecoverable[@]}"}
     exit 65
+  fi
+
+  if ((${#unrecoverable[@]} > 0)); then
+    printf '%s: overwriting %d file(s) that git cannot restore afterwards:\n' "$PROG" "${#unrecoverable[@]}" >&2
+    print_paths "${unrecoverable[@]}"
+    printf '\n' >&2
   fi
 
   local created=0 replaced=0
