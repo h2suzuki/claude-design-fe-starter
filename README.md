@@ -23,7 +23,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 ├── .claude/           project skills（/fe-kickoff・/design-order・/mock-freeze・/ast-extract）+ 機械判定 hook 2 本
 ├── docs/presentation/ui-mock/  mock 凍結置き場（export + screenshots + sha256 台帳 + KEEP_IMPL 台帳）
 ├── docs/presentation/ui-ast/   UI AST 置き場（schema 2 本 + registry.json + screens/）
-├── frontend/          vite skeleton（src/ui/{tokens,components} + src/pages）
+├── frontend/          SvelteKit skeleton（$lib/ui/{tokens,components} + src/routes、依存導入は bun）
 ├── pp/                parity harness（dump / diff / sweep / self-baseline / provenance）
 ├── tools/             design_sync（Claude Design 同期）+ ast_validate / ast-tree / ast-viewer（AST gate と可視化）+ install.sh（既存 repo への copy-in）
 └── seed-docs/         プロセス文書（walking-skeleton / screen-loop / design-order-template / first-prompts）

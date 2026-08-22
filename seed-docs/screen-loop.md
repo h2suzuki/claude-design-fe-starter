@@ -39,14 +39,14 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 
 ### ④ 新部品の単体実装 (states 込み)
 
-- frontend/src/ui/components/ に、token (frontend/src/ui/tokens/tokens.css) 参照で実装する。直書きの色・寸法を持ち込まない
+- frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する。直書きの色・寸法を持ち込まない
 - states fixture を部品の完成条件にする: default / empty / loading / error / 長文、加えて touch (hover 非存在で操作完結・target 44px)
 - fixture データは API schema 派生の単一データセットとし、mock と test が同源を参照する (二重管理はドリフト源)
 - 完了条件: 基準幅 = SELECTOR_MAP 登録 + sample-parity 緑 / 状態 = 全 fixture 状態で挙動一致
 
 ### ⑤ page composition
 
-- frontend/src/pages/ は部品の薄い合成に留める。ページにロジックや見た目の実装を書き始めたら、③に戻って部品化する
+- frontend/src/routes/ は部品の薄い合成に留める。ページにロジックや見た目の実装を書き始めたら、③に戻って部品化する
 - 完了条件: page が部品参照のみで組めていること
 
 ### ⑥ 機械 gate

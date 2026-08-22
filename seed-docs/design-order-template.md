@@ -2,7 +2,7 @@
 
 ## 位置づけ
 
-- docs/ の 4 本 (ui-quality-policy / pixel-perfect / design-sync / ui-caveats) は repo / agent 側の規約であり、Claude Design には持ち込まない
+- docs/ の 5 本 (ui-quality-policy / pixel-perfect / design-sync / ui-caveats / ast-layer) は repo / agent 側の規約であり、Claude Design には持ち込まない
 - Claude Design に持ち込むデザイン規約は、この 1 枚に凝縮する。発注文への組み込みは /design-order が行う
 - 下の block の数値 (390 / 1280 / 44px) は例。pp/src/config.ts で確定した基準 viewport と一致させてから使う
 
@@ -36,5 +36,5 @@
 ## 補足
 
 - 項目 5 の狙いはレイアウトシフトをデザイン段階で殺すこと。実装後に直すより桁違いに安い
-- 項目 7 は tokens の発注要件でもある。パレット名がそのまま frontend/src/ui/tokens/tokens.css の token 名の母体になる
+- 項目 7 は tokens の発注要件でもある。パレット名がそのまま frontend/src/lib/ui/tokens/tokens.css の token 名の母体になる
 - 各項目は repo 側の検証 (pp/ の parity・sweep、docs/ の規約) と対になっており、mock 段階で守られていないと FE 実装の gate で必ず検出される

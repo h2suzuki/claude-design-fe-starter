@@ -6,7 +6,7 @@
 
 この seed は次の構成を前提とする。
 
-- web FE (vite・frontend/) + Claude Design mock 正本 (docs/presentation/ui-mock/) + Playwright 検証 harness (pp/)
+- web FE (SvelteKit・frontend/。依存導入と local 実行は bun) + Claude Design mock 正本 (docs/presentation/ui-mock/) + Playwright 検証 harness (pp/)
 - モバイルファースト: mobile viewport が第一正本、desktop が第二正本
 
 ## 轍 → day-0 対策
@@ -17,7 +17,7 @@
 |---|---|---|
 | 1 | mock なしで実装を重ね、UI 品質が収束しなかった | mock-first を DoD に: mock 完成宣言 → 凍結 (/mock-freeze) が着工条件 (docs/ui-quality-policy.md) |
 | 2 | 検証 harness を後付けし、実装収束後に篩を新設する羽目になった | walking skeleton: 最初の 1 部品で全経路を一周してから量産 (本書後半) |
-| 3 | ページ単位実装で同一部品が複数実装に分裂し、色が重複定義された | 部品先行: frontend/src/ui/ + 単体 fixture。page は薄い composition (frontend/src/pages/) |
+| 3 | ページ単位実装で同一部品が複数実装に分裂し、色が重複定義された | 部品先行: frontend/src/lib/ui/ + 単体 fixture。page は薄い composition (frontend/src/routes/) |
 | 4 | 描画から実測した端数 px を実装に固定し、壊れた描画への合わせ込みになった | 構造契約 (token / clamp / %) を最初から規約に (docs/pixel-perfect.md) |
 | 5 | 検証 gate の突合先が旧 mock・古いデータへドリフトし、その間の逸脱を検出できなかった | export 凍結 + sha256 provenance pin + mock-provenance spec を画面 1 枚目から (docs/presentation/ui-mock/) |
 | 6 | 既定状態しか見ず、空状態・操作後・長文のバグ群を見逃した | states fixture を部品の完成条件に + width-sweep / poststate-sweep を定常 gate に (pp/) |
@@ -34,7 +34,7 @@
 
 - 基準 viewport 2 点: mobile 390×844 (第一正本・DPR 2–3・touch) / desktop 1280×800 (第二正本)。数値は例 — 各 PJ が pp/src/config.ts で確定する
 - 基準 2 点の間と外側 (320〜1920) は連続幅スイープで invariant 検証する
-- フォント同梱 (実体 = pp/vendor に取得記録つきで置き、frontend/src/ui/tokens/tokens.css の --font-sans を差し替える)
+- フォント同梱 (実体 = pp/vendor に取得記録つきで置き、frontend/src/lib/ui/tokens/tokens.css の --font-sans を差し替える)
 - 時計・locale・DPR・touch は pp/src/config.ts の context options で明示固定する (UA まで固定したい場合は devices preset に置き換える)
 
 ### 2. repo 骨格の確認
@@ -42,7 +42,7 @@
 ```text
 docs/presentation/ui-mock/   mock 正本。export/ (凍結 export)・mock-baseline.sha256 (台帳)・
                     DESIGN-POLICY.md (KEEP_IMPL 台帳)・README.md (凍結手順)
-frontend/           vite app。src/ui/tokens/tokens.css・src/ui/components/・src/pages/
+frontend/           SvelteKit app。src/lib/ui/tokens/tokens.css・src/lib/ui/components/・src/routes/
 pp/                 parity harness。基準 viewport は pp/src/config.ts で差し替え
 docs/presentation/ui-ast/    UI AST 正本。schema 2 本・registry.json (共通語彙)・screens/ (画面別)
 docs/               規約 5 本 (ui-quality-policy / pixel-perfect / design-sync / ui-caveats / ast-layer)
@@ -61,7 +61,7 @@ seed-docs/          本書ほかプロセス文書
 ### 4. 台帳・規約 docs の確認
 
 - KEEP_IMPL 台帳 (docs/presentation/ui-mock/DESIGN-POLICY.md) が空台帳として在ること
-- docs/ の 4 本を読み、PJ 固有の差し替え点 (意味色の名前・語彙など) を埋めること
+- docs/ の 5 本を読み、PJ 固有の差し替え点 (意味色の名前・語彙など) を埋めること
 
 ### 5. 発注規約 1 枚の準備
 
@@ -73,7 +73,7 @@ seed-docs/          本書ほかプロセス文書
 
 1. **mock**: design system の基礎部品 1 つを含む最小画面を Claude Design で作る (seed-docs/first-prompts.md)
 2. **凍結**: /mock-freeze で standalone HTML export を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する
-3. **部品実装**: frontend/src/ui/components/ に、token (frontend/src/ui/tokens/tokens.css) 参照で実装する
+3. **部品実装**: frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する
 4. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
 5. **parity**: pp の SELECTOR_MAP に部品を登録し、sample-parity spec を緑にする
 6. **sweep + 回帰**: width-sweep / poststate-sweep / self-baseline / mock-provenance を全て実行して緑にする (self-baseline は初回 `--update-snapshots` で baseline を生成し、再実行で緑を確認する)

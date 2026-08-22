@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{PRODUCT_NAME}}</title>
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <!-- id は width-sweep の APP_MOUNT_SELECTOR と対応する。display:contents は SvelteKit の推奨形 -->
+    <div id="app" style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

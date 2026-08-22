@@ -27,8 +27,8 @@
 
 | placeholder / 差し替え点 | 場所 |
 |---|---|
-| `{{PRODUCT_NAME}}` などの `{{...}}` トークン | `docs/` `seed-docs/` `frontend/index.html` の各所（grep で列挙できる） |
+| `{{PRODUCT_NAME}}` などの `{{...}}` トークン | `docs/` `seed-docs/` `frontend/src/app.html` の各所（grep で列挙できる） |
 | 基準 viewport・locale・timezone・固定時刻 | `pp/src/config.ts` |
 | mock の entry ファイル名・SELECTOR_MAP | `pp/src/config.ts` `pp/src/selector-map.ts` |
-| design token の実値 | `frontend/src/ui/tokens/tokens.css` |
+| design token の実値 | `frontend/src/lib/ui/tokens/tokens.css` |
 | Claude Design project ID | 環境変数 `DESIGN_PROJECT_ID`（`tools/design_sync`） |

@@ -1,6 +1,7 @@
 # fe-starter:begin
 node_modules/
 dist/
+.svelte-kit/
 drafts/
 pp/artifacts/
 __pycache__/
