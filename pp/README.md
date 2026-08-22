@@ -6,6 +6,7 @@
 
 | spec | 検証内容 | DoD 分類 | 有効化条件 |
 |---|---|---|---|
+| `canvas-diff` | 判定器自身の陽性対照（差の検出と 1px 寸法差の crop） | （前提: 判定器の健全性） | 常に実行される |
 | `mock-provenance` | 凍結 export と sha256 台帳の一致 | （前提: 突合先の出所） | export が 1 ファイル以上 |
 | `ast-provenance` | screen AST の provenance と凍結 export の一致 | （前提: 突合先の出所） | `docs/presentation/ui-ast/screens/` に AST が 1 件以上 |
 | `ast-conformance` | 実装の `data-visual-id` tree が AST tree と構造一致（親子関係と出現） | （前提: 木の形） | screen AST + `PP_MOCK_FILE` + `PP_APP_URL` |

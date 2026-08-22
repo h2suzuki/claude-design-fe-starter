@@ -58,9 +58,14 @@ export function diffCanvasPngs(mockPng: PNG, appPng: PNG, threshold = 0): Canvas
       PNG.bitblt(src, out, ox, oy, cropW, cropH, 0, 0);
       return out;
     };
+    // 余剰の付く端は軸ごとに独立に決まるので、対角 2 点でなく x/y の全組合せを試す
+    const offsets = (src: PNG) =>
+      (src.width === cropW ? [0] : [0, src.width - cropW]).flatMap((x) =>
+        (src.height === cropH ? [0] : [0, src.height - cropH]).map((y) => ({ x, y })),
+      );
     let best: CanvasDiffResult | null = null;
-    for (const mo of [{ x: 0, y: 0 }, { x: mockPng.width - cropW, y: mockPng.height - cropH }]) {
-      for (const ao of [{ x: 0, y: 0 }, { x: appPng.width - cropW, y: appPng.height - cropH }]) {
+    for (const mo of offsets(mockPng)) {
+      for (const ao of offsets(appPng)) {
         const result = diffCanvasPngs(cropped(mockPng, mo.x, mo.y), cropped(appPng, ao.x, ao.y), threshold);
         if (best == null || result.diffPixels < best.diffPixels) best = result;
         if (best.matched) return best;
