@@ -52,18 +52,39 @@ seed-docs/          本書ほかプロセス文書
 .claude/            project skills (/fe-kickoff・/design-order・/mock-freeze・/ast-extract)
 ```
 
-### 3. Claude Design 2 project 体制
+### 3. 依存の導入
+
+`frontend/` は bun、`pp/` は npm (Node + Playwright 固定) で導入する。
+
+```bash
+bun install --cwd frontend
+npm --prefix pp install
+```
+
+host に bun が無くても、Playwright browser と同じく repo-local に置けば足りる (実体は gitignore 下・installer は配らない)。
+
+```bash
+BUN_DIR="$(git rev-parse --show-toplevel)/drafts/bun"
+mkdir -p "$BUN_DIR"
+curl -fsSL -o "$BUN_DIR/bun.zip" https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip
+unzip -qo "$BUN_DIR/bun.zip" -d "$BUN_DIR"
+"$BUN_DIR/bun-linux-x64/bun" --version
+```
+
+既定の cache 先へ書けない環境では `BUN_INSTALL_CACHE_DIR="$BUN_DIR/cache"` を添えて実行する。bun の version は固定しない — 機械 gate は bun を呼ばず (pp は Node + Playwright 固定)、依存の再現性は commit 済みの `frontend/bun.lock` が担う。
+
+### 4. Claude Design 2 project 体制
 
 - **design-system 型 project** (部品ライブラリ) を新設する。publish すると org の新規 project に自動適用される — これは公式メカニズムで、手動で参照させるのではない
 - **mock 用の通常 project** は作成時に design system を継承する。「部品から組まれた mock」が既定挙動になる
 - 初回プロンプトと運用の注意は seed-docs/first-prompts.md
 
-### 4. 台帳・規約 docs の確認
+### 5. 台帳・規約 docs の確認
 
 - KEEP_IMPL 台帳 (docs/presentation/ui-mock/DESIGN-POLICY.md) が空台帳として在ること
 - docs/ の 5 本を読み、PJ 固有の差し替え点 (意味色の名前・語彙など) を埋めること
 
-### 5. 発注規約 1 枚の準備
+### 6. 発注規約 1 枚の準備
 
 - seed-docs/design-order-template.md をプロダクトに合わせて差し替える。Claude Design へ持ち込む規約はこの 1 枚だけ (docs/ は repo 側の規約であり持ち込まない)
 
@@ -75,7 +96,7 @@ seed-docs/          本書ほかプロセス文書
 2. **凍結**: /mock-freeze で standalone HTML export を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する
 3. **部品実装**: frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する
 4. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
-5. **parity**: pp の SELECTOR_MAP に部品を登録し、sample-parity spec を緑にする
+5. **parity**: /ast-extract で screen AST を起こす (SELECTOR_MAP はそこから導出される)。導けない対だけ pp の MANUAL_PAIRS に書き、ast-provenance・ast-conformance・sample-parity を緑にする
 6. **sweep + 回帰**: width-sweep / poststate-sweep / self-baseline / mock-provenance を全て実行して緑にする (self-baseline は初回 `--update-snapshots` で baseline を生成し、再実行で緑を確認する)
 
 完了条件: 全 gate が「skip ではなく実行されて緑」。1 spec でも skip のまま「一周した」と宣言しない。ここまで緑になって初めて画面量産 (seed-docs/screen-loop.md) に入る。
