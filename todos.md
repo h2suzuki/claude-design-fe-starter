@@ -22,6 +22,7 @@ Exit Criteria:
 
 - [x] design 資産の移設と参照張り替え (473edcf: git mv 4 file + 参照 21 file、gates 緑、凍結 hook の新 path 陽性対照済み)。stack 置換の残 = SvelteKit + Bun skeleton (Bun install は terminal-configs へ依頼済み)
 - [x] AST 基盤の第 1 増分: ui-ast schema v0.2 + ui-registry schema + tools/ast_validate (5db755c: self-test rc=0・SCHEMA/AST101..106 各 1 発火・ruff/ty 緑)
+- [ ] pp 結線: ast-provenance (df27b30・陽性対照 8 件) と SELECTOR_MAP の AST 導出 (0bffa50・陽性対照 10 件) が land。残 = ast-conformance (実装の data-visual-id tree と AST tree の構造一致)
 - [x] AST 基盤の残り: ast-tree / ast-viewer / ast-extract skill / docs/ast-layer.md (7e7c51c)。受け入れレビューで source.region の並びの食い違いと node の notes 不能を是正し、screen-loop ③ へ結線。ast-viewer は Chromium 実画面で 3 面・Ctrl+クリック相互ジャンプ・dark theme を実測。registry.json と screens/ の実体は最初の抽出時に生成される
 
 ## Medium
