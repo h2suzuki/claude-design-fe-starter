@@ -7,9 +7,9 @@ command -v jq >/dev/null 2>&1 || exit 0
 FILE=$(jq -r '.tool_input.file_path // empty' <<<"$INPUT")
 [[ -n $FILE ]] || exit 0
 
-ROOT=${CLAUDE_PROJECT_DIR:-$PWD}
+# project dir に anchor すると別 checkout (worktree 等) の凍結 mock を素通りさせるので、path 区間で判定する
 case $FILE in
-  "$ROOT"/docs/presentation/ui-mock/export/*)
+  */docs/presentation/ui-mock/export/*)
     # 文面は意図的に冗長 — 誤読防止のため trim せず維持する
     cat >&2 <<'MSG'
 docs/presentation/ui-mock/export/ は凍結済み mock 資産のため、Edit/Write での直接編集を止めました

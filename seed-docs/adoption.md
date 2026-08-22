@@ -4,22 +4,33 @@
 
 install.sh 自体の入手と実行は seed の README.md に載っている（本書は copy-in 後に repo 内から読める場所に置くため、bootstrap は扱わない）。
 
-## 1. 作業場所 — main を凍結し worktree で作る
+## 1. 作業場所 — branch で凍結し、checkout は動かさない
 
-既存実装は**動いている資産**であって、置き換えが完走するまで消してはならない。かといって同一 checkout で並走させると、実装と mock 由来の新実装が混ざる。
+既存実装は**動いている資産**であって、置き換えが完走するまで消してはならない。ただし凍結すべきなのは「既存実装が動く状態」であって checkout の場所ではない。それは branch で足りる。
 
 ```bash
-git worktree add -b fe-rebuild ../<repo>-fe-rebuild
-tools/install.sh ../<repo>-fe-rebuild
+git switch -c fe-rebuild
+<seed>/tools/install.sh .
 ```
 
-- `main` は既存実装のまま凍結され、deploy も検証も従来どおり続けられる
+- `main` branch は既存実装のまま凍結される。deploy も検証も従来どおり続けられる
 - seed が配る file は `fe-rebuild` branch にだけ載る（installer は add-only なので既存 file は 1 つも書き換わらない）
-- 置き換えが完走してから branch を統合する。途中で main を触らない
+- `git switch main` すれば working tree は旧実装だけに戻り、status も clean のまま保たれる
+- **作業する dir が変わらない**ので、既に動いている session をそのまま使える
 
-worktree は repo の**外**（sibling dir）に置く。repo 内に置くと、deploy 対象を tree ごと走査する仕組み（Vercel 等）が作りかけの実装まで拾いうる。
+install 直後に commit する。未 commit のまま branch を切り替えると、untracked の seed file が旧実装側の tree に残って見分けがつかなくなる。
 
-**作業 session はこの worktree を作業 dir にして動かす。** seed が配る hooks は worktree 側の `.claude/settings.json` に入るため、main を作業 dir にしたまま worktree の file を編集すると、凍結 mock の保護が効かない。
+旧実装を**同時に file として**参照したいなら、読むための checkout を別に出す。
+
+```bash
+git worktree add ../<repo>-main main
+```
+
+こちらは読むだけなので seed も hooks も要らない。作業する側は元の checkout のままである。
+
+### 作業側を worktree にする場合
+
+逆の構成も取れるが、そのときは **seed を入れた dir と session が見ている dir を一致させる**必要がある。seed の hooks は `.claude/settings.json` で登録され、この file は seed を入れた checkout にしか存在しないため、別の checkout を見ている session には登録されない。この一致は人の運用に依存して崩れるので、上の branch 方式を既定とする。
 
 ### worktree での path 解決
 
