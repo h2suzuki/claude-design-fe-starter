@@ -14,8 +14,12 @@ tools/install.sh ../<repo>-fe-rebuild
 ```
 
 - `main` は既存実装のまま凍結され、deploy も検証も従来どおり続けられる
-- seed が配る 77 file は `fe-rebuild` branch にだけ載る（installer は add-only なので既存 file は 1 つも書き換わらない）
+- seed が配る file は `fe-rebuild` branch にだけ載る（installer は add-only なので既存 file は 1 つも書き換わらない）
 - 置き換えが完走してから branch を統合する。途中で main を触らない
+
+worktree は repo の**外**（sibling dir）に置く。repo 内に置くと、deploy 対象を tree ごと走査する仕組み（Vercel 等）が作りかけの実装まで拾いうる。
+
+**作業 session はこの worktree を作業 dir にして動かす。** seed が配る hooks は worktree 側の `.claude/settings.json` に入るため、main を作業 dir にしたまま worktree の file を編集すると、凍結 mock の保護が効かない。
 
 ### worktree での path 解決
 
@@ -42,7 +46,13 @@ tools/install.sh ../<repo>-fe-rebuild
 
 既存実装が Claude Design の export そのもの（`<x-dc>` 形式）で本番稼働している場合、突合先は最初から確定しているぶん有利だが、**旧 export をそのまま凍結 mock にはしない**。凍結するのは今回作り直した新しい export である。
 
-## 3. 順序 — 1 画面ずつ、gate を緑にしてから次へ
+## 3. 新しい mock を持ち込む時点
+
+mock の持ち込みは **install.sh の後**である。凍結の置き場（`docs/presentation/ui-mock/export/`）・sha256 台帳・`/mock-freeze`・凍結後の編集を止める hook は、いずれも seed が配るものだからである。先に export を置いても、管理外の場所に置いた file にしかならない。
+
+持ち込みの手順は `/mock-freeze` が正で、export の配置と sha256 の台帳登録を同一 commit にする。凍結せずに実装へ入らない — 突合先がドリフトすると、以降の gate は「今どの mock と比べているのか」を答えられなくなる。
+
+## 4. 順序 — 1 画面ずつ、gate を緑にしてから次へ
 
 画面数が多くても、最初の 1 枚は `seed-docs/walking-skeleton.md` の一周をそのまま踏む。2 枚目以降は `seed-docs/screen-loop.md` の定常ループに乗る。
 
@@ -53,7 +63,7 @@ tools/install.sh ../<repo>-fe-rebuild
 
 walking skeleton の目的は「harness が動くことの証明」なので、**API を 1 本でも持つ画面**を推す。
 
-## 4. 先に済ませる設定
+## 5. 先に済ませる設定
 
 一周に入る前に確定しておくと手戻りが出ない。
 
@@ -63,7 +73,7 @@ walking skeleton の目的は「harness が動くことの証明」なので、*
 
 mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等）なら、その URL も vendor 対象になる。`npm run lint:mock` が外部参照を検出する。
 
-## 5. seed への戻し方
+## 6. seed への戻し方
 
 この作業中に見つかるのは 2 種類で、扱いが違う。
 
@@ -74,7 +84,7 @@ mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等
 
 判断に迷ったら「新規プロジェクトでも同じものが要るか」で分ける。要るなら機構、要らないなら固有物である。
 
-## 6. 完了の判定
+## 7. 完了の判定
 
 一周の完了条件は `seed-docs/walking-skeleton.md` と同じで、**全 gate が skip でなく実行されて緑**である。skip は「未検証」であって「合格」ではない。1 spec でも skip のまま「一周した」と宣言しない。
 
