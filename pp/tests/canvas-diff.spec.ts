@@ -52,9 +52,14 @@ test.describe("canvas-diff — judge self-check", () => {
   });
 
   test("mixed 1px excess (left column and bottom row) is cropped away", () => {
-    // 余剰が対角に揃わない組合せ。対角 2 点だけを試す実装はここで落ちる
+    // 片方が両軸で大きく、余剰が対角に揃わない組合せ。対角 2 点だけを試す実装はここで落ちる
     expect(diffCanvasPngs(withExcess(41, 31, 1, 0, gradient), makePng(40, 30, gradient)).matched).toBe(true);
     expect(diffCanvasPngs(withExcess(41, 31, 0, 1, gradient), makePng(40, 30, gradient)).matched).toBe(true);
+  });
+
+  test("1px excess split across images on different axes is cropped away", () => {
+    // mock が幅・app が高さで大きい配置。各画像の候補が 2 点で足りる側の境界を pin する
+    expect(diffCanvasPngs(withExcess(41, 30, 1, 0, gradient), withExcess(40, 31, 0, 1, gradient)).matched).toBe(true);
   });
 
   test("2px difference is reported as a dimension mismatch", () => {
