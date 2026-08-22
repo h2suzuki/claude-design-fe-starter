@@ -29,15 +29,4 @@ Exit Criteria:
 
 ## Medium
 
-### canvas-diff の 1px 混在 offset 対応と dsa back-port
-
-起票: fable-5 2026-08-22 (chat 提案をユーザー採用)
-Goal: pp/src/canvas-diff.ts の ±1px 寸法差 crop を対角 2 点から 4 offset 全組合せ (dw=1 かつ dh=1 の混在 offset を含む) に拡張し、陽性対照で検証のうえ dsa の frontend/pp へ back-port する。
-
-Exit Criteria:
-
-- [x] seed 側: 混在 offset の陽性対照 (例: mock 101x101 vs app 100x100 で余剰が左列 + 下行) が red→green で実測される (d7a2863: 混在 1 件のみ red を実測 → 修正後 6 件 green)
-- [x] pp typecheck 緑 + 既存の 1px/2px 陽性対照に回帰なし (pp/tests/canvas-diff.spec.ts に常設。単軸 1px・対角 1px・2px mismatch を含む 6 件)
-- [x] dsa の frontend/pp/src/canvas-diff.ts へ同変更を back-port し、出典 (seed 側 commit hash) を dsa 側 commit message に記す (dsa 側 owner が da258f1 で land。実測確認 = offsets() 化・commit message に出典記載・陽性対照 spec の同梱。dsa 側で red 先行と pp 全 pack 313 passed も実施済み)
-
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
