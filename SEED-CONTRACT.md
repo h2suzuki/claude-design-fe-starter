@@ -10,7 +10,9 @@
 - `docs/presentation/ui-ast/`
 - `seed-docs/`
 
-## merge 領域への寄与（file/dir 単位の追加のみ・既存は上書きしない）
+## merge 領域への寄与（file/dir 単位の追加。既存との衝突は既定で停止）
+
+installer は既存 file を黙って置き換えない。1 件でも衝突したら **1 file も書かずに停止**し、対象を列挙する。置き換えるには `--overwrite` を明示する（PJ が育てた `pp/src/config.ts`・`selector-map.ts`・`.claude/settings.json` を失う操作なので、既定にはしない）。
 
 | 領域 | 寄与 | 冪等化の方法 |
 |---|---|---|
@@ -18,7 +20,7 @@
 | `tools/` | `design_sync` `ast_validate` `ast-tree` `ast-viewer` `install.sh` | file 単位の add-only |
 | `.claude/skills/` | `fe-kickoff/` `design-order/` `mock-freeze/` `ast-extract/` | file 単位の add-only（新規 dir として追加される） |
 | `.claude/hooks/` | `block-frozen-mock-edit.sh` `check-mock-baseline.sh` | file 単位の add-only |
-| `.claude/settings.json` | hooks 登録 | 無ければ作成・有れば手動 merge を案内（上書きしない） |
+| `.claude/settings.json` | hooks 登録 | 無ければ作成。既存なら衝突として停止し、hooks は seed の同 file から手動 merge する |
 | `CLAUDE.md` | 行動規範ブロック | `<!-- fe-starter:begin/end -->` マーカー区間の追記（既存なら skip） |
 | `.gitignore` | build/一時生成物の除外 | `# fe-starter:begin/end` マーカー区間の追記（既存なら skip） |
 

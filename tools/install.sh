@@ -18,11 +18,14 @@ usage() {
   cat <<EOF
 Usage:
     $PROG {-h|--help}
-    $PROG <target-repo-dir>
+    $PROG [--overwrite] <target-repo-dir>
 
-Copies this seed's owned dirs into <target-repo-dir> (add-only), and appends
-marker-delimited blocks to CLAUDE.md / .gitignore (skipped when already present).
-Re-running is safe: existing files are never overwritten.
+Copies this seed's owned dirs into <target-repo-dir> and appends marker-delimited
+blocks to CLAUDE.md / .gitignore (skipped when the marker is already present).
+
+Files that already exist in the target are never replaced silently. When any are
+found, this script writes nothing and lists them; pass --overwrite to replace
+them with the seed's versions. With no collisions, no option is needed.
 EOF
 }
 
@@ -71,50 +74,100 @@ append_marker_block() {
   printf 'append: %s\n' "$(basename "$target_file")"
 }
 
+# 文面は意図的に冗長 — 誤読防止のため trim せず維持する
+report_collisions() {
+  local target=$1 shown=0 rel
+  shift
+  printf '%s: stopping before writing anything — %d file(s) already exist in the target.\n\n' "$PROG" "$#" >&2
+  for rel in "$@"; do
+    if ((shown >= 20)); then
+      printf '  ... and %d more\n' "$(($# - shown))" >&2
+      break
+    fi
+    printf '  %s\n' "$rel" >&2
+    shown=$((shown + 1))
+  done
+  cat >&2 <<EOF
+
+Nothing was copied. The seed does not replace existing files by default, because
+these paths often hold state the project owns: pp/src/config.ts (viewports,
+locale, pinned clock), pp/src/selector-map.ts (MANUAL_PAIRS), .claude/settings.json
+(hook registrations belonging to other tools), and anything already adapted here.
+
+To replace them with the seed's versions, re-run with --overwrite:
+
+  $PROG --overwrite $target
+
+To pick up newer seed changes without losing local edits, leave this script out
+of it and move them through git, where the merge stays reviewable:
+
+  git remote add seed <seed repo url>
+  git fetch seed && git cherry-pick <commit>
+EOF
+}
+
 main() {
-  [[ $# -eq 1 ]] || { usage >&2; exit 64; }
-  case $1 in
-    -h|--help) usage; exit 0 ;;
-  esac
-  local target=$1
+  local target="" overwrite=0
+  while (($#)); do
+    case $1 in
+      -h|--help) usage; exit 0 ;;
+      --overwrite) overwrite=1 ;;
+      -*) die "unknown option: $1" ;;
+      *)
+        [[ -z $target ]] || die "unexpected argument: $1"
+        target=$1
+        ;;
+    esac
+    shift
+  done
+  [[ -n $target ]] || { usage >&2; exit 64; }
   [[ -d $target ]] || die "target directory not found: $target" 66
   target=$(cd -- "$target" && pwd -P)
   [[ $target != "$SEED_ROOT" ]] || die "target is the seed checkout itself"
 
-  local created=0 skipped=0
-  local skipped_files=()
   local dir rel src dst
+  local -a rels=() collisions=()
   for dir in "${COPY_DIRS[@]}"; do
     while IFS= read -r -d '' rel; do
       [[ -n $rel ]] || continue
-      src=$SEED_ROOT/$rel
-      dst=$target/$rel
-      if [[ -e $dst ]]; then
-        skipped=$((skipped + 1))
-        skipped_files+=("$rel")
-        continue
+      rels+=("$rel")
+      if [[ -e $target/$rel ]]; then
+        collisions+=("$rel")
       fi
-      mkdir -p -- "$(dirname "$dst")"
-      # -p で mode を保存する（design_sync / hook script の exec bit を落とさない）
-      cp -p -- "$src" "$dst"
-      created=$((created + 1))
     done < <(list_seed_files "$dir")
   done
   # 1 件も見つからないのは列挙の失敗（不完全な seed コピー等）— 半端な marker だけ残して成功と偽らない
-  (( created + skipped > 0 )) || die "no seed files found under $SEED_ROOT — incomplete seed copy?" 70
+  ((${#rels[@]} > 0)) || die "no seed files found under $SEED_ROOT — incomplete seed copy?" 70
+
+  # 衝突が 1 件でもあれば 1 file も書かずに止める。部分適用したうえで問い直すと、状態が説明できなくなる
+  if ((${#collisions[@]} > 0)) && ((overwrite == 0)); then
+    report_collisions "$target" "${collisions[@]}"
+    exit 65
+  fi
+
+  local created=0 replaced=0
+  for rel in "${rels[@]}"; do
+    src=$SEED_ROOT/$rel
+    dst=$target/$rel
+    if [[ -e $dst ]]; then
+      replaced=$((replaced + 1))
+    else
+      created=$((created + 1))
+    fi
+    mkdir -p -- "$(dirname "$dst")"
+    # -p で mode を保存する（design_sync / hook script の exec bit を落とさない）
+    cp -p -- "$src" "$dst"
+  done
 
   append_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END"
   append_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END"
 
-  printf '\n%s: %d file(s) copied, %d existing file(s) left untouched\n' "$PROG" "$created" "$skipped"
-  printf 'NOTE: seed の README.md / SEED-CONTRACT.md は copy 対象外 (PJ 所有物のため)。契約と使い方は seed checkout 側で参照する\n'
-  if ((skipped > 0)); then
-    printf '  untouched: %s\n' "${skipped_files[@]}"
-    case " ${skipped_files[*]} " in
-      *' .claude/settings.json '*)
-        printf 'NOTE: .claude/settings.json が既存のため、hooks 登録は seed の同 file から手動 merge してください\n'
-        ;;
-    esac
+  printf '\n%s: %d file(s) copied, %d file(s) overwritten\n' "$PROG" "$created" "$replaced"
+  printf 'NOTE: the seed README.md / SEED-CONTRACT.md are not copied (the project owns those paths); read them in the seed checkout.\n'
+  if ((replaced > 0)); then
+    printf 'overwritten:\n' >&2
+    printf '  %s\n' "${collisions[@]}" >&2
+    printf 'Review these with git diff before committing — local adaptations in them are gone.\n' >&2
   fi
 }
 

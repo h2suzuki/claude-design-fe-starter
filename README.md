@@ -44,7 +44,7 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 /tmp/fe-seed/tools/install.sh .
 ```
 
-installer は追加のみ（既存ファイルは上書きしない・冪等）。詳細は `SEED-CONTRACT.md`。
+installer は既定で追加のみ。既存ファイルと衝突したら**何も書かずに停止**し、対象を列挙する（置き換えたい場合だけ `--overwrite` を付ける）。詳細は `SEED-CONTRACT.md`。
 
 既に動いている実装がある repo（BE 先行・旧 FE あり等）は、導入後にまず `seed-docs/adoption.md` を読む（worktree で main を凍結したまま作り替える手順・既存実装を参照資料として扱う規律・段階移行の順序）。
 

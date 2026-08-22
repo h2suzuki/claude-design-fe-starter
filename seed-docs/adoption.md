@@ -14,7 +14,7 @@ git switch -c fe-rebuild
 ```
 
 - `main` branch は既存実装のまま凍結される。deploy も検証も従来どおり続けられる
-- seed が配る file は `fe-rebuild` branch にだけ載る（installer は add-only なので既存 file は 1 つも書き換わらない）
+- seed が配る file は `fe-rebuild` branch にだけ載る（installer は既存 file と衝突したら停止するので、既存実装が黙って書き換わることはない）
 - `git switch main` すれば working tree は旧実装だけに戻り、status も clean のまま保たれる
 - **作業する dir が変わらない**ので、既に動いている session をそのまま使える
 
