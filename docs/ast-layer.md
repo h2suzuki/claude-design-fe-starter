@@ -145,7 +145,7 @@ code-first 修正を禁じる理由は、実装だけを直すと AST と実装�
 | --- | --- | --- |
 | `ast-schema` | schema 検証 + AST101..106（coverage 閾値・重複 id・低信頼過多・生 px・参照解決・slug 一致） | 実装済み（`tools/ast_validate`） |
 | `ast-provenance` | AST の `provenance.sha256` が現行凍結 mock の hash と一致する（再凍結で stale を検出） | 実装済み（`pp/tests/ast-provenance.spec.ts`） |
-| `ast-conformance` | 実装の `data-visual-id` tree が AST tree と構造一致する（親子関係と出現） | pp 結線 phase の対象 |
+| `ast-conformance` | 実装の `data-visual-id` tree が AST tree と構造一致する（親子関係と出現） | 実装済み（`pp/tests/ast-conformance.spec.ts`） |
 
 `ast-schema` は単体で走る。
 
@@ -157,11 +157,14 @@ python3 tools/ast_validate --self-test
 
 `--self-test` は正常系が緑で通り、SCHEMA と AST101..106 が各 1 回発火することを確認する陽性対照である。
 
-`ast-provenance` は screens/ に AST が 1 件も無い間は理由付きで skip する。
-`ast-conformance` は pp の spec として追加する対象であり、本書時点では未結線である。
-`pp/README.md` の skip 規律と同じく、skip した gate も未結線の gate も「合格」と読み替えない。
+`ast-provenance` は screens/ に AST が 1 件も無い間、`ast-conformance` は加えて `PP_APP_URL` が無い間、
+それぞれ理由付きで skip する。`pp/README.md` の skip 規律と同じく、skip した gate を「合格」と読み替えない。
+
 `ast-conformance` は pixel ではなく構造を見る。`sample-parity`（基準 2 viewport での style/geometry diff = 0）
 の手前に置く網であり、pixel を合わせる前に「木の形そのものが違う」を落とす。
+判定は base tree（`screen.children`）が対象で、`binding.visualId` を持たない中間 node は親子関係から飛ばす。
+overlay は初期状態で DOM に無いことがあるため、描画されていてもいなくても構造差分として数えない
+（overlay の構造は状態を作ってから見る領域であり、`poststate-sweep` 側の担当である）。
 
 ### 3.4 pp への結線
 

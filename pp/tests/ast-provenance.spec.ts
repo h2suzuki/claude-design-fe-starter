@@ -1,7 +1,8 @@
 // AST 出所照合 gate: screen AST の provenance が現行の凍結 export と一致することを検証する。
 // 再凍結後に AST を取り直さないと、下流の gate が旧 mock の構造を正として走る
 import { expect, test } from "@playwright/test";
-import { collectStaleScreens, listScreenAsts } from "../src/ast-provenance";
+import { collectStaleScreens } from "../src/ast-provenance";
+import { listScreenAsts } from "../src/ast-screen";
 import { MOCK_ROOT, UI_AST_SCREENS_DIR } from "../src/mock-server";
 
 test.describe("docs/presentation/ui-ast — provenance", () => {
