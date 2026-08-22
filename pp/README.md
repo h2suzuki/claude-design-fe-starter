@@ -24,9 +24,11 @@
 ```bash
 cd pp
 npm install
+# 共有 toolchain の置き場。worktree では --show-toplevel が worktree 自身を指すので、
+# main repo 側を返す --git-common-dir から引く（通常 repo でも同じ値になる）
+REPO_MAIN="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
 # ブラウザキャッシュを repo ローカルへ（sandbox 環境では既定キャッシュ dir が書けないため）
-PLAYWRIGHT_BROWSERS_PATH="$(git rev-parse --show-toplevel)/drafts/pw-browsers" \
-  npx playwright install chromium
+PLAYWRIGHT_BROWSERS_PATH="$REPO_MAIN/drafts/pw-browsers" npx playwright install chromium
 ```
 
 `@playwright/test` は完全固定 version。上げるときは vendor 資産と selector map の再検証をセットで行う（同梱 Chromium の更新は text metrics/AA を揺らす）。
@@ -36,8 +38,9 @@ PLAYWRIGHT_BROWSERS_PATH="$(git rev-parse --show-toplevel)/drafts/pw-browsers" \
 app 側 spec は dev server の URL を明示的に渡したときだけ走る。sandbox 環境では server とテストを同一 shell invocation で動かす（invocation ごとに network namespace が分かれる環境があるため。通常環境なら別 terminal でも良い）:
 
 ```bash
+# 検証対象は「今いる worktree」の frontend なので、こちらは --show-toplevel で正しい
 cd "$(git rev-parse --show-toplevel)/frontend"
-npx vite --host 127.0.0.1 --port 5173 --strictPort &
+bun run dev -- --host 127.0.0.1 --port 5173 --strictPort &
 VITE_PID=$!
 # 起動した PID だけを止める（pkill/fuser/port 指定 kill は使わない）。trap は crash/中断で発火し、
 # hang は下の timeout が有限化して EXIT へ到達させる — この 2 段で server を残さない
@@ -45,7 +48,7 @@ trap 'kill "$VITE_PID" 2>/dev/null' EXIT INT TERM
 until curl -sf http://127.0.0.1:5173 >/dev/null; do sleep 1; done
 
 cd ../pp
-PLAYWRIGHT_BROWSERS_PATH="$(git rev-parse --show-toplevel)/drafts/pw-browsers" \
+PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/drafts/pw-browsers" \
 PP_APP_URL="http://127.0.0.1:5173" \
 PP_MOCK_FILE="your-screen.html" \
   timeout 600 npm test

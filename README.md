@@ -26,7 +26,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 ├── frontend/          SvelteKit skeleton（$lib/ui/{tokens,components} + src/routes、依存導入は bun）
 ├── pp/                parity harness（dump / diff / sweep / self-baseline / provenance）
 ├── tools/             design_sync（Claude Design 同期）+ ast_validate / ast-tree / ast-viewer（AST gate と可視化）+ install.sh（既存 repo への copy-in）
-└── seed-docs/         プロセス文書（walking-skeleton / screen-loop / design-order-template / first-prompts）
+└── seed-docs/         プロセス文書（adoption / walking-skeleton / screen-loop / design-order-template / first-prompts）
 ```
 
 ## 使い方
@@ -45,6 +45,8 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 ```
 
 installer は追加のみ（既存ファイルは上書きしない・冪等）。詳細は `SEED-CONTRACT.md`。
+
+既に動いている実装がある repo（BE 先行・旧 FE あり等）は、導入後にまず `seed-docs/adoption.md` を読む（worktree で main を凍結したまま作り替える手順・既存実装を参照資料として扱う規律・段階移行の順序）。
 
 導入後はそのまま `/fe-kickoff` で day-0 を進める（project skills は自動 hot-reload される。認識されないときは `/reload-skills`、hooks 登録を含む settings の変更が効かないときのみ再起動）。`.claude/settings.json` が既存だった場合は、hooks の手動 merge を先に行う（installer が NOTE で知らせる）。
 
