@@ -4,7 +4,7 @@
 
 install.sh 自体の入手と実行は seed の README.md に載っている（本書は copy-in 後に repo 内から読める場所に置くため、bootstrap は扱わない）。
 
-## 1. 作業場所 — branch で凍結し、checkout は動かさない
+## 1. 作業場所 — 既存実装は branch で凍結する
 
 既存実装は**動いている資産**であって、置き換えが完走するまで消してはならない。ただし凍結すべきなのは「既存実装が動く状態」であって checkout の場所ではない。それは branch で足りる。
 
@@ -30,7 +30,18 @@ git worktree add ../<repo>-main main
 
 ### 作業側を worktree にする場合
 
-逆の構成も取れるが、そのときは **seed を入れた dir と session が見ている dir を一致させる**必要がある。seed の hooks は `.claude/settings.json` で登録され、この file は seed を入れた checkout にしか存在しないため、別の checkout を見ている session には登録されない。この一致は人の運用に依存して崩れるので、上の branch 方式を既定とする。
+既存実装を今までどおり deploy しながら別 checkout で作り替えるなら、**先に seed を入れて commit し、その commit から worktree を出す**。
+
+```bash
+<seed>/tools/install.sh .        # 元の checkout で実行し、commit する
+git worktree add .claude/worktrees/fe-rebuild -b fe-rebuild
+```
+
+`.claude/settings.json`（hooks 登録）・hook script・skills はいずれも追跡ファイルなので、commit 済みなら worktree にも materialize される（hook script の exec bit も保たれる）。session は通常どおり repo top で起動し、worktree へは `EnterWorktree` に `path` を渡して入る。
+
+順序を逆にして worktree の中で install すると、seed はその worktree にしか載らない。元の checkout を見ている session には hooks が登録されず、凍結 mock の編集 gate が効かないまま作業することになる。
+
+hooks 登録を含む settings の変更は hot-reload されないので、install 後に session を 1 回だけ再起動する。
 
 ### worktree での path 解決
 
