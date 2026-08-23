@@ -29,6 +29,20 @@ Exit Criteria:
 
 ## Medium
 
+### 既存 repo 適用の出口が未定義 — 旧実装との regression 段と main への land 手順
+
+起票: opus-5 2026-08-24
+Goal: 既存実装のある repo で一周を終えた後、旧実装との突合と main への land を、文書化された手順で完了できるようにする。
+Work file: `seed-docs/adoption.md`（§2 と §8）・`seed-docs/screen-loop.md`（⑦）
+
+Exit Criteria:
+
+- [ ] 旧実装をどこまで参照してよいか、参照の結果 mock と差が出たときの扱い（DESIGN-POLICY への裁定登録か実装修正か）を adoption.md §2 に書く
+- [ ] 一周完了後に作業 branch を main へ land し、旧実装を退役させるまでの手順を書く。deploy 先の切替と Claude Design 同期の再確立を含む
+- [ ] どちらも文書を先に変えてから、その文書どおり実行して確認する
+
+適用先からの報告（2026-08-24）で 2 件とも確認済み。screen-loop ⑦ の判定基準は mock と意味論で、旧実装と比べる段が無い。adoption.md §1 は main を凍結すると書くが、凍結を解いて作り替えた側を main にする手順が無く、§8「完了の判定」も gate が緑になるところで止まっている。いずれも新規 repo では出ない、既存 repo 適用固有の不足。
+
 ### seed 更新の取り込み経路 — merge のままか rebase へ変えるか
 
 起票: opus-5 2026-08-24

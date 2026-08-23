@@ -15,7 +15,7 @@ seed からの立ち上げを day-0 手順で完走させる。詳細手順の�
 3. `seed-docs/walking-skeleton.md` を読み、Day-0 チェックリストを Task 登録する
 4. 依存を導入する: `frontend/` は `bun install`、`pp/` は `npm install`（pp は Node + Playwright 固定）。pp では Playwright browser も導入する（コマンドと環境注意は `pp/README.md` の setup 節）
 5. 検証条件を確定する: `pp/src/config.ts` の基準 viewport 2 点・locale/timezone・固定時刻
-6. Claude Design の 2 project 体制を用意する（design-system 型 = 部品ライブラリ、通常 = mock 用）。環境変数 `DESIGN_PROJECT_ID` を設定する
+6. mock の取得経路を確定する。自分で project を扱うなら Claude Design の 2 project 体制を用意し（design-system 型 = 部品ライブラリ、通常 = mock 用）、環境変数 `DESIGN_PROJECT_ID` を設定する。ユーザーから export 一式を受け取る運用なら、この step も `DESIGN_PROJECT_ID` も要らない（`docs/presentation/ui-mock/README.md` の取得経路）
 7. 発注規約 1 枚を用意する（/design-order が `seed-docs/design-order-template.md` から組み立てる）
 8. `{{...}}` placeholder を grep で列挙し、残る差し替え点を確定させる（`frontend/src/app.html` の `{{PRODUCT_NAME}}` を含む）
 9. walking skeleton を一周する: 最初の 1 部品で mock → /mock-freeze → 実装 → parity → sweep。pp の skip が全て外れて緑になってから画面量産に入る

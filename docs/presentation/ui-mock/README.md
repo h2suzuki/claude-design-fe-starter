@@ -13,7 +13,9 @@ docs/presentation/ui-mock/
 ## 凍結手順（/mock-freeze skill が案内する内容）
 
 1. Claude Design 上でユーザーが mock の完成を宣言する
-2. standalone HTML export を取得し（`tools/design_sync fetch` または DesignSync tool）、`export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし）
+2. standalone HTML export を取得し、`export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし）。取得経路は 2 つあり、どちらでも以降の gate は変わらない
+   - **project 経由**: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool
+   - **受け取り**: ユーザーから export 一式（zip 等）を受け取って展開する。この場合 `tools/design_sync verify` による Claude Design との再照合と、実装済み部品のライブラリ書き戻しは使えない — 突合先の出所は sha256 台帳だけが担う
 3. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する
 4. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
