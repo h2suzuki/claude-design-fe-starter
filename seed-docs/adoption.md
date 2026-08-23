@@ -121,12 +121,20 @@ hook 登録を含む `.claude/settings.json` が更新されるので、merge �
 
 ## 7. seed への戻し方
 
-この作業中に見つかるのは 2 種類で、扱いが違う。
+この作業中に見つかるのは 2 種類で、扱いが違う。分類の鍵は dir でなく **seed がその file を配っているか**である。
 
 | 見つかるもの | 扱い |
 | --- | --- |
-| この repo 固有のもの（mock・AST・部品・SELECTOR_MAP の中身・fixture） | この repo に留める。seed へ戻さない |
-| seed の機構の欠陥・不足（`pp/src`・spec の骨格・`tools/`・skills・本書を含む docs） | seed へ back-port する。出典 commit を message に記す |
+| seed が配っている file の欠陥・不足 | seed へ back-port する。出典 commit を message に記す |
+| それ以外（mock・AST・部品・SELECTOR_MAP の中身・fixture、および PJ が自分で足した file） | この repo に留める。seed へ戻さない |
+
+dir 名で判定してはならない。`docs/` `tools/` `.claude/` は `SEED-CONTRACT.md` の **merge 領域**で、seed が配る file と PJ が足した file が同居する（`frontend/` `pp/` `seed-docs/` `docs/presentation/` は seed の占有 dir なので同居しない）。dir で判定すると、PJ が自分で足した tool の修正を seed へ戻そうとする経路が開く。
+
+機械的に確かめる。
+
+```bash
+git -C <seed> ls-files --error-unmatch -- <path>   # rc 0 = seed が配っている file
+```
 
 判断に迷ったら「新規プロジェクトでも同じものが要るか」で分ける。要るなら機構、要らないなら固有物である。
 

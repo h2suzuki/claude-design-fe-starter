@@ -62,7 +62,7 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 ## seed との往復（更新の運び方）
 
 - **seed → PJ**: `git remote add seed <この repo の URL>` して必要 commit を `git cherry-pick` する（PJ 側で placeholder を差し替えている前提のため、一括上書きの機構は持たない）
-- **PJ → seed**: pp harness 等の汎用部を強化・修正したら seed へ back-port する。運ぶのは機構（`pp/src`・spec の骨格・`pp/scripts`・`tools/`）だけで、PJ 固有物（SELECTOR_MAP の中身・fixture・screen 定義・差し替え済み placeholder）は運ばない。cherry-pick がそのまま当たらない場合は手動で port し、出典 commit を message に記す
+- **PJ → seed**: pp harness 等の汎用部を強化・修正したら seed へ back-port する。運ぶのは **seed が配っている file** の修正だけで、PJ 固有物（SELECTOR_MAP の中身・fixture・screen 定義・差し替え済み placeholder・PJ が自分で `tools/` や `docs/` に足した file）は運ばない。dir 名で判定しない — `docs/` `tools/` `.claude/` は merge 領域で両者が同居する（`git -C <seed> ls-files --error-unmatch -- <path>` が rc 0 なら seed の配布物）。cherry-pick がそのまま当たらない場合は手動で port し、出典 commit を message に記す
 - 共通部の package 化（npm 等）は 3 プロジェクト目まで見送る（rule of three）
 
 ## 設計原則: 強制の階層
