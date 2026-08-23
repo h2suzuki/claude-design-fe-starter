@@ -21,9 +21,10 @@ const BASES = [
 
 for (const [label, contextOptions] of BASES) {
   test.describe(`app — self-baseline screenshots (${label})`, () => {
+    test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
+
     for (const appPath of SELF_BASELINE_PATHS) {
       test(`${appPath}`, async ({ browser }) => {
-        test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
         const context = await browser.newContext(contextOptions);
         try {
           await installNetworkGuard(context);

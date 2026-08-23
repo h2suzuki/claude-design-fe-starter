@@ -13,14 +13,14 @@ const READY_SELECTOR = "body";
 const EXPECTED = expectedTree(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE);
 
 test.describe("app — AST conformance", () => {
-  test("data-visual-id tree keeps the AST parent-child structure", async ({ browser }) => {
-    test.skip(!MOCK_CONFIGURED, "PP_MOCK_FILE 未設定 — docs/presentation/ui-mock/export/ 内の突合先ファイル名を渡す");
-    test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
-    test.skip(
-      EXPECTED.nodes.length === 0,
-      "対応する screen AST に binding.visualId が無い — /ast-extract で起こすと有効化される",
-    );
+  test.skip(!MOCK_CONFIGURED, "PP_MOCK_FILE 未設定 — docs/presentation/ui-mock/export/ 内の突合先ファイル名を渡す");
+  test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
+  test.skip(
+    EXPECTED.nodes.length === 0,
+    "対応する screen AST に binding.visualId が無い — /ast-extract で起こすと有効化される",
+  );
 
+  test("data-visual-id tree keeps the AST parent-child structure", async ({ browser }) => {
     const context = await browser.newContext(MOBILE_CONTEXT_OPTIONS);
     await installNetworkGuard(context);
     const page = await openApp(context, { readySelector: READY_SELECTOR });

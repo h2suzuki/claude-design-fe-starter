@@ -13,8 +13,9 @@ const APP_MOUNT_SELECTOR = "#app";
 const WIDTHS = [...SWEEP_WIDTHS, ...BREAKPOINT_EDGE_WIDTHS];
 
 test.describe("app — width sweep", () => {
+  test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
+
   test(`layout invariants hold across ${WIDTHS[0]}..${WIDTHS[WIDTHS.length - 1]}`, async ({ browser }) => {
-    test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
     for (const width of WIDTHS) {
       const context = await browser.newContext(sweepContextOptions(width));
       try {

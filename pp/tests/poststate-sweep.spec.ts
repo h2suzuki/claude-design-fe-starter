@@ -41,8 +41,9 @@ async function assertClean(page: Page, where: string): Promise<void> {
 }
 
 test.describe("app — post-interaction state sweep", () => {
+  test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
+
   test("initial state and every registered interaction stay clean", async ({ browser }) => {
-    test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
     const context = await browser.newContext(MOBILE_CONTEXT_OPTIONS);
     try {
       await installNetworkGuard(context);

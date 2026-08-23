@@ -52,9 +52,10 @@ const BASES = [
 
 for (const [label, contextOptions] of BASES) {
   test.describe(`app — modal geometry sweep (${label})`, () => {
+    test.skip(MODALS.length === 0, "MODALS が空 — モーダル第 1 号を登録すると有効化される");
+    test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
+
     test("every registered modal fits the viewport and keeps its controls inside", async ({ browser }) => {
-      test.skip(MODALS.length === 0, "MODALS が空 — モーダル第 1 号を登録すると有効化される");
-      test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
       const context = await browser.newContext(contextOptions);
       try {
         await installNetworkGuard(context);

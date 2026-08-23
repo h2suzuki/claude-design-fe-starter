@@ -27,9 +27,10 @@ async function assertListIdentity(page: Page, key: string, before: Array<string 
 }
 
 test.describe("app — list identity sweep", () => {
+  test.skip(EDGES.length === 0, "EDGES が空 — 状態変更操作の第 1 号を登録すると有効化される");
+  test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
+
   test("every registered state change keeps selection and row order", async ({ browser }) => {
-    test.skip(EDGES.length === 0, "EDGES が空 — 状態変更操作の第 1 号を登録すると有効化される");
-    test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
     const context = await browser.newContext(MOBILE_CONTEXT_OPTIONS);
     try {
       await installNetworkGuard(context);
