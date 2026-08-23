@@ -50,16 +50,19 @@ trap 'kill "$VITE_PID" 2>/dev/null' EXIT INT TERM
 until curl -sf http://127.0.0.1:5173 >/dev/null; do sleep 1; done
 
 cd ../pp
-PLAYWRIGHT_BROWSERS_PATH="$(../tools/toolchain-dir)/pw-browsers" \
 PP_APP_URL="http://127.0.0.1:5173" \
 PP_MOCK_FILE="your-screen.html" \
-  timeout 600 npm test
+  timeout 600 npm run gate
 ```
+
+browser の置き場は `npm test` が `tools/toolchain-dir` から解決するので、env の前置は要らない（`npm run gate` と `test:*` はいずれも `npm test` 経由）。`npx playwright test` を直に叩くときだけ `PLAYWRIGHT_BROWSERS_PATH` を自分で渡す。
+
+完了判定には `npm test` でなく `npm run gate` を使う — `npm test` は skip を素通しする。
 
 mock を変更（再凍結）したら必須 gate:
 
 ```bash
-npm run lint:mock && npm test
+npm run lint:mock && npm run gate
 ```
 
 ## 差し替え点（PJ 開始時に確定する）
