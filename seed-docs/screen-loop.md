@@ -52,6 +52,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 ### ⑥ 機械 gate
 
 - sample-parity (structural parity) + width-sweep + poststate-sweep + self-baseline スクショ回帰 + mock-provenance を全て実行する
+- 画面が増えると self-baseline の baseline PNG も増える。`pp/tests/*-snapshots/` は追跡対象なので同じ commit に載せる (追跡しないと比較対象が消えて回帰網が空回りする)
 - 完了条件: DoD 3 分類の機械側が全て「実行されて緑」。skip 混じりを緑と報告しない
 
 ### ⑦ LLM スクショ一次レビュー + 人間受入

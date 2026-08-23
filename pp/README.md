@@ -21,6 +21,14 @@
 
 この判定は `npm run gate`（= `playwright test` + `scripts/require-no-skips.mjs`）が機械的に行う。skip が 1 件でも残れば exit 1 になり、残った spec と skip 理由を列挙する。`npm test` 単体は skip を素通しするので、完了判定には `gate` を使う。
 
+## self-baseline の baseline は commit する
+
+`tests/self-baseline.spec.ts-snapshots/` に生成される PNG は **追跡して commit する**。commit しないと clone や新しい worktree で毎回再生成され、比較対象が無いまま緑になる — gate は通るのに何も検出していない状態になり、「回帰網」として機能しない。`@playwright/test` を完全固定しているのは、この baseline を環境をまたいで再現させるためである。
+
+`--update-snapshots` は初回生成と、**意図して受け入れる変更**のときだけ使う。実行すると baseline がその場の描画で上書きされるので、更新した PNG の差分を commit で必ずレビューする。無自覚に回すと回帰網を自分で書き換えることになる。
+
+file 名は `<name>-<project>-<platform>.png`（例 `desktop---pp-linux.png`）で platform ごとに別 file になる。gate を回す platform を 1 つ決め、その baseline を正とする。別 platform で回すぶんは別 file として増えるので、混在させるなら「どの platform のものが正か」を PJ 側で決める。
+
 ## setup
 
 ```bash
