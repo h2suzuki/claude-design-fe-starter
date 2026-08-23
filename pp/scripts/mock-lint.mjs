@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 凍結 mock の静的 lint: 外部資産参照（CDN 依存 = 検証の非決定性）と size cap を検査する
-// MOCK101 = vendor 化されていない外部資産参照 / MOCK102 = size cap 超過
+// MOCK101 = vendor 化されていない外部資産参照 / MOCK102 = size cap 超過 / MOCK103 = 途中で切れた document
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -50,6 +50,15 @@ function lintFile(file) {
   if (bytes.byteLength > CAP_BYTES) {
     violations.push({ file, line: 1, id: 'MOCK102', message: `file is ${bytes.byteLength} bytes; cap is ${CAP_BYTES}` });
   }
+  // 取得 API 側の size cap で切れた export を正本として pin させない（台帳は「取得物と一致する」しか保証しない）
+  if (!/<\/html\s*>\s*$/i.test(text)) {
+    violations.push({
+      file,
+      line: lineAt(text, text.length),
+      id: 'MOCK103',
+      message: `document does not end with </html> (${bytes.byteLength} bytes) — 取得が途中で切れていないか確認する`,
+    });
+  }
   return violations;
 }
 
@@ -71,7 +80,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(`mock-lint self-test: ${message}`);
 }
 
-// self-test claim: 合成違反ファイルで MOCK101/MOCK102 が各 1 回発火し、クリーンなファイルは違反 0
+// self-test claim: 合成違反ファイルで MOCK101/MOCK102/MOCK103 が各 1 回発火し、クリーンなファイルは違反 0
 function runSelfTest() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mock-lint-'));
   try {
@@ -85,13 +94,19 @@ function runSelfTest() {
     assert(cdnViolations.length === 1 && cdnViolations[0].id === 'MOCK101', 'cdn fixture did not fire MOCK101 exactly once');
 
     const capFile = path.join(tempDir, 'cap.html');
-    fs.writeFileSync(capFile, Buffer.alloc(CAP_BYTES + 1, 0x20));
+    fs.writeFileSync(capFile, Buffer.concat([Buffer.alloc(CAP_BYTES, 0x20), Buffer.from('</html>')]));
     const capViolations = lintFile(capFile);
     assert(capViolations.length === 1 && capViolations[0].id === 'MOCK102', 'cap fixture did not fire MOCK102 exactly once');
+
+    // 取得 API の cap で末尾が落ちた export を模す（閉じタグまで届かない）
+    const truncatedFile = path.join(tempDir, 'truncated.html');
+    fs.writeFileSync(truncatedFile, '<html><head><link href="./local.css" rel="stylesheet"></head><body><div>cut he');
+    const truncatedViolations = lintFile(truncatedFile);
+    assert(truncatedViolations.length === 1 && truncatedViolations[0].id === 'MOCK103', 'truncated fixture did not fire MOCK103 exactly once');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
-  console.log('mock-lint self-test: clean passes; MOCK101/MOCK102 each fire once');
+  console.log('mock-lint self-test: clean passes; MOCK101/MOCK102/MOCK103 each fire once');
 }
 
 function main(args) {

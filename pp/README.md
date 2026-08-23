@@ -42,7 +42,9 @@ app 側 spec は dev server の URL を明示的に渡したときだけ走る�
 ```bash
 # 検証対象は「今いる worktree」の frontend なので、こちらは --show-toplevel で正しい
 cd "$(git rev-parse --show-toplevel)/frontend"
-bun run dev -- --host 127.0.0.1 --port 5173 --strictPort &
+# host に bun が無い環境では setup 節で drafts へ置いた実体を使う（PATH には載らない）
+BUN="$(command -v bun || echo "$(../tools/toolchain-dir)/bun/bun-linux-x64/bun")"
+"$BUN" run dev -- --host 127.0.0.1 --port 5173 --strictPort &
 VITE_PID=$!
 # 起動した PID だけを止める（pkill/fuser/port 指定 kill は使わない）。trap は crash/中断で発火し、
 # hang は下の timeout が有限化して EXIT へ到達させる — この 2 段で server を残さない

@@ -65,11 +65,13 @@ npm --prefix pp install
 
 ```bash
 DRAFTS="$(tools/toolchain-dir)"
-BUN_INSTALL_CACHE_DIR="$DRAFTS/bun/cache" bun install --cwd frontend
+# host に bun が無い環境では下で落とす実体を使う（PATH には載らない）
+BUN="$(command -v bun || echo "$DRAFTS/bun/bun-linux-x64/bun")"
+BUN_INSTALL_CACHE_DIR="$DRAFTS/bun/cache" "$BUN" install --cwd frontend
 npm_config_cache="$DRAFTS/npm-cache" npm --prefix pp install
 ```
 
-host に bun が無くても、Playwright browser と同じく repo-local に置けば足りる (実体は gitignore 下・installer は配らない)。
+host に bun が無くても、Playwright browser と同じく repo-local に置けば足りる (実体は gitignore 下・installer は配らない)。先に下の取得を済ませてから上を実行する。
 
 ```bash
 BUN_DIR="$(tools/toolchain-dir)/bun"
