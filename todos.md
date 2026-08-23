@@ -29,6 +29,20 @@ Exit Criteria:
 
 ## Medium
 
+### BE 結合済み実装と Claude Design の往復手順が無い
+
+起票: opus-5 2026-08-24
+Goal: BE と結合した実装を持つ repo で、mock への書き戻しと mock 由来の変更の取り込みを、文書化された手順で回せるようにする。
+Work file: `docs/design-sync.md`・`seed-docs/first-prompts.md`
+
+Exit Criteria:
+
+- [ ] 実装が呼ぶ BE を、書き戻し時に何へ置換するか（`docs/design-sync.md` の「共有 fixture module」が受け皿）と、その変換を書き戻し手順のどこで行うかを書く
+- [ ] mock 側の変更を BE 結合済み FE へ戻すとき、fixture と実 BE の両方へ整合させる調整段を書く
+- [ ] 一周実証の完了後に着手し、文書を先に変えてから文書どおり実行して確認する
+
+適用先からの報告（2026-08-24）。`first-prompts.md:28` は「実装から生成した preview HTML を書き戻す」としか書いておらず、BE 呼び出しの扱いが無い。そのまま書き戻すと Claude Design 上で外部 fetch できず動かない。受け皿の概念（`design-sync.md:14,107` の共有 fixture module）は既にあるので、欠けているのは変換の位置づけ。`design-sync.md` は mock → 実装の読解と pp での pin を定めるが、既に BE と結合した実装へ戻す調整は扱っていない。新規実装では出ず、旧実装と BE を持つ repo でだけ出る。
+
 ### 既存 repo 適用の出口が未定義 — 旧実装との regression 段と main への land 手順
 
 起票: opus-5 2026-08-24
