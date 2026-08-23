@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# 共有 toolchain（Playwright browser・bun・npm cache）の置き場を返す。書けない環境では worktree 側へ退避する
+set -euo pipefail
+
+PROG=$(basename "$0")
+
+usage() {
+  cat <<MSG
+Usage: $PROG
+
+Prints the directory to keep the shared toolchain in (Playwright browsers, bun,
+npm cache). It prefers the main repository's drafts/ so that every worktree
+shares one copy, and falls back to the current worktree's own drafts/ when that
+is not writable -- which is what happens in sandboxes that grant write access
+only to the checkout the session sits in.
+
+Run it from anywhere inside the repository:
+
+  DRAFTS="\$(tools/$PROG)"
+
+The fallback is reported on stderr, so a per-worktree copy never looks like the
+shared one. Exit codes: 0 printed a usable directory, 73 neither was writable.
+MSG
+}
+
+# 書けるかの判定そのものなので、probe の失敗は error でなく結果として扱う
+writable_drafts() {
+  local dir=$1
+  mkdir -p -- "$dir" 2>/dev/null || return 1
+  : > "$dir/.write-probe.$$" 2>/dev/null || return 1
+  rm -f -- "$dir/.write-probe.$$"
+}
+
+main() {
+  case ${1:-} in
+    -h|--help) usage; exit 0 ;;
+    '') ;;
+    *) usage >&2; exit 64 ;;
+  esac
+  command -v git >/dev/null 2>&1 || { printf '%s: git not found\n' "$PROG" >&2; exit 69; }
+
+  local shared local_dir
+  shared=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/drafts
+  local_dir=$(git rev-parse --show-toplevel)/drafts
+
+  if writable_drafts "$shared"; then
+    printf '%s\n' "$shared"
+    return
+  fi
+  if writable_drafts "$local_dir"; then
+    printf '%s: %s is not writable, so the toolchain is kept per-worktree instead of shared.\n' "$PROG" "$shared" >&2
+    printf '%s\n' "$local_dir"
+    return
+  fi
+  if [[ $shared == "$local_dir" ]]; then
+    printf '%s: %s is not writable — nowhere to put the toolchain.\n' "$PROG" "$shared" >&2
+  else
+    printf '%s: neither %s nor %s is writable — nowhere to put the toolchain.\n' "$PROG" "$shared" "$local_dir" >&2
+  fi
+  exit 73
+}
+
+main "$@"

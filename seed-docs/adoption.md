@@ -50,9 +50,11 @@ hooks 登録を含む settings の変更は hot-reload されないので、inst
 | 対象 | 引き方 | 理由 |
 | --- | --- | --- |
 | 作業対象（`frontend/` `pp/` `docs/`） | `git rev-parse --show-toplevel` | 検証するのは今いる worktree の実装 |
-| 共有 toolchain（`drafts/pw-browsers` `drafts/bun`） | `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` | 実体は main repo 側に 1 つ置いて全 worktree で共有する。通常 repo でも同じ値になる |
+| 共有 toolchain（browser・bun・npm cache） | `tools/toolchain-dir` | main repo 側に 1 つ置いて全 worktree で共有する。書けない環境では worktree 側へ退避して、その旨を stderr に出す |
 
 `drafts/` は gitignore 対象なので worktree には materialize されない。新しい worktree で browser や bun が「無い」ように見えたら、まず上表の引き方を疑う。
+
+共有先が書けない環境がある — session の write 権限が今いる checkout に閉じている sandbox では、main repo 側が read-only になる。`tools/toolchain-dir` はそれを実測して置き場を決めるので、手で場合分けしない。退避したときは worktree ごとに browser と bun を取り直すことになる（共有の狙いは達成できない）が、手順は同じまま通る。
 
 同じ理由で `node_modules/` も worktree には無い。**依存の導入は worktree ごとに 1 回必要**で、これを飛ばすと `ERR_MODULE_NOT_FOUND` が出る。共有できるのは gitignore 下でも main repo 側に実体を置いた toolchain（`drafts/`）だけで、`node_modules` は各 worktree が持つ。
 

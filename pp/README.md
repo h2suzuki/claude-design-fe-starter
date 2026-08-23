@@ -25,13 +25,12 @@
 
 ```bash
 cd pp
-# 共有 toolchain の置き場。worktree では --show-toplevel が worktree 自身を指すので、
-# main repo 側を返す --git-common-dir から引く（通常 repo でも同じ値になる）
-REPO_MAIN="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+# 共有 toolchain の置き場。main repo 側を優先し、書けない環境では worktree 側へ退避する
+DRAFTS="$(../tools/toolchain-dir)"
 # cache もブラウザも repo ローカルへ（sandbox 環境では既定 cache dir が書けず、
 # npm install は EROFS で落ちる）
-npm_config_cache="$REPO_MAIN/drafts/npm-cache" npm install
-PLAYWRIGHT_BROWSERS_PATH="$REPO_MAIN/drafts/pw-browsers" npx playwright install chromium
+npm_config_cache="$DRAFTS/npm-cache" npm install
+PLAYWRIGHT_BROWSERS_PATH="$DRAFTS/pw-browsers" npx playwright install chromium
 ```
 
 `@playwright/test` は完全固定 version。上げるときは vendor 資産と selector map の再検証をセットで行う（同梱 Chromium の更新は text metrics/AA を揺らす）。
@@ -51,7 +50,7 @@ trap 'kill "$VITE_PID" 2>/dev/null' EXIT INT TERM
 until curl -sf http://127.0.0.1:5173 >/dev/null; do sleep 1; done
 
 cd ../pp
-PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/drafts/pw-browsers" \
+PLAYWRIGHT_BROWSERS_PATH="$(../tools/toolchain-dir)/pw-browsers" \
 PP_APP_URL="http://127.0.0.1:5173" \
 PP_MOCK_FILE="your-screen.html" \
   timeout 600 npm test

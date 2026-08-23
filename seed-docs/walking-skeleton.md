@@ -61,10 +61,10 @@ bun install --cwd frontend
 npm --prefix pp install
 ```
 
-既定の cache 先へ書けない環境（sandbox 等）では、cache を repo-local へ振る。省くと npm は EROFS で落ちる。
+既定の cache 先へ書けない環境（sandbox 等）では、cache を repo-local へ振る。省くと npm は EROFS で落ちる。置き場は `tools/toolchain-dir` が決める（main repo 側を優先し、書けなければ worktree 側へ退避する）。
 
 ```bash
-DRAFTS="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/drafts"
+DRAFTS="$(tools/toolchain-dir)"
 BUN_INSTALL_CACHE_DIR="$DRAFTS/bun/cache" bun install --cwd frontend
 npm_config_cache="$DRAFTS/npm-cache" npm --prefix pp install
 ```
@@ -72,8 +72,7 @@ npm_config_cache="$DRAFTS/npm-cache" npm --prefix pp install
 host に bun が無くても、Playwright browser と同じく repo-local に置けば足りる (実体は gitignore 下・installer は配らない)。
 
 ```bash
-# worktree では --show-toplevel が worktree 自身を指すので、main repo 側を返す形で引く
-BUN_DIR="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/drafts/bun"
+BUN_DIR="$(tools/toolchain-dir)/bun"
 mkdir -p "$BUN_DIR"
 curl -fsSL -o "$BUN_DIR/bun.zip" https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip
 unzip -qo "$BUN_DIR/bun.zip" -d "$BUN_DIR"
