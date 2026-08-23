@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# claude-design-fe-starter を既存 repo へ copy-in する冪等 installer（追加のみ・既存ファイルは変更しない）
-# 契約の正は SEED-CONTRACT.md。使い方: git clone --depth 1 <seed> /tmp/fe-seed && /tmp/fe-seed/tools/install.sh <target>
+# seed 一式を既存 repo へ copy-in する冪等 installer（PJ が育てた file だけ止めて問い直す）
+# 契約の正は SEED-CONTRACT.md。使い方は --help
 set -euo pipefail
 
 PROG=$(basename "$0")
@@ -24,9 +24,9 @@ Copies this seed's owned dirs into <target-repo-dir> and appends marker-delimite
 blocks to CLAUDE.md / .gitignore (skipped when the marker is already present).
 The target may be relative, and defaults to the current directory.
 
-Existing files that already match the seed are left alone. Ones whose content
-differs are never replaced silently: this script writes nothing, lists them, and
-asks for --overwrite. With nothing differing, no option is needed.
+Existing files that already match the seed are left alone, and ones still holding
+an older seed version are refreshed in place. Only files this seed never shipped
+stop the run: nothing is written, they are listed, and --overwrite is asked for.
 
 In a git repo the copied paths are then offered for commit -- prompted on a
 terminal, forced by --commit, suppressed by --no-commit. Declining leaves the
@@ -110,14 +110,15 @@ list_unrecoverable() {
 report_collisions() {
   local target=$1 count=$2
   shift 2
-  printf '%s: stopping before writing anything — %d file(s) in the target differ from the seed.\n\n' "$PROG" "$count" >&2
+  printf '%s: stopping before writing anything — %d file(s) hold content this seed never shipped.\n\n' "$PROG" "$count" >&2
   print_paths "${@:1:$count}"
   cat >&2 <<EOF
 
-Nothing was copied. The seed does not replace existing files by default, because
-these paths often hold state the project owns: pp/src/config.ts (viewports,
-locale, pinned clock), pp/src/selector-map.ts (MANUAL_PAIRS), .claude/settings.json
-(hook registrations belonging to other tools), and anything already adapted here.
+Nothing was copied. Files still carrying an older seed version are refreshed
+without asking, so what is listed above was changed here: pp/src/config.ts
+(viewports, locale, pinned clock), pp/src/selector-map.ts (MANUAL_PAIRS),
+.claude/settings.json (hook registrations belonging to other tools), and anything
+else adapted for this project.
 EOF
   if (($# > count)); then
     printf '\ngit cannot restore %d of them after --overwrite. They are untracked, or they\n' "$(($# - count))" >&2
@@ -148,6 +149,17 @@ EOF
 
 is_git_repo() {
   command -v git >/dev/null 2>&1 && git -C "$1" rev-parse --git-dir >/dev/null 2>&1
+}
+
+# 過去に seed が配った版と同じ中身なら PJ の編集は乗っていない — 黙って新版へ入れ替えてよい
+is_former_seed_version() {
+  local rel=$1 file=$2 blob rev
+  seed_is_git_root || return 1
+  blob=$(git -C "$SEED_ROOT" hash-object -- "$file") || return 1
+  while read -r rev; do
+    [[ $(git -C "$SEED_ROOT" rev-parse -q --verify "$rev:$rel") != "$blob" ]] || return 0
+  done < <(git -C "$SEED_ROOT" log --all --format=%H -- "$rel")
+  return 1
 }
 
 strip_marker_block() {
@@ -228,18 +240,19 @@ main() {
 
   local dir rel src dst
   local -a rels=() collisions=()
-  # 内容一致は衝突でない — そう扱わないと 2 回目の実行が必ず止まり、installer が冪等でなくなる
-  local -A identical=()
+  # seed 由来と分かる file を衝突に数えないための 2 分類 — でないと再実行が必ず止まる
+  local -A identical=() stale=()
   for dir in "${COPY_DIRS[@]}"; do
     while IFS= read -r -d '' rel; do
       [[ -n $rel ]] || continue
       rels+=("$rel")
-      if [[ -e $target/$rel ]]; then
-        if cmp -s -- "$SEED_ROOT/$rel" "$target/$rel"; then
-          identical[$rel]=1
-        else
-          collisions+=("$rel")
-        fi
+      [[ -e $target/$rel ]] || continue
+      if cmp -s -- "$SEED_ROOT/$rel" "$target/$rel"; then
+        identical[$rel]=1
+      elif is_former_seed_version "$rel" "$target/$rel"; then
+        stale[$rel]=1
+      else
+        collisions+=("$rel")
       fi
     done < <(list_seed_files "$dir")
   done
@@ -276,15 +289,17 @@ main() {
     fi
   fi
 
-  local created=0 replaced=0
+  local created=0 replaced=0 refreshed=0
   for rel in "${rels[@]}"; do
     [[ -v identical[$rel] ]] && continue
     src=$SEED_ROOT/$rel
     dst=$target/$rel
-    if [[ -e $dst ]]; then
-      replaced=$((replaced + 1))
-    else
+    if [[ ! -e $dst ]]; then
       created=$((created + 1))
+    elif [[ -v stale[$rel] ]]; then
+      refreshed=$((refreshed + 1))
+    else
+      replaced=$((replaced + 1))
     fi
     mkdir -p -- "$(dirname "$dst")"
     # -p で mode を保存する（design_sync / hook script の exec bit を落とさない）
@@ -294,8 +309,8 @@ main() {
   append_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END"
   append_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END"
 
-  printf '\n%s: %d file(s) copied, %d file(s) overwritten, %d already current\n' \
-    "$PROG" "$created" "$replaced" "${#identical[@]}"
+  printf '\n%s: %d copied, %d refreshed from an older seed version, %d overwritten, %d already current\n' \
+    "$PROG" "$created" "$refreshed" "$replaced" "${#identical[@]}"
   printf 'NOTE: the seed README.md / SEED-CONTRACT.md are not copied (the project owns those paths); read them in the seed checkout.\n'
   if ((replaced > 0)); then
     printf 'overwritten:\n' >&2
