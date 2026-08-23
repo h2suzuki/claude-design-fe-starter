@@ -61,6 +61,14 @@ bun install --cwd frontend
 npm --prefix pp install
 ```
 
+既定の cache 先へ書けない環境（sandbox 等）では、cache を repo-local へ振る。省くと npm は EROFS で落ちる。
+
+```bash
+DRAFTS="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/drafts"
+BUN_INSTALL_CACHE_DIR="$DRAFTS/bun/cache" bun install --cwd frontend
+npm_config_cache="$DRAFTS/npm-cache" npm --prefix pp install
+```
+
 host に bun が無くても、Playwright browser と同じく repo-local に置けば足りる (実体は gitignore 下・installer は配らない)。
 
 ```bash
@@ -72,7 +80,7 @@ unzip -qo "$BUN_DIR/bun.zip" -d "$BUN_DIR"
 "$BUN_DIR/bun-linux-x64/bun" --version
 ```
 
-既定の cache 先へ書けない環境では `BUN_INSTALL_CACHE_DIR="$BUN_DIR/cache"` を添えて実行する。bun の version は固定しない — 機械 gate は bun を呼ばず (pp は Node + Playwright 固定)、依存の再現性は commit 済みの `frontend/bun.lock` が担う。
+bun の version は固定しない — 機械 gate は bun を呼ばず (pp は Node + Playwright 固定)、依存の再現性は commit 済みの `frontend/bun.lock` が担う。
 
 ### 4. Claude Design 2 project 体制
 

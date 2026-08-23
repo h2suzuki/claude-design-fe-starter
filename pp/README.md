@@ -23,11 +23,12 @@
 
 ```bash
 cd pp
-npm install
 # 共有 toolchain の置き場。worktree では --show-toplevel が worktree 自身を指すので、
 # main repo 側を返す --git-common-dir から引く（通常 repo でも同じ値になる）
 REPO_MAIN="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
-# ブラウザキャッシュを repo ローカルへ（sandbox 環境では既定キャッシュ dir が書けないため）
+# cache もブラウザも repo ローカルへ（sandbox 環境では既定 cache dir が書けず、
+# npm install は EROFS で落ちる）
+npm_config_cache="$REPO_MAIN/drafts/npm-cache" npm install
 PLAYWRIGHT_BROWSERS_PATH="$REPO_MAIN/drafts/pw-browsers" npx playwright install chromium
 ```
 
