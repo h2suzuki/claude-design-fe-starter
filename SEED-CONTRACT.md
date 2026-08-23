@@ -25,8 +25,8 @@ installer は既存 file を 3 分類する。**seed の現行版と一致**す�
 | `.claude/skills/` | `fe-kickoff/` `design-order/` `mock-freeze/` `ast-extract/` | file 単位の add-only（新規 dir として追加される） |
 | `.claude/hooks/` | `block-frozen-mock-edit.sh` `check-mock-baseline.sh` | file 単位の add-only |
 | `.claude/settings.json` | hooks 登録 | 無ければ作成。既存なら衝突として停止し、hooks は seed の同 file から手動 merge する |
-| `CLAUDE.md` | 行動規範ブロック | `<!-- fe-starter:begin/end -->` マーカー区間の追記（既存なら skip） |
-| `.gitignore` | build/一時生成物の除外 | `# fe-starter:begin/end` マーカー区間の追記（既存なら skip） |
+| `CLAUDE.md` | 行動規範ブロック | `<!-- fe-starter:begin/end -->` マーカー区間の追記（既存なら skip — 強制力を持たない層なので PJ の版に任せる） |
+| `.gitignore` | build/一時生成物の除外 | `# fe-starter:begin/end` マーカー区間の追記（既存区間は seed の現行版へ入れ替える — 機械的に効くので追随させる。区間外と区間の位置は動かさない） |
 
 `README.md`・`LICENSE` は installer の対象外（PJ 所有）。
 

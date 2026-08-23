@@ -20,8 +20,9 @@ Usage:
     $PROG {-h|--help}
     $PROG [--overwrite] [--commit|--no-commit] [<target-repo-dir>]
 
-Copies this seed's owned dirs into <target-repo-dir> and appends marker-delimited
-blocks to CLAUDE.md / .gitignore (skipped when the marker is already present).
+Copies this seed's owned dirs into <target-repo-dir> and adds marker-delimited
+blocks to CLAUDE.md / .gitignore. An existing .gitignore block is refreshed to
+this seed's version; an existing CLAUDE.md block is left as the project has it.
 The target may be relative, and defaults to the current directory.
 
 Existing files that already match the seed are left alone, and ones still holding
@@ -61,16 +62,37 @@ list_seed_files() {
   fi
 }
 
-# seed 側 file の marker 区間を target へ追記する。marker が既にあれば何もしない（冪等）
-append_marker_block() {
-  local source_file=$1 target_file=$2 begin=$3 end=$4
+extract_marker_block() {
+  awk -v b="$2" -v e="$3" '$0 == b { in_block = 1 } in_block { print } $0 == e { in_block = 0 }' "$1"
+}
+
+# 区間だけを差し替える。位置を動かすと .gitignore の否定パターンの効き方が変わる
+replace_marker_block() {
+  local target_file=$1 begin=$2 end=$3 block=$4 updated
+  updated=$(awk -v b="$begin" -v e="$end" -v block="$block" '
+    $0 == b { skip = 1; print block; next }
+    skip && $0 == e { skip = 0; next }
+    !skip { print }
+  ' "$target_file")
+  printf '%s\n' "$updated" > "$target_file"
+}
+
+# seed 側 file の marker 区間を target へ配る。mode=refresh なら既存区間を現行版へ入れ替える
+sync_marker_block() {
+  local source_file=$1 target_file=$2 begin=$3 end=$4 mode=$5 block
+  block=$(extract_marker_block "$source_file" "$begin" "$end")
+  [[ -n $block ]] || die "marker block not found in seed file: $source_file" 70
   if [[ -f $target_file ]] && grep -qF -- "$begin" "$target_file"; then
-    printf 'skip (marker present): %s\n' "$(basename "$target_file")"
+    if [[ $mode != refresh ]]; then
+      printf 'skip (marker present): %s\n' "$(basename "$target_file")"
+    elif [[ $(extract_marker_block "$target_file" "$begin" "$end") == "$block" ]]; then
+      printf 'up to date: %s\n' "$(basename "$target_file")"
+    else
+      replace_marker_block "$target_file" "$begin" "$end" "$block"
+      printf 'refresh (fe-starter block): %s\n' "$(basename "$target_file")"
+    fi
     return
   fi
-  local block
-  block=$(awk -v b="$begin" -v e="$end" '$0 == b { in_block = 1 } in_block { print } $0 == e { in_block = 0 }' "$source_file")
-  [[ -n $block ]] || die "marker block not found in seed file: $source_file" 70
   if [[ -s $target_file ]]; then
     printf '\n%s\n' "$block" >> "$target_file"
   else
@@ -306,8 +328,9 @@ main() {
     cp -p -- "$src" "$dst"
   done
 
-  append_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END"
-  append_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END"
+  # .gitignore は機械的に効くので追随させ、強制力を持たない CLAUDE.md は PJ のものに任せる
+  sync_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END" keep
+  sync_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END" refresh
 
   printf '\n%s: %d copied, %d refreshed from an older seed version, %d overwritten, %d already current\n' \
     "$PROG" "$created" "$refreshed" "$replaced" "${#identical[@]}"
