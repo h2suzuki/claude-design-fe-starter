@@ -6,6 +6,8 @@
   "description": "mock/app parity harness — renders the frozen Claude Design mock and the real frontend under identical conditions and machine-diffs them",
   "scripts": {
     "test": "playwright test",
+    "gate": "playwright test && node scripts/require-no-skips.mjs",
+    "test:no-skips": "node scripts/require-no-skips.mjs --self-test",
     "test:provenance": "playwright test tests/mock-provenance.spec.ts",
     "test:parity": "playwright test tests/sample-parity.spec.ts",
     "test:sweep": "playwright test tests/width-sweep.spec.ts",

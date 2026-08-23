@@ -51,6 +51,17 @@ seed_is_git_root() {
   [[ $toplevel == "$SEED_ROOT" ]]
 }
 
+# working tree の mode が落ちていても、seed が記録した exec bit で配る（hook が黙って無効化されるのを防ぐ）
+list_seed_exec_files() {
+  local entry
+  seed_is_git_root || return 0
+  while IFS= read -r -d '' entry; do
+    if [[ ${entry%% *} == 100755 ]]; then
+      printf '%s\0' "${entry#*$'\t'}"
+    fi
+  done < <(git -C "$SEED_ROOT" -c core.quotePath=false ls-files -s -z -- "$@")
+}
+
 list_seed_files() {
   local dir=$1
   if seed_is_git_root; then
@@ -315,6 +326,11 @@ main() {
     fi
   fi
 
+  local -A exec_bit=()
+  while IFS= read -r -d '' rel; do
+    exec_bit[$rel]=1
+  done < <(list_seed_exec_files "${COPY_DIRS[@]}")
+
   local created=0 replaced=0 refreshed=0
   for rel in "${rels[@]}"; do
     [[ -v identical[$rel] ]] && continue
@@ -330,6 +346,9 @@ main() {
     mkdir -p -- "$(dirname "$dst")"
     # -p で mode を保存する（design_sync / hook script の exec bit を落とさない）
     cp -p -- "$src" "$dst"
+    if [[ -v exec_bit[$rel] ]]; then
+      chmod +x -- "$dst"
+    fi
   done
 
   # .gitignore は機械的に効くので追随させ、強制力を持たない CLAUDE.md は PJ のものに任せる

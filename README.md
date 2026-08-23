@@ -20,7 +20,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 ```text
 ├── CLAUDE.md          mock-first 行動規範（数行・outcome 原則のみ）
 ├── docs/              規約 5 docs（ui-quality-policy / pixel-perfect / design-sync / ui-caveats / ast-layer）
-├── .claude/           project skills（/fe-kickoff・/design-order・/mock-freeze・/ast-extract）+ 機械判定 hook 2 本
+├── .claude/           project skills（/fe-kickoff・/design-order・/mock-freeze・/ast-extract）+ 機械判定 hook 3 本
 ├── docs/presentation/ui-mock/  mock 凍結置き場（export + screenshots + sha256 台帳 + KEEP_IMPL 台帳）
 ├── docs/presentation/ui-ast/   UI AST 置き場（schema 2 本 + registry.json + screens/）
 ├── frontend/          SvelteKit skeleton（$lib/ui/{tokens,components} + src/routes、依存導入は bun）
@@ -72,7 +72,7 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 | 層 | 置くもの | この seed での実体 |
 |---|---|---|
 | テスト/CI | FE の不変条件ほぼ全部 | `pp/` の parity・sweep・provenance・self-baseline |
-| hooks | 機械判定できる少数の門だけ | 凍結 mock の編集 block・commit 前の sha256 照合の 2 本 |
+| hooks | 機械判定できる少数の門だけ | 凍結 mock の編集 block・mock 未凍結での UI 実装 block・commit 前の sha256 照合の 3 本 |
 | CLAUDE.md | outcome 原則の数行 | `CLAUDE.md` |
 | skills | on-demand の手順書 | `/fe-kickoff`・`/design-order`・`/mock-freeze` |
 | docs | 参照知識 | `docs/` 4 本（発注書から必須参照でリンク） |

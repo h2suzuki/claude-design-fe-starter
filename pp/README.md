@@ -19,6 +19,8 @@
 
 未充足の条件がある spec は理由付きで skip される（端末の list reporter には理由が出ない — 理由は `artifacts/playwright-report.json` の annotations か、spec 冒頭の skip 条件で確認する）。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。
 
+この判定は `npm run gate`（= `playwright test` + `scripts/require-no-skips.mjs`）が機械的に行う。skip が 1 件でも残れば exit 1 になり、残った spec と skip 理由を列挙する。`npm test` 単体は skip を素通しするので、完了判定には `gate` を使う。
+
 ## setup
 
 ```bash
