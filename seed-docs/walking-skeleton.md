@@ -34,7 +34,7 @@
 
 - 基準 viewport 2 点: mobile 390×844 (第一正本・DPR 2–3・touch) / desktop 1280×800 (第二正本)。数値は例 — 各 PJ が pp/src/config.ts で確定する
 - 基準 2 点の間と外側 (320〜1920) は連続幅スイープで invariant 検証する
-- フォント同梱 (実体 = pp/vendor に取得記録つきで置き、frontend/src/lib/ui/tokens/tokens.css の --font-sans を差し替える)
+- フォントは同梱する (検証中の CDN 取得は pp/src/net-block.ts が abort する)。ただし day-0 で決めるのは「同梱する」という条件だけ — 書体の選定は design system の出力なので、実体の取得と tokens.css の --font-sans 差し替えは mock 確定後 (下の一周「vendor 化」) に行う
 - 時計・locale・DPR・touch は pp/src/config.ts の context options で明示固定する (UA まで固定したい場合は devices preset に置き換える)
 
 ### 2. repo 骨格の確認
@@ -102,10 +102,11 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 
 1. **mock**: design system の基礎部品 1 つを含む最小画面を Claude Design で作る (seed-docs/first-prompts.md)
 2. **凍結**: /mock-freeze で standalone HTML export を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する
-3. **部品実装**: frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する
-4. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
-5. **parity**: /ast-extract で screen AST を起こす (SELECTOR_MAP はそこから導出される)。導けない対だけ pp の MANUAL_PAIRS に書き、ast-provenance・ast-conformance・sample-parity を緑にする
-6. **sweep + 回帰**: width-sweep / poststate-sweep / self-baseline / mock-provenance を全て実行して緑にする (self-baseline は初回 `--update-snapshots` で baseline を生成し、再実行で緑を確認する)
+3. **vendor 化**: `npm run lint:mock` が挙げる外部参照 (フォント・JS ライブラリ) を pp/vendor へ落として `VENDOR_ROUTES` に登録し、取得コマンドを pp/vendor/README.md へ記録する。フォントはここで tokens.css の --font-sans も差し替える
+4. **部品実装**: frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する
+5. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
+6. **parity**: /ast-extract で screen AST を起こす (SELECTOR_MAP はそこから導出される)。導けない対だけ pp の MANUAL_PAIRS に書き、ast-provenance・ast-conformance・sample-parity を緑にする
+7. **sweep + 回帰**: width-sweep / poststate-sweep / self-baseline / mock-provenance を全て実行して緑にする (self-baseline は初回 `--update-snapshots` で baseline を生成し、再実行で緑を確認する)
 
 完了条件: 全 gate が「skip ではなく実行されて緑」。1 spec でも skip のまま「一周した」と宣言しない。ここまで緑になって初めて画面量産 (seed-docs/screen-loop.md) に入る。
 

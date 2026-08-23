@@ -93,7 +93,7 @@ walking skeleton の目的は「harness が動くことの証明」なので、*
 
 - `pp/src/config.ts` — 基準 viewport 2 点・locale・timezone・固定時刻
 - `pp/vendor/` — mock の描画に要る外部資産（JS ライブラリ・フォント）を落として `VENDOR_ROUTES` に登録する。検証中の CDN 取得は `pp/src/net-block.ts` が abort するので、登録漏れは loud に失敗する。取得コマンドは `pp/vendor/README.md` に追記して再取得可能にしておく
-- `frontend/src/app.html` ほかの `{{...}}` placeholder — grep で列挙して差し替える
+- `frontend/src/app.html` ほかの `{{...}}` placeholder — grep で列挙し、残る差し替え点を確定させる。`seed-docs/first-prompts.md` の `{{...}}` は `/design-order` が発注ごとに実値で埋める template なので、ここでは差し替えない
 
 mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等）なら、その URL も vendor 対象になる。`npm run lint:mock` が外部参照を検出する。
 
