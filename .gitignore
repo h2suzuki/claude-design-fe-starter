@@ -8,6 +8,7 @@ __pycache__/
 pp/vendor/*
 !pp/vendor/README.md
 .claude/.cc-writes/
+.claude/settings.local.json
 # fe-starter:end
 
 # seed bootstrap materials (local-only, not for publication)

@@ -41,10 +41,10 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 
 ```bash
 git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe-seed
-/tmp/fe-seed/tools/install.sh .
+/tmp/fe-seed/tools/install.sh
 ```
 
-installer は既定で追加のみ。既存ファイルと衝突したら**何も書かずに停止**し、対象を列挙する（置き換えたい場合だけ `--overwrite` を付ける）。詳細は `SEED-CONTRACT.md`。
+対象 dir は相対パスでよく、省略すると cwd になる。installer は既定で追加のみで、内容の違う既存ファイルに当たったら**何も書かずに停止**し対象を列挙する（置き換えたい場合だけ `--overwrite`）。最後に配った path の commit を `[Y/n]` で聞く（`--commit` / `--no-commit` で固定でき、辞退しても再実行で同じ確認に戻る）。詳細は `SEED-CONTRACT.md`。
 
 既に動いている実装がある repo（BE 先行・旧 FE あり等）は、導入後にまず `seed-docs/adoption.md` を読む（worktree で main を凍結したまま作り替える手順・既存実装を参照資料として扱う規律・段階移行の順序）。
 

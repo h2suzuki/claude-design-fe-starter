@@ -12,7 +12,9 @@
 
 ## merge 領域への寄与（file/dir 単位の追加。既存との衝突は既定で停止）
 
-installer は既存 file を黙って置き換えない。1 件でも衝突したら **1 file も書かずに停止**し、対象を列挙する。置き換えるには `--overwrite` を明示する（PJ が育てた `pp/src/config.ts`・`selector-map.ts`・`.claude/settings.json` を失う操作なので、既定にはしない）。
+installer は既存 file を黙って置き換えない。**内容が seed と一致する file は衝突に数えず**そのまま残す（再実行が冪等になる）。内容が違う file が 1 件でもあれば **1 file も書かずに停止**し、対象を列挙する。置き換えるには `--overwrite` を明示する（PJ が育てた `pp/src/config.ts`・`selector-map.ts`・`.claude/settings.json` を失う操作なので、既定にはしない）。
+
+書き込みの後、target が git repo なら配った path の commit まで進む（端末では `[Y/n]` で確認・`--commit` で無条件・`--no-commit` で抑止）。辞退しても file は残るので、再実行すると同じ確認に戻る。元から未 commit の編集を持っていた `CLAUDE.md` / `.gitignore` は、marker 追記が既存編集と混ざるため commit 対象から外す。
 
 | 領域 | 寄与 | 冪等化の方法 |
 |---|---|---|

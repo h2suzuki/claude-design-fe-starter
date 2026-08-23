@@ -18,15 +18,19 @@ usage() {
   cat <<EOF
 Usage:
     $PROG {-h|--help}
-    $PROG [--overwrite] [<target-repo-dir>]
+    $PROG [--overwrite] [--commit|--no-commit] [<target-repo-dir>]
 
 Copies this seed's owned dirs into <target-repo-dir> and appends marker-delimited
 blocks to CLAUDE.md / .gitignore (skipped when the marker is already present).
 The target may be relative, and defaults to the current directory.
 
-Files that already exist in the target are never replaced silently. When any are
-found, this script writes nothing and lists them; pass --overwrite to replace
-them with the seed's versions. With no collisions, no option is needed.
+Existing files that already match the seed are left alone. Ones whose content
+differs are never replaced silently: this script writes nothing, lists them, and
+asks for --overwrite. With nothing differing, no option is needed.
+
+In a git repo the copied paths are then offered for commit -- prompted on a
+terminal, forced by --commit, suppressed by --no-commit. Declining leaves the
+files on disk, and re-running reaches the same prompt without recopying.
 EOF
 }
 
@@ -106,7 +110,7 @@ list_unrecoverable() {
 report_collisions() {
   local target=$1 count=$2
   shift 2
-  printf '%s: stopping before writing anything — %d file(s) already exist in the target.\n\n' "$PROG" "$count" >&2
+  printf '%s: stopping before writing anything — %d file(s) in the target differ from the seed.\n\n' "$PROG" "$count" >&2
   print_paths "${@:1:$count}"
   cat >&2 <<EOF
 
@@ -142,12 +146,64 @@ of it and move them through git, where the merge stays reviewable:
 EOF
 }
 
+is_git_repo() {
+  command -v git >/dev/null 2>&1 && git -C "$1" rev-parse --git-dir >/dev/null 2>&1
+}
+
+# 追記した marker 区間が既存の未 commit 編集と混ざるので、元から dirty な file は commit に含めない
+list_dirty_tracked() {
+  local target=$1 entry
+  shift
+  while IFS= read -r -d '' entry; do
+    [[ ${entry:0:2} == '??' ]] || printf '%s\0' "${entry:3}"
+  done < <(git -C "$target" status --porcelain -z -- "$@")
+}
+
+confirm_commit() {
+  local count=$1 reply
+  if [[ ! -t 0 || ! -t 2 ]]; then
+    printf '%s: no terminal to ask on, so the %d path(s) stay uncommitted. Re-run with --commit.\n' "$PROG" "$count" >&2
+    return 1
+  fi
+  printf '%s: commit the %d path(s) written here? [Y/n] ' "$PROG" "$count" >&2
+  read -r reply || return 1
+  [[ -z $reply || $reply == [Yy] || $reply == [Yy][Ee][Ss] ]]
+}
+
+commit_installed() {
+  local target=$1 mode=$2 entry
+  shift 2
+  local -a pending=()
+  if ! is_git_repo "$target"; then
+    printf '%s: the target is not a git repo, so nothing was committed.\n' "$PROG"
+    return
+  fi
+  # status 経由で拾うことで、ignore された path を git add に渡して失敗させずに済む
+  while IFS= read -r -d '' entry; do
+    pending+=("${entry:3}")
+  done < <(git -C "$target" status --porcelain -z --untracked-files=all -- "$@")
+  if ((${#pending[@]} == 0)); then
+    printf '%s: the seed paths are already committed here.\n' "$PROG"
+    return
+  fi
+  if [[ $mode == no ]] || { [[ $mode != yes ]] && ! confirm_commit "${#pending[@]}"; }; then
+    printf '%s: left %d path(s) uncommitted. Re-running reaches this prompt again.\n' "$PROG" "${#pending[@]}" >&2
+    return
+  fi
+  git -C "$target" add -- "${pending[@]}" || die "git add failed in $target" 70
+  git -C "$target" commit -q -m "Install $(basename "$SEED_ROOT")" -- "${pending[@]}" \
+    || die "git commit failed in $target (is user.name/user.email set?)" 70
+  printf '%s: committed %d path(s).\n' "$PROG" "${#pending[@]}"
+}
+
 main() {
-  local target="" overwrite=0
+  local target="" overwrite=0 commit_mode=ask
   while (($#)); do
     case $1 in
       -h|--help) usage; exit 0 ;;
       --overwrite) overwrite=1 ;;
+      --commit) commit_mode=yes ;;
+      --no-commit) commit_mode=no ;;
       -*) die "unknown option: $1" ;;
       *)
         [[ -z $target ]] || die "unexpected argument: $1"
@@ -163,12 +219,18 @@ main() {
 
   local dir rel src dst
   local -a rels=() collisions=()
+  # 内容一致は衝突でない — そう扱わないと 2 回目の実行が必ず止まり、installer が冪等でなくなる
+  local -A identical=()
   for dir in "${COPY_DIRS[@]}"; do
     while IFS= read -r -d '' rel; do
       [[ -n $rel ]] || continue
       rels+=("$rel")
       if [[ -e $target/$rel ]]; then
-        collisions+=("$rel")
+        if cmp -s -- "$SEED_ROOT/$rel" "$target/$rel"; then
+          identical[$rel]=1
+        else
+          collisions+=("$rel")
+        fi
       fi
     done < <(list_seed_files "$dir")
   done
@@ -194,8 +256,17 @@ main() {
     printf '\n' >&2
   fi
 
+  local -a marker_files=(CLAUDE.md .gitignore)
+  local -A dirty_marker=()
+  if is_git_repo "$target"; then
+    while IFS= read -r -d '' rel; do
+      dirty_marker[$rel]=1
+    done < <(list_dirty_tracked "$target" "${marker_files[@]}")
+  fi
+
   local created=0 replaced=0
   for rel in "${rels[@]}"; do
+    [[ -v identical[$rel] ]] && continue
     src=$SEED_ROOT/$rel
     dst=$target/$rel
     if [[ -e $dst ]]; then
@@ -211,13 +282,25 @@ main() {
   append_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END"
   append_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END"
 
-  printf '\n%s: %d file(s) copied, %d file(s) overwritten\n' "$PROG" "$created" "$replaced"
+  printf '\n%s: %d file(s) copied, %d file(s) overwritten, %d already current\n' \
+    "$PROG" "$created" "$replaced" "${#identical[@]}"
   printf 'NOTE: the seed README.md / SEED-CONTRACT.md are not copied (the project owns those paths); read them in the seed checkout.\n'
   if ((replaced > 0)); then
     printf 'overwritten:\n' >&2
     printf '  %s\n' "${collisions[@]}" >&2
     printf 'Review these with git diff before committing — local adaptations in them are gone.\n' >&2
   fi
+
+  local -a commit_paths=("${rels[@]}")
+  for rel in "${marker_files[@]}"; do
+    [[ -v dirty_marker[$rel] ]] || commit_paths+=("$rel")
+  done
+  if ((${#dirty_marker[@]} > 0)); then
+    printf '%s: left out of the commit because it already had uncommitted edits: %s\n' \
+      "$PROG" "${!dirty_marker[*]}" >&2
+  fi
+  printf '\n'
+  commit_installed "$target" "$commit_mode" "${commit_paths[@]}"
 }
 
 main "$@"

@@ -10,7 +10,7 @@ seed からの立ち上げを day-0 手順で完走させる。詳細手順の�
 
 ## Process
 
-1. 導入形態を確認する: template 生成済みならそのまま。既存 repo への後付けなら `tools/install.sh <target>` を実行する（既定は追加のみ。既存 file と衝突したら何も書かずに停止し対象を列挙するので、置き換える判断をしたときだけ `--overwrite` を付ける）
+1. 導入形態を確認する: template 生成済みならそのまま。既存 repo への後付けなら対象 repo で `tools/install.sh` を実行する（引数省略で cwd。内容の違う既存 file に当たったら何も書かずに停止し対象を列挙するので、置き換える判断をしたときだけ `--overwrite` を付ける。最後に配った path の commit を `[Y/n]` で聞かれる）
 2. 既に動いている実装がある repo なら `seed-docs/adoption.md` を先に読む（worktree で main を凍結したまま作り替える・既存実装は参照資料に留める・段階移行の順序）
 3. `seed-docs/walking-skeleton.md` を読み、Day-0 チェックリストを Task 登録する
 4. 依存を導入する: `frontend/` は `bun install`、`pp/` は `npm install`（pp は Node + Playwright 固定）。pp では Playwright browser も導入する（コマンドと環境注意は `pp/README.md` の setup 節）

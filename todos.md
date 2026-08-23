@@ -8,7 +8,7 @@
 
 起票: fable-5 2026-08-22
 Goal: seed の前提を SvelteKit + Vite + Bun へ移行し、mock → UI AST → shadcn 構成 → FE の翻訳層 (抽出・検証 gate・可視化 tool) を screen-loop に組み込んで walking skeleton 一周で実証する。
-Work file: drafts/foundation-upgrade-handoff.md / drafts/research/foundation-upgrade-proposal.md / drafts/research/report-web-research-svelte-bun-ir.md / drafts/research/report-docs-structure-check.md / drafts/research/ir-sample/
+Work file: `drafts/foundation-upgrade-handoff.md` / `drafts/research/foundation-upgrade-proposal.md` / `drafts/research/report-web-research-svelte-bun-ir.md` / `drafts/research/report-docs-structure-check.md` / drafts/research/ir-sample/
 
 Exit Criteria:
 
