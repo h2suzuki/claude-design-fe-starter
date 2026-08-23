@@ -29,9 +29,10 @@ Existing files that already match the seed are left alone, and ones still holdin
 an older seed version are refreshed in place. Only files this seed never shipped
 stop the run: nothing is written, they are listed, and --overwrite is asked for.
 
-In a git repo the copied paths are then offered for commit -- prompted on a
-terminal, forced by --commit, suppressed by --no-commit. Declining leaves the
-files on disk, and re-running reaches the same prompt without recopying.
+In a git repo the seed paths that are not committed yet are then offered for
+commit -- one keypress on a terminal, where only y or Y proceeds and every other
+key cancels; forced by --commit, suppressed by --no-commit. Cancelling leaves
+the files on disk, and re-running reaches the same prompt without recopying.
 EOF
 }
 
@@ -208,9 +209,12 @@ confirm_commit() {
     printf '%s: no terminal to ask on, so the %d path(s) stay uncommitted. Re-run with --commit.\n' "$PROG" "$count" >&2
     return 1
   fi
-  printf '%s: commit the %d path(s) written here? [Y/n] ' "$PROG" "$count" >&2
-  read -r reply || return 1
-  [[ -z $reply || $reply == [Yy] || $reply == [Yy][Ee][Ss] ]]
+  printf '%s: commit the %d seed path(s) not yet committed here? [y/N] ' "$PROG" "$count" >&2
+  read -rsn1 reply || reply=""
+  printf '\n' >&2
+  # 矢印等の残りを読み捨てる。timeout で抜けるのが正常なので status は見ない
+  [[ $reply != $'\e' ]] || read -rsn8 -t 0.05 _ || :
+  [[ $reply == [Yy] ]]
 }
 
 commit_installed() {

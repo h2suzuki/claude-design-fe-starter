@@ -16,7 +16,7 @@ installer は既存 file を 3 分類する。**seed の現行版と一致**す�
 
 **seed が一度も配ったことのない中身**を持つ file が 1 件でもあれば **1 file も書かずに停止**し、対象を列挙する。ここに残るのは PJ が育てた `pp/src/config.ts`・`selector-map.ts`・`.claude/settings.json` などなので、置き換えるには `--overwrite` を明示する。
 
-書き込みの後、target が git repo なら配った path の commit まで進む（端末では `[Y/n]` で確認・`--commit` で無条件・`--no-commit` で抑止）。辞退しても file は残るので、再実行すると同じ確認に戻る。元から未 commit の編集を持っていた `CLAUDE.md` / `.gitignore` は、marker 追記が既存編集と混ざるため commit 対象から外す。
+書き込みの後、target が git repo なら **まだ commit されていない seed の path** の commit まで進む（端末では 1 キー確認で `y` / `Y` だけが進み他は即 cancel・`--commit` で無条件・`--no-commit` で抑止）。cancel しても file は残るので、再実行すると同じ確認に戻る。元から未 commit の編集を持っていた `CLAUDE.md` / `.gitignore` は、marker 追記が既存編集と混ざるため commit 対象から外す。
 
 | 領域 | 寄与 | 冪等化の方法 |
 |---|---|---|
