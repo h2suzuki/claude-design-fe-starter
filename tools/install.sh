@@ -18,10 +18,11 @@ usage() {
   cat <<EOF
 Usage:
     $PROG {-h|--help}
-    $PROG [--overwrite] <target-repo-dir>
+    $PROG [--overwrite] [<target-repo-dir>]
 
 Copies this seed's owned dirs into <target-repo-dir> and appends marker-delimited
 blocks to CLAUDE.md / .gitignore (skipped when the marker is already present).
+The target may be relative, and defaults to the current directory.
 
 Files that already exist in the target are never replaced silently. When any are
 found, this script writes nothing and lists them; pass --overwrite to replace
@@ -155,7 +156,7 @@ main() {
     esac
     shift
   done
-  [[ -n $target ]] || { usage >&2; exit 64; }
+  [[ -n $target ]] || target=$PWD
   [[ -d $target ]] || die "target directory not found: $target" 66
   target=$(cd -- "$target" && pwd -P)
   [[ $target != "$SEED_ROOT" ]] || die "target is the seed checkout itself"
