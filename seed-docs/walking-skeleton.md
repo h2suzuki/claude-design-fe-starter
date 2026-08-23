@@ -54,12 +54,14 @@ seed-docs/          本書ほかプロセス文書
 
 ### 3. 依存の導入
 
-`frontend/` は bun、`pp/` は npm (Node + Playwright 固定) で導入する。
+`frontend/` は bun、`pp/` は npm (Node + Playwright 固定) で導入する。host に bun があり既定 cache も書けるなら、この形で足りる。
 
 ```bash
 bun install --cwd frontend
 npm --prefix pp install
 ```
+
+**どちらかが満たせない環境では下の形を使う。** 満たしているかは打ってみれば分かる — bun が無ければ `command not found`、cache が書けなければ npm が EROFS で落ちる。
 
 既定の cache 先へ書けない環境（sandbox 等）では、cache を repo-local へ振る。省くと npm は EROFS で落ちる。置き場は `tools/toolchain-dir` が決める（main repo 側を優先し、書けなければ worktree 側へ退避する）。
 
