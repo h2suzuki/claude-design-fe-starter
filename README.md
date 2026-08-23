@@ -44,7 +44,7 @@ git clone --depth 1 https://github.com/h2suzuki/claude-design-fe-starter /tmp/fe
 /tmp/fe-seed/tools/install.sh
 ```
 
-対象 dir は相対パスでよく、省略すると cwd になる。前回 install のまま触られていないファイルは黙って新版へ入れ替わり、**PJ が手を入れたファイル**に当たったときだけ何も書かずに停止して対象を列挙する（置き換えたい場合だけ `--overwrite`）。最後に、まだ commit されていない seed の path をまとめて commit するか 1 キーで聞く（`y` / `Y` だけが進み、他のキーは即 cancel。`--commit` / `--no-commit` で固定でき、cancel しても再実行で同じ確認に戻る）。詳細は `SEED-CONTRACT.md`。
+対象 dir は相対パスでよく、省略すると cwd になる。前回 install のまま触られていないファイルは黙って新版へ入れ替わり、**PJ が手を入れたファイル**（`pp/src/config.ts` などの差し替え点）はそのまま残して末尾に列挙する。まだ seed が入っていない repo で衝突したときだけ、対象違いを疑って何も書かずに停止する（置き換えたい場合は `--overwrite`）。最後に、まだ commit されていない seed の path をまとめて commit するか 1 キーで聞く（`y` / `Y` だけが進み、他のキーは即 cancel。`--commit` / `--no-commit` で固定でき、cancel しても再実行で同じ確認に戻る）。詳細は `SEED-CONTRACT.md`。
 
 既に動いている実装がある repo（BE 先行・旧 FE あり等）は、導入後にまず `seed-docs/adoption.md` を読む（worktree で main を凍結したまま作り替える手順・既存実装を参照資料として扱う規律・段階移行の順序）。
 

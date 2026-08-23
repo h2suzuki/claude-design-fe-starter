@@ -27,7 +27,8 @@ MSG
 writable_drafts() {
   local dir=$1
   mkdir -p -- "$dir" 2>/dev/null || return 1
-  : > "$dir/.write-probe.$$" 2>/dev/null || return 1
+  # redirect は左から順に適用されるので、group で囲まないと > の失敗が素の shell error として漏れる
+  { : > "$dir/.write-probe.$$"; } 2>/dev/null || return 1
   rm -f -- "$dir/.write-probe.$$"
 }
 

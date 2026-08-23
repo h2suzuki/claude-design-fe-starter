@@ -26,8 +26,11 @@ this seed's version; an existing CLAUDE.md block is left as the project has it.
 The target may be relative, and defaults to the current directory.
 
 Existing files that already match the seed are left alone, and ones still holding
-an older seed version are refreshed in place. Only files this seed never shipped
-stop the run: nothing is written, they are listed, and --overwrite is asked for.
+an older seed version are refreshed in place. Files whose content this seed never
+shipped belong to the project: updating an install that is already here keeps
+them and lists them at the end, while a first install that runs into them writes
+nothing at all, since that usually means the wrong target directory. --overwrite
+replaces them in either case.
 
 In a git repo the seed paths that are not committed yet are then offered for
 commit -- one keypress on a terminal, where only y or Y proceeds and every other
@@ -185,6 +188,15 @@ is_git_repo() {
   command -v git >/dev/null 2>&1 && git -C "$1" rev-parse --git-dir >/dev/null 2>&1
 }
 
+# seed 由来の痕跡があれば初回導入でなく更新。marker も見るのは、配布 file を全部差し替えた repo でも更新と判る形にするため
+seed_already_installed() {
+  local target=$1 recognised=$2
+  ((recognised == 0)) || return 0
+  [[ ! -f $target/CLAUDE.md ]] || ! grep -qF -- "$CLAUDE_BEGIN" "$target/CLAUDE.md" || return 0
+  [[ ! -f $target/.gitignore ]] || ! grep -qF -- "$GITIGNORE_BEGIN" "$target/.gitignore" || return 0
+  return 1
+}
+
 # 過去に seed が配った版と同じ中身なら PJ の編集は乗っていない — 黙って新版へ入れ替えてよい
 is_former_seed_version() {
   local rel=$1 file=$2 blob rev
@@ -278,7 +290,7 @@ main() {
   local dir rel src dst
   local -a rels=() collisions=()
   # seed 由来と分かる file を衝突に数えないための 2 分類 — でないと再実行が必ず止まる
-  local -A identical=() stale=()
+  local -A identical=() stale=() foreign=()
   for dir in "${COPY_DIRS[@]}"; do
     while IFS= read -r -d '' rel; do
       [[ -n $rel ]] || continue
@@ -290,6 +302,7 @@ main() {
         stale[$rel]=1
       else
         collisions+=("$rel")
+        foreign[$rel]=1
       fi
     done < <(list_seed_files "$dir")
   done
@@ -303,13 +316,19 @@ main() {
     done < <(list_unrecoverable "$target" "${collisions[@]}")
   fi
 
-  # 衝突が 1 件でもあれば 1 file も書かずに止める。部分適用したうえで問い直すと、状態が説明できなくなる
+  # 既に seed が入っている repo なら更新であり、PJ が育てた file を避けて残りは配る。
+  # 初回で衝突するのは対象 dir 違いを疑う場面なので、そちらは 1 file も書かずに止める
+  local keep_foreign=0
   if ((${#collisions[@]} > 0)) && ((overwrite == 0)); then
-    report_collisions "$target" "${#collisions[@]}" "${collisions[@]}" ${unrecoverable[@]+"${unrecoverable[@]}"}
-    exit 65
+    if seed_already_installed "$target" "$((${#identical[@]} + ${#stale[@]}))"; then
+      keep_foreign=1
+    else
+      report_collisions "$target" "${#collisions[@]}" "${collisions[@]}" ${unrecoverable[@]+"${unrecoverable[@]}"}
+      exit 65
+    fi
   fi
 
-  if ((${#unrecoverable[@]} > 0)); then
+  if ((${#unrecoverable[@]} > 0)) && ((keep_foreign == 0)); then
     printf '%s: overwriting %d file(s) that git cannot restore afterwards:\n' "$PROG" "${#unrecoverable[@]}" >&2
     print_paths "${unrecoverable[@]}"
     printf '\n' >&2
@@ -334,6 +353,9 @@ main() {
   local created=0 replaced=0 refreshed=0
   for rel in "${rels[@]}"; do
     [[ -v identical[$rel] ]] && continue
+    if ((keep_foreign)) && [[ -v foreign[$rel] ]]; then
+      continue
+    fi
     src=$SEED_ROOT/$rel
     dst=$target/$rel
     if [[ ! -e $dst ]]; then
@@ -355,9 +377,23 @@ main() {
   sync_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END" keep
   sync_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END" refresh
 
-  printf '\n%s: %d copied, %d refreshed from an older seed version, %d overwritten, %d already current\n' \
-    "$PROG" "$created" "$refreshed" "$replaced" "${#identical[@]}"
+  printf '\n%s: %d copied, %d refreshed from an older seed version, %d overwritten, %d already current, %d left to the project\n' \
+    "$PROG" "$created" "$refreshed" "$replaced" "${#identical[@]}" "$((keep_foreign ? ${#collisions[@]} : 0))"
   printf 'NOTE: the seed README.md / SEED-CONTRACT.md are not copied (the project owns those paths); read them in the seed checkout.\n'
+  if ((keep_foreign)); then
+    # 文面は意図的に冗長 — 誤読防止のため trim せず維持する
+    printf '\n%s: %d file(s) were left as this project has them, so any seed change to them did not land:\n' "$PROG" "${#collisions[@]}" >&2
+    print_paths "${collisions[@]}"
+    cat >&2 <<EOF
+
+These are the paths a project is expected to grow into (pp/src/config.ts,
+frontend/src/app.html, the docs it fills in), so replacing them would undo the
+day-0 work. Everything else was updated.
+
+If a seed change to one of them matters, merge it by hand, or re-run with
+--overwrite and pick your edits back out of git.
+EOF
+  fi
   if ((replaced > 0)); then
     printf 'overwritten:\n' >&2
     printf '  %s\n' "${collisions[@]}" >&2

@@ -14,7 +14,12 @@
 
 installer は既存 file を 3 分類する。**seed の現行版と一致**する file はそのまま残し、**seed が過去に配った版**（前回 install のまま触られていない file）は黙って新版へ入れ替える。判定は seed の git 履歴に同じ blob があるかで行うので、seed が git checkout でない場合はこの緩和が効かず全て衝突扱いになる。
 
-**seed が一度も配ったことのない中身**を持つ file が 1 件でもあれば **1 file も書かずに停止**し、対象を列挙する。ここに残るのは PJ が育てた `pp/src/config.ts`・`selector-map.ts`・`.claude/settings.json` などなので、置き換えるには `--overwrite` を明示する。
+**seed が一度も配ったことのない中身**を持つ file は PJ が育てたものとみなす（`pp/src/config.ts`・`selector-map.ts`・`frontend/src/app.html`・PJ 語彙を埋めた docs など、seed 自身が day-0 で埋めろと指示している差し替え点がここに来る）。
+
+- **既に seed が入っている repo（更新）**: その file だけ触らずに残りを配り、触らなかった file を末尾に列挙する。差し替え点を埋めた repo が機構更新を受け取れなくなるのを避けるため、全か無かにはしない
+- **まだ seed が入っていない repo（初回）で衝突**: 対象 dir 違いを疑う場面なので **1 file も書かずに停止**する
+
+どちらも `--overwrite` で置き換えられる。判定は「配布 file のどれかが seed 由来と認識できるか」または「marker 区間が既にあるか」で行う。
 
 書き込みの後、target が git repo なら **まだ commit されていない seed の path** の commit まで進む（端末では 1 キー確認で `y` / `Y` だけが進み他は即 cancel・`--commit` で無条件・`--no-commit` で抑止）。cancel しても file は残るので、再実行すると同じ確認に戻る。元から未 commit の編集を持っていた `CLAUDE.md` / `.gitignore` は、marker 追記が既存編集と混ざるため commit 対象から外す。
 
