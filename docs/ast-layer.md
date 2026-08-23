@@ -84,10 +84,12 @@ node には `notes` を置けない（schema が拒否する）。node 単位の
 
 ### 2.2 2 層管理
 
-| 層 | ファイル | 中身 | 更新契機 |
-| --- | --- | --- | --- |
-| 共通語彙 | `docs/presentation/ui-ast/registry.json` | wrapper 名・kind・status・`codeComponent`・registry 構成 | 部品の追加・変更 |
-| 画面別 | `docs/presentation/ui-ast/screens/{{SLUG}}.ui-ast.json` | screen tree・overlays・provenance・coverage・uncertainNodes | mock の再凍結 |
+| 層 | ファイル | 中身 | 更新契機 | 書く主体 |
+| --- | --- | --- | --- | --- |
+| 共通語彙 | `docs/presentation/ui-ast/registry.json` | wrapper 名・kind・status・`codeComponent`・registry 構成 | 部品の追加・変更 | 人手（screen-loop ③ の分類で新規部品を確定したとき） |
+| 画面別 | `docs/presentation/ui-ast/screens/{{SLUG}}.ui-ast.json` | screen tree・overlays・provenance・coverage・uncertainNodes | mock の再凍結 | `/ast-extract` |
+
+registry は seed が**空台帳**（`{"version": "0.2.0", "items": []}`）で配る。`/ast-extract` は screens/ しか書かない — 抽出 pass は registry を「あればそれ」と読む側で、語彙を増やすのは部品を確定した人の仕事である。追記したら `python3 tools/ast_validate --registry docs/presentation/ui-ast/registry.json` を通す。
 
 slug は `docs/presentation/ui-mock/export/{{SLUG}}.html` と共通鍵である。
 dir 名を `ui-mock` / `ui-ast` の対にし、slug で対応を引けるようにする。
