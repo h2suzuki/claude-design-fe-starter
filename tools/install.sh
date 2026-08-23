@@ -150,13 +150,22 @@ is_git_repo() {
   command -v git >/dev/null 2>&1 && git -C "$1" rev-parse --git-dir >/dev/null 2>&1
 }
 
-# 追記した marker 区間が既存の未 commit 編集と混ざるので、元から dirty な file は commit に含めない
-list_dirty_tracked() {
-  local target=$1 entry
-  shift
-  while IFS= read -r -d '' entry; do
-    [[ ${entry:0:2} == '??' ]] || printf '%s\0' "${entry:3}"
-  done < <(git -C "$target" status --porcelain -z -- "$@")
+strip_marker_block() {
+  # 末尾の空行も落とす — 追記が 1 行入れるため、残すと HEAD 側と一致しなくなる
+  awk -v b="$2" -v e="$3" '
+    $0 == b { skip = 1 }
+    !skip { buf[n++] = $0 }
+    $0 == e { skip = 0; next }
+    END { while (n > 0 && buf[n - 1] == "") n--; for (i = 0; i < n; i++) print buf[i] }
+  ' "$1"
+}
+
+# marker 区間を除いてなお HEAD と差があるなら、それは他人の未 commit 編集
+marker_has_foreign_edit() {
+  local target=$1 file=$2 begin=$3 end=$4
+  git -C "$target" cat-file -e "HEAD:$file" 2>/dev/null || return 1
+  ! cmp -s <(strip_marker_block <(git -C "$target" show "HEAD:$file") "$begin" "$end") \
+           <(strip_marker_block "$target/$file" "$begin" "$end")
 }
 
 confirm_commit() {
@@ -259,9 +268,12 @@ main() {
   local -a marker_files=(CLAUDE.md .gitignore)
   local -A dirty_marker=()
   if is_git_repo "$target"; then
-    while IFS= read -r -d '' rel; do
-      dirty_marker[$rel]=1
-    done < <(list_dirty_tracked "$target" "${marker_files[@]}")
+    if marker_has_foreign_edit "$target" CLAUDE.md "$CLAUDE_BEGIN" "$CLAUDE_END"; then
+      dirty_marker[CLAUDE.md]=1
+    fi
+    if marker_has_foreign_edit "$target" .gitignore "$GITIGNORE_BEGIN" "$GITIGNORE_END"; then
+      dirty_marker[.gitignore]=1
+    fi
   fi
 
   local created=0 replaced=0
