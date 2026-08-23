@@ -103,23 +103,19 @@ mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等
 
 ```bash
 <seed>/tools/install.sh .                 # seed を入れた checkout（通常は main）で実行し、commit する
-git -C <worktree> rebase main             # 作業 branch へ運ぶ
+git -C <worktree> merge main              # 作業 branch へ運ぶ
 ```
 
 install.sh は PJ が育てた file（`pp/src/config.ts`・`frontend/src/app.html`・PJ 語彙を埋めた docs）を触らずに残し、末尾に列挙する。差し替え点を埋めた repo でも機構更新は届く。
 
-**merge でなく rebase を使う。** §1 の形（seed を入れて commit し、その commit から worktree を出す）で始めた repo は、履歴が「seed の install の上に PJ の作業が載る」直線になる。merge で受けると seed の install commit が 2 つに分かれて合流し、どの commit が seed 由来でどれが PJ 固有かが読み取れなくなる — §7 の back-port はまさにその区別の上に立つので、形が崩れると判断材料が減る。
-
-作業 branch を push 済みで他者と共有しているなら rebase は使えない。その場合だけ `git merge main` にする（履歴は diamond になるが、tree の結果は同じ）。
-
-衝突するのは、**seed が配る file を作業 branch でも手で置いた場合**だけである（同じ path を両側が別々に追加した add/add 衝突）。seed 側が正なので、その file は main の版を採る。
+merge で衝突するのは、**seed が配る file を作業 branch でも手で置いた場合**だけである（同じ path を両側が別々に追加した add/add 衝突）。seed 側が正なので、その file は main の版を採る。
 
 ```bash
 git checkout main -- <path>   # index と working tree の両方が解決される（git add は不要）
-git rebase --continue
+git commit --no-edit
 ```
 
-hook 登録を含む `.claude/settings.json` が更新されるので、取り込み後に session を 1 回再起動する。
+hook 登録を含む `.claude/settings.json` が更新されるので、merge 後に session を 1 回再起動する。
 
 `git cherry-pick` は個別修正を拾う時の手段であって、更新の常道ではない。seed の commit は `README.md`・`SEED-CONTRACT.md` のような PJ 所有 path を含むことがあり、そのまま当たらない。
 
