@@ -97,7 +97,29 @@ walking skeleton の目的は「harness が動くことの証明」なので、*
 
 mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等）なら、その URL も vendor 対象になる。`npm run lint:mock` が外部参照を検出する。
 
-## 6. seed への戻し方
+## 6. seed の更新を受け取る
+
+`tools/install.sh` は **repo に対して 1 回**実行する。branch への伝播は git の仕事なので、作業 branch を持つ worktree に向けて直接実行しない — 同じ seed を 2 か所から入れる形になり、どちらが正かが説明できなくなる。
+
+```bash
+<seed>/tools/install.sh .                 # seed を入れた checkout（通常は main）で実行し、commit する
+git -C <worktree> merge main              # 作業 branch へ運ぶ
+```
+
+install.sh は PJ が育てた file（`pp/src/config.ts`・`frontend/src/app.html`・PJ 語彙を埋めた docs）を触らずに残し、末尾に列挙する。差し替え点を埋めた repo でも機構更新は届く。
+
+merge で衝突するのは、**seed が配る file を作業 branch でも手で置いた場合**だけである（同じ path を両側が別々に追加した add/add 衝突）。seed 側が正なので、その file は main の版を採る。
+
+```bash
+git checkout main -- <path>   # index と working tree の両方が解決される（git add は不要）
+git commit --no-edit
+```
+
+hook 登録を含む `.claude/settings.json` が更新されるので、merge 後に session を 1 回再起動する。
+
+`git cherry-pick` は個別修正を拾う時の手段であって、更新の常道ではない。seed の commit は `README.md`・`SEED-CONTRACT.md` のような PJ 所有 path を含むことがあり、そのまま当たらない。
+
+## 7. seed への戻し方
 
 この作業中に見つかるのは 2 種類で、扱いが違う。
 
@@ -108,7 +130,7 @@ mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等
 
 判断に迷ったら「新規プロジェクトでも同じものが要るか」で分ける。要るなら機構、要らないなら固有物である。
 
-## 7. 完了の判定
+## 8. 完了の判定
 
 一周の完了条件は `seed-docs/walking-skeleton.md` と同じで、**全 gate が skip でなく実行されて緑**である。skip は「未検証」であって「合格」ではない。1 spec でも skip のまま「一周した」と宣言しない。
 
