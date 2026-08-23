@@ -40,6 +40,8 @@ Exit Criteria:
 - [ ] 一周実証の完了後に判断する（実証中は §6 を動かさない）
 - [ ] rebase を採るなら、先に §6 を変えてから文書どおり実行し、gate 緑まで確認する。merge のまま据え置くならその理由を §6 に書く
 
-適用先が §6 どおり merge で取り込んで gate 緑（0 failed / 12 skipped / 7 passed）に到達した後、履歴の形を理由に rebase で作り直し、それを §6 の変更として持ち込んだ（4bec574）。実証の途中で被検証物を差し替える形だったので f3c5b67 で revert し、検証済みの merge に戻した。rebase 側の理由（§7 の back-port は「seed 由来か PJ 固有か」の区別に立つので、履歴が直線だと読み取りやすい）は退けていない。
+適用先が §6 どおり merge で取り込んで gate 緑（0 failed / 12 skipped / 7 passed）に到達した後、履歴の形を理由に rebase で作り直し、それを §6 の変更として持ち込んだ（4bec574）。実証の途中で被検証物を差し替える形だったので f3c5b67 で revert し、検証済みの merge に戻した。
+
+**rebase 側の根拠は未特定**。当初 §7 を根拠に挙げたが成立しない — §7 の判断基準は「新規プロジェクトでも同じものが要るか」= 変更の中身であって、履歴の形には触れていない（唯一の commit 言及は back-port message に出典 seed commit を記す件で、適用先の履歴とは無関係）。4bec574 と f3c5b67 の commit message にはこの誤った根拠が残っている。再検討するなら根拠から立て直す。
 
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
