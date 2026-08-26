@@ -72,4 +72,32 @@ Exit Criteria:
 
 **rebase 側の根拠は未特定**。当初 §7 を根拠に挙げたが成立しない — §7 の判断基準は「新規プロジェクトでも同じものが要るか」= 変更の中身であって、履歴の形には触れていない（唯一の commit 言及は back-port message に出典 seed commit を記す件で、適用先の履歴とは無関係）。4bec574 と f3c5b67 の commit message にはこの誤った根拠が残っている。再検討するなら根拠から立て直す。
 
+### 凍結の手順はあるが道具が無い — 閉包収集と参照スクショ
+
+起票: opus-5 2026-08-27
+Goal: `docs/presentation/ui-mock/README.md` が定める凍結の判定則を、手作業でなく seed 同梱の tool で実行できるようにする。
+Work file: `docs/presentation/ui-mock/README.md`・`pp/scripts/`
+
+Exit Criteria:
+
+- [ ] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される
+- [ ] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る
+- [ ] 一周実証の完了後に着手し、実際に凍結を 1 回通して確認する
+
+適用先が一周の凍結時に自作した（`pp/scripts/collect-mock-closure.ts` / `pp/scripts/mock-screenshot.ts`、いずれも config の viewport・net-block・mock-server を使うだけで PJ 非依存との報告）。判定則を README に書いた時点で道具は付けていないので、次の PJ も同じ自作をする。取り込む際は実装をこちらでレビューしてから入れる。実証の途中で seed に新しい道具を足すのは被検証物の差し替えになるため、一周の完了を待つ。
+
+### 差し替え点と機構が同じ file に同居し、seed 更新が PJ 編集と必ず衝突する
+
+起票: opus-5 2026-08-27
+Goal: seed の機構更新が、PJ が埋めた差し替え点を巻き込まずに届くようにする。
+Work file: `pp/src/net-block.ts`・`pp/scripts/mock-lint.mjs`・`tools/install.sh`
+
+Exit Criteria:
+
+- [ ] PJ が埋める値（`VENDOR_ROUTES`・`ALLOWED_EXTERNAL` 等）と機構コードが別 file に分かれ、install.sh の 3 分類で機構側が「旧 seed 版」と判定されて黙って更新される
+- [ ] 分離後に、PJ 側の値を埋めた状態で install.sh を再実行し、値が保たれたまま機構だけ更新されることを実測する
+- [ ] 一周実証の完了後に着手する（分離自体が PJ 側に merge を強いるため）
+
+`pp/src/net-block.ts` は `VENDOR_ROUTES`（差し替え点）と `installNetworkGuard`（機構）を同居させており、PJ が値を埋めた時点で install.sh からは foreign file になる。今回 CORS header の修正を seed に入れたが、適用先はこの理由で seed 版を受け取れず、自分で当てた修正を使い続ける。`pp/scripts/mock-lint.mjs` の `ALLOWED_EXTERNAL` も同型。
+
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
