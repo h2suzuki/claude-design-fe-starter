@@ -17,8 +17,8 @@
     "test:self-baseline": "npm test -- tests/self-baseline.spec.ts",
     "lint:mock": "node scripts/mock-lint.mjs",
     "test:mock-lint": "node scripts/mock-lint.mjs --self-test",
-    "verify-selectors": "tsx scripts/verify-selectors.ts",
-    "overlay-diff": "tsx scripts/overlay-diff.ts",
+    "verify-selectors": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/verify-selectors.ts",
+    "overlay-diff": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/overlay-diff.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
