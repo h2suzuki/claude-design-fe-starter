@@ -21,6 +21,16 @@ docs/presentation/ui-mock/
 - **live な外部 embed は閉包に入らない**。子 frame が外部サービスへ navigate する形（地図・動画・SNS の埋め込み）は export の file ではなく、vendor 化もできない。閉包の「取りこぼし」と分けて扱い、mock 側と実装側の両方で同じく空にする
 - ただし embed の領域は **parity で検証されない**。空同士が一致しても、承認された意匠と一致した証明にはならない。この領域は screen-loop ⑦ の人間受入で見る
 
+### デザインシステム page が混ざっている場合
+
+export には、画面ではなく **design system の仕様書 + 見本**にあたる page が含まれることがある。形式は他の画面と同じ HTML なので、放っておくと実装対象の画面として数えてしまう。
+
+- **凍結には含める**。表現規則と部品 variant の参照先なので sha256 で固定する
+- **route として実装しない**。旧実装の page 対応で存否を判断する対象でもない
+- **token 名の母体にはするが pixel の正本にしない**。値は各画面の実値を正とする — 見本 page を第 2 の正本にすると二重管理のドリフト（轍 #8）が再発する。画面と見本で値が割れたら DESIGN-POLICY.md に日付付きで裁定を残す
+- 部品 variant の初期一覧はこの page から取る。足りない状態（disabled / loading / empty / 長文）は Claude Design へ追加発注し、実装側で作らない
+- コピー規則・icon / logo 規則は受入時の checklist にする。違反は実装で直さず mock 側へ差し戻す
+
 ## 凍結手順（/mock-freeze skill が案内する内容）
 
 1. Claude Design 上でユーザーが mock の完成を宣言する

@@ -36,6 +36,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - mock 内の構成要素を「既存部品の再利用 / 新規部品 / ページ固有」に分類する。AST の kind census と registry.json の突合が分類の機械化入力 (tools/ast-viewer の部品一覧が同じ census を描く)
 - 判定規準: 同じ見た目 = 同じ部品。既存と似て非なる部品を新設しない
 - 完了条件: tools/ast_validate が緑で、分類と uncertainNodes の裁定が発注書 (または PR 説明) に列挙されていること
+- 抽出できたら tools/ast-viewer の HTML を Artifact として公開し、link を裁定の場に示す。裁定は文字列でなく画と対応付けて行う
 
 ### ④ 新部品の単体実装 (states 込み)
 

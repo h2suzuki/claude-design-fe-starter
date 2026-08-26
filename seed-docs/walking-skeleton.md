@@ -90,6 +90,7 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 - **design-system 型 project** (部品ライブラリ) を新設する。publish すると org の新規 project に自動適用される — これは公式メカニズムで、手動で参照させるのではない
 - **mock 用の通常 project** は作成時に design system を継承する。「部品から組まれた mock」が既定挙動になる
 - 初回プロンプトと運用の注意は seed-docs/first-prompts.md
+- export に design system の見本 page が混ざることがある。凍結はするが実装対象の画面には数えない（docs/presentation/ui-mock/README.md の「デザインシステム page が混ざっている場合」）
 
 ### 5. 台帳・規約 docs の確認
 
