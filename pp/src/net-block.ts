@@ -31,7 +31,13 @@ export async function installNetworkGuard(context: BrowserContext): Promise<void
         await route.abort("failed");
         return;
       }
-      await route.fulfill({ status: 200, contentType, path: vendorPath });
+      // SRI 検証と @font-face は CORS mode で読むので、許可 header が無いと vendor 済みでも失敗する
+      await route.fulfill({
+        status: 200,
+        contentType,
+        headers: { "access-control-allow-origin": "*" },
+        path: vendorPath,
+      });
     });
   }
 }
