@@ -92,9 +92,35 @@ fi
 
 [[ -n $CMD ]] || exit 0
 
-# 書き込みの形を取る command だけを見る。読むだけの参照で deny しないため対象を絞る
-if [[ $CMD =~ (>|>>)[[:space:]]*[^[:space:]\|\;\&]*$GUARDED ]] \
-  || [[ $CMD =~ (tee|sed[[:space:]]+-i|touch|mkdir|dd)[^\;\|\&]*$GUARDED ]]; then
-  mock_is_frozen "${CLAUDE_PROJECT_DIR:-$PWD}/docs/presentation/ui-mock/export" || deny
-fi
+# 相対 path の書き込み先は command が走る dir で決まる。worktree では project dir と別
+CWD=$(jq -r '.cwd // empty' <<<"$INPUT")
+: "${CWD:=${CLAUDE_PROJECT_DIR:-$PWD}}"
+
+# heredoc の本文は data であって command ではない。混ぜると文書中の語だけで誤 deny する
+drop_heredoc_bodies() {
+  local line term=""
+  while IFS= read -r line; do
+    if [[ -n $term ]]; then
+      [[ ${line//[[:space:]]/} == "$term" ]] && term=""
+      continue
+    fi
+    printf '%s\n' "$line"
+    if [[ $line =~ \<\<-?[[:space:]]*[\"\']?([A-Za-z_][A-Za-z0-9_]*) ]]; then
+      term=${BASH_REMATCH[1]}
+    fi
+  done <<<"$1"
+}
+
+# 書き込みの形を取る行だけを見る。行をまたぐ照合は離れた語を 1 つの command と誤認する
+while IFS= read -r line; do
+  [[ $line =~ (^|[[:space:]])(\>|\>\>)[[:space:]]*[^[:space:]\|\;\&]*$GUARDED ]] ||
+    [[ $line =~ (^|[[:space:]\;\|\&])(tee|sed[[:space:]]+-i|touch|mkdir|dd)[[:space:]]+[^\;\|\&]*$GUARDED ]] ||
+    continue
+  # 書き込み先の path から repo を割り出す（Edit/Write 経路と同じ根拠に揃える）
+  [[ $line =~ ([^[:space:]\'\"\;\|\&]*${GUARDED}[^[:space:]\'\"\;\|\&]*) ]] || continue
+  target=${BASH_REMATCH[1]}
+  root=$CWD
+  [[ $target == /* ]] && root=${target%/frontend/src/*}
+  mock_is_frozen "$root/docs/presentation/ui-mock/export" || deny
+done < <(drop_heredoc_bodies "$CMD")
 exit 0

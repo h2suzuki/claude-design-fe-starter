@@ -10,13 +10,13 @@ when_to_use: TRIGGER when a frozen mock needs its UI AST built or rebuilt, when 
 
 ## Process
 
-1. **前提を確認する** — 対象 slug の mock がユーザー完成宣言済みで、`docs/presentation/ui-mock/export/<slug>.html` が凍結され、`mock-baseline.sha256` と一致していること。未凍結 mock からは抽出しない（突合先がドリフトする）
+1. **前提を確認する** — 対象 slug の mock がユーザー完成宣言済みで、`docs/presentation/ui-mock/export/<slug>.html`（取得元によっては `<slug>.dc.html` など複数段の拡張子）が凍結され、`mock-baseline.sha256` と一致していること。未凍結 mock からは抽出しない（突合先がドリフトする）
 2. **機械証拠を採取する** — 下記 Evidence の 4 種を Playwright で決定的に取る
 3. **macro pass** — `20-macro-pass.md` に従い大領域だけを抽出する
 4. **leaf pass** — `30-leaf-pass.md` に従い領域ごとの部品候補を出す（複数候補可）
 5. **reconcile pass** — `40-reconcile-pass.md` に従い v0.2 準拠 JSON へ確定する
 6. **gate を通す** — `python3 tools/ast_validate <file>` が緑になるまで直す（`--self-test` で gate 自体の健全性も確認できる）
-7. **保存する** — `docs/presentation/ui-ast/screens/<slug>.ui-ast.json`（slug は `export/<slug>.html` と共通）
+7. **保存する** — `docs/presentation/ui-ast/screens/<slug>.ui-ast.json`（slug は凍結 export の file 名の最初の dot までと共通）
 8. **裁定論点を報告する** — `uncertainNodes` と未カバー領域をターン末尾に列挙し、ユーザー裁定を仰ぐ
 
 ## Evidence
@@ -44,7 +44,7 @@ when_to_use: TRIGGER when a frozen mock needs its UI AST built or rebuilt, when 
 - **採取していない状態を書かない** — 状態・responsive 差分・hidden 判定は、採取した証拠がある範囲だけ書く。1 viewport だけの採取から breakpoint 差分を推測しない
 - **class 名を component 名として採用しない** — mock の class は意匠都合の名前であり、canonical な部品名ではない。意味は tag / role / aria / text / 構造から起こす
 - **CSS selector は `source.nodeRef` に書く** — schema の `source` は `kind` / `region` / `file` / `nodeRef` のみを許す。selector 用の独自 key を足すと schema error になる
-- **slug を一致させる（AST106）** — `screen.name` = `<slug>`、`screen.provenance.mockFile` = `export/<slug>.html`。`sha256` は `mock-baseline.sha256` に記録された当該 export の値をそのまま使う
+- **slug を一致させる（AST106）** — `screen.name` = `<slug>`、`screen.provenance.mockFile` = 凍結した export の相対 path（file 名の最初の dot までが `<slug>` と一致すればよい）。`sha256` は `mock-baseline.sha256` に記録された当該 export の値をそのまま使う
 
 ## Output
 
