@@ -72,6 +72,21 @@ Exit Criteria:
 
 **rebase 側の根拠は未特定**。当初 §7 を根拠に挙げたが成立しない — §7 の判断基準は「新規プロジェクトでも同じものが要るか」= 変更の中身であって、履歴の形には触れていない（唯一の commit 言及は back-port message に出典 seed commit を記す件で、適用先の履歴とは無関係）。4bec574 と f3c5b67 の commit message にはこの誤った根拠が残っている。再検討するなら根拠から立て直す。
 
+### 発注した幅で mock 自身が成立しているかを誰も確かめていない
+
+起票: opus-5 2026-08-27
+Goal: 発注規約が要求した幅の範囲を mock 自身が満たしているかを、正本にする前に機械で確かめられるようにする。
+Work file: `pp/tests/`・`docs/presentation/ui-mock/README.md`・`.claude/skills/mock-freeze/SKILL.md`
+
+Exit Criteria:
+
+- [ ] 凍結 export を `SWEEP_WIDTHS` の下限で描画し、横スクロールとはみ出しが無いことを検査する gate が pp に入る（対象は app でなく mock）
+- [ ] 発注規約の下限を満たさない mock を合成 fixture で作り、その gate が落ちることを実測する
+- [ ] 凍結手順（README 手順 3）と `/mock-freeze` skill の step を同じ内容に揃える
+- [ ] 一周実証の完了後に着手する
+
+`width-sweep` は `PP_APP_URL` を要求するので **app しか見ない**。発注規約は「下限〜上限で成立する単一レスポンシブ HTML」を mock の要件にしているのに、それを検証する段が凍結の前にも後にも無く、違反した mock が正本になる。実装後に横スクロールとして現れるので、mock の欠陥が実装の欠陥に見える。適用先の実測（凍結 7 画面を 320 で描画すると全画面で header の nav が 4px はみ出す）で表面化した。当面は README 手順 3 の目視で埋めているが、目視は gate ではない。
+
 ### pp の登録点が 1 画面前提で、画面が増えると破綻する
 
 起票: opus-5 2026-08-27
