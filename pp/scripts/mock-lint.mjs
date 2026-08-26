@@ -8,9 +8,15 @@ import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const EXPORT_DIR = path.resolve(SCRIPT_DIR, '../../docs/presentation/ui-mock/export');
-const CAP_BYTES = 1_048_576; // standalone export 1 枚の上限目安。PJ で調整可
+const CAP_BYTES = 1_048_576; // export 1 file の上限目安。PJ で調整可
 // vendor 同梱済みで net-block の VENDOR_ROUTES が握る URL prefix はここで許可する
 const ALLOWED_EXTERNAL = [];
+
+const HTML_RE = /\.html?$/i;
+const SCRIPT_RE = /\.m?js$/i;
+const SCANNED_RE = /\.(?:html?|css|m?js)$/i;
+// 取得先ではなく識別子として書かれる URL
+const NON_FETCH_URL = /^https?:\/\/(?:www\.)?w3\.org\//i;
 
 // 資産を読み込む参照だけを対象にする（本文中の単なる URL 文字列やリンク href は対象外）
 const ASSET_REF_PATTERNS = [
@@ -20,6 +26,9 @@ const ASSET_REF_PATTERNS = [
   /url\(\s*["']?https?:\/\/[^"')]+/gi,
   /@import\s+["']https?:\/\/[^"']+["']/gi,
 ];
+
+// script 注入や動的 import は HTML の形を取らないので、URL リテラルを丸ごと候補にする
+const SCRIPT_REF_PATTERNS = [/["'`]https?:\/\/[^"'`\s]+["'`]/g];
 
 function lineAt(text, offset) {
   return text.slice(0, offset).split('\n').length;
@@ -34,10 +43,11 @@ function lintFile(file) {
   }
   const text = bytes.toString('utf8');
   const violations = [];
-  for (const pattern of ASSET_REF_PATTERNS) {
+  for (const pattern of SCRIPT_RE.test(file) ? SCRIPT_REF_PATTERNS : ASSET_REF_PATTERNS) {
     for (const match of text.matchAll(pattern)) {
-      const url = /https?:\/\/[^"')\s]+/.exec(match[0])?.[0] ?? match[0];
+      const url = /https?:\/\/[^"'`)\s]+/.exec(match[0])?.[0] ?? match[0];
       if (/\/\/(?:localhost|127\.0\.0\.1)[:/]/.test(url)) continue;
+      if (NON_FETCH_URL.test(url)) continue;
       if (ALLOWED_EXTERNAL.some((prefix) => url.startsWith(prefix))) continue;
       violations.push({
         file,
@@ -51,7 +61,7 @@ function lintFile(file) {
     violations.push({ file, line: 1, id: 'MOCK102', message: `file is ${bytes.byteLength} bytes; cap is ${CAP_BYTES}` });
   }
   // 取得 API 側の size cap で切れた export を正本として pin させない（台帳は「取得物と一致する」しか保証しない）
-  if (!/<\/html\s*>\s*$/i.test(text)) {
+  if (HTML_RE.test(file) && !/<\/html\s*>\s*$/i.test(text)) {
     violations.push({
       file,
       line: lineAt(text, text.length),
@@ -69,7 +79,7 @@ function defaultTargets() {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const p = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(p);
-      else if (/\.(?:html|css)$/.test(entry.name)) out.push(p);
+      else if (SCANNED_RE.test(entry.name)) out.push(p);
     }
   };
   walk(EXPORT_DIR);
@@ -81,6 +91,7 @@ function assert(condition, message) {
 }
 
 // self-test claim: 合成違反ファイルで MOCK101/MOCK102/MOCK103 が各 1 回発火し、クリーンなファイルは違反 0
+// あわせて kind 別の適用範囲: MOCK101 は注入 JS も拾い namespace は拾わない / MOCK103 は HTML だけ
 function runSelfTest() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mock-lint-'));
   try {
@@ -103,10 +114,28 @@ function runSelfTest() {
     fs.writeFileSync(truncatedFile, '<html><head><link href="./local.css" rel="stylesheet"></head><body><div>cut he');
     const truncatedViolations = lintFile(truncatedFile);
     assert(truncatedViolations.length === 1 && truncatedViolations[0].id === 'MOCK103', 'truncated fixture did not fire MOCK103 exactly once');
+
+    // MOCK103 は HTML document の終端検査なので、他 kind へ適用すると必ず誤発火する
+    const cssFile = path.join(tempDir, 'sheet.css');
+    fs.writeFileSync(cssFile, '.a { color: #000 }\n');
+    assert(lintFile(cssFile).length === 0, 'css fixture must produce no violations');
+
+    // script 注入で外部を読む runtime は HTML の形を取らないので、文字列リテラルごと拾う
+    const runtimeFile = path.join(tempDir, 'support.js');
+    fs.writeFileSync(runtimeFile, 'const s = document.createElement("script");\ns.src = "https://cdn.example.com/react.production.min.js";\n');
+    const runtimeViolations = lintFile(runtimeFile);
+    assert(runtimeViolations.length === 1 && runtimeViolations[0].id === 'MOCK101', 'runtime fixture did not fire MOCK101 exactly once');
+
+    // XML namespace は識別子であって取得先ではない
+    const nsFile = path.join(tempDir, 'svg.js');
+    fs.writeFileSync(nsFile, 'el = document.createElementNS("http://www.w3.org/2000/svg", "path");\n');
+    assert(lintFile(nsFile).length === 0, 'namespace fixture must produce no violations');
+
+    assert(fs.readdirSync(tempDir).filter((name) => SCANNED_RE.test(name)).length === 7, 'SCANNED_RE must cover the html/css/js fixtures');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
-  console.log('mock-lint self-test: clean passes; MOCK101/MOCK102/MOCK103 each fire once');
+  console.log('mock-lint self-test: clean passes; MOCK101/MOCK102/MOCK103 each fire once; kind scoping holds');
 }
 
 function main(args) {
