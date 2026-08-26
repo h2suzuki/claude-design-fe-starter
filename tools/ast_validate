@@ -130,6 +130,13 @@ def validate_registry(data: dict) -> list[str]:
     return schema_errors(data, "ui-registry.schema.json")
 
 
+def validate(data: dict, force_registry: bool) -> list[str]:
+    """registry か screen かは中身で決める。file 名は PJ が変えられるので根拠にしない"""
+    if force_registry or ("items" in data and "screen" not in data):
+        return validate_registry(data)
+    return validate_screen(data)
+
+
 def good_screen() -> dict:
     body = {
         "id": "n-open",
@@ -190,6 +197,10 @@ def self_test() -> int:
         failures.append("clean screen unexpectedly failed")
     if validate_registry(good_registry()):
         failures.append("clean registry unexpectedly failed")
+    if validate(good_registry(), False):
+        failures.append("registry was not recognised without --registry")
+    if validate(good_screen(), False):
+        failures.append("screen was misread as a registry")
 
     def expect(label: str, mutate, code: str):
         data = copy.deepcopy(good_screen())
@@ -279,7 +290,7 @@ def main() -> int:
         parser.error("file is required unless --self-test")
 
     data = load_json(Path(args.file))
-    errors = validate_registry(data) if args.registry else validate_screen(data)
+    errors = validate(data, args.registry)
     if errors:
         for message in errors:
             print(message, file=sys.stderr)
