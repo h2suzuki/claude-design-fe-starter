@@ -6,7 +6,7 @@ import { APP_CONFIGURED, MOBILE_CONTEXT_OPTIONS } from "../src/config";
 import { installNetworkGuard } from "../src/net-block";
 import { openApp } from "../src/targets/app-target";
 
-// app の描画完了を示すセレクタに差し替える
+// app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
 const READY_SELECTOR = "body";
 // 一覧の行セレクタ。行を一意に識別する key 属性を app 側の行に付与して差し替える
 const ROW_SELECTOR = "tbody tr[data-row-key]";

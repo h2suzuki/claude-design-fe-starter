@@ -7,7 +7,7 @@ import { UI_AST_SCREENS_DIR } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
 import { openApp } from "../src/targets/app-target";
 
-// app の描画完了を示すセレクタに差し替える
+// app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
 const READY_SELECTOR = "body";
 
 const EXPECTED = expectedTree(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE);

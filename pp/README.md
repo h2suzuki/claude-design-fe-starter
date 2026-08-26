@@ -107,7 +107,7 @@ npm run lint:mock && npm run gate
 - `src/selector-map.ts` — visual id ↔ selector 対応。既定は `PP_MOCK_FILE` に対応する screen AST からの導出（mock 側 = `source.nodeRef`、app 側 = `data-visual-id` 属性）で、AST から導けない対だけ `MANUAL_PAIRS` に手書きする
 - `src/net-block.ts` — vendor 資産の URL 対応表（`vendor/README.md`）
 - `src/fixtures/route-intercept.ts` + `tests/sample-parity.spec.ts` の `APP_API_FIXTURES` — app が読む API の fixture（空でも 404 fallback が実 BE への素通りを塞ぐ）
-- 各 spec 冒頭の `READY_SELECTOR`（width-sweep は `APP_MOUNT_SELECTOR` も） — app の描画完了セレクタ
+- 各 spec 冒頭の `READY_SELECTOR`（width-sweep は `APP_MOUNT_SELECTOR` も） — app の描画完了セレクタ。**本番 markup に test 都合を持ち込まない** — `data-visual-id` を mount 後だけ付けるような実装は parity の突合対象そのものを揺らすので、root に `data-ready` のような専用属性を置いてそれを指す
 
 spec を足すときは `test.skip(条件, 理由)` を **`test.describe` の直下**に書く。`test()` の本体に置くと `browser` fixture が先に作られるので、条件を満たしていない gate が skip でなく browser 起動の失敗として落ち、原因と無関係な spec が一斉に赤くなる。
 - `tests/modal-geometry-sweep.spec.ts` の `MODALS` + `DIALOG_SELECTOR` / `tests/list-identity-sweep.spec.ts` の `EDGES` + 行・詳細キーのセレクタ — 状態系 sweep の登録点（空のうちは理由付き skip）

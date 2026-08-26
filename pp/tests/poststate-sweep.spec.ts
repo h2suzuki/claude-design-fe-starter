@@ -9,7 +9,7 @@ import { openApp } from "../src/targets/app-target";
 // \b は "[" の外側に word 文字を要求するため、bracket 形はグループから分離する（混ぜると素の "[object Object]" を取りこぼす）
 const FORBIDDEN_LITERAL = /\b(?:undefined|null|NaN)\b|\[object Object\]/;
 
-// app の描画完了を示すセレクタに差し替える
+// app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
 const READY_SELECTOR = "body";
 
 // 画面状態を変える操作を PJ ごとに登録する（行選択・ソート・タブ切替・モーダル開閉等）。空でも初期状態は検証される

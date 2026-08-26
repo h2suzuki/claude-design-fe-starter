@@ -5,7 +5,7 @@ import { APP_CONFIGURED, BREAKPOINT_EDGE_WIDTHS, SWEEP_WIDTHS, sweepContextOptio
 import { installNetworkGuard } from "../src/net-block";
 import { openApp } from "../src/targets/app-target";
 
-// app の描画完了を示すセレクタに差し替える
+// app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
 const READY_SELECTOR = "body";
 // app の mount 点。静的 body ではなく JS 描画後の中身を陽性対照に使う（差し替え点）
 const APP_MOUNT_SELECTOR = "#app";
@@ -16,6 +16,8 @@ test.describe("app — width sweep", () => {
   test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
 
   test(`layout invariants hold across ${WIDTHS[0]}..${WIDTHS[WIDTHS.length - 1]}`, async ({ browser }) => {
+    // 全幅を 1 test で回すので、既定 timeout でなく幅数に比例させる（dev server では 1 幅の module load だけで数秒）
+    test.setTimeout(WIDTHS.length * 10_000);
     for (const width of WIDTHS) {
       const context = await browser.newContext(sweepContextOptions(width));
       try {
