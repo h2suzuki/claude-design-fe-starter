@@ -27,7 +27,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 
 - **凍結には含める**。表現規則と部品 variant の参照先なので sha256 で固定する
 - **route として実装しない**。旧実装の page 対応で存否を判断する対象でもない
-- **token 名の母体にはするが pixel の正本にしない**。値は各画面の実値を正とする — 見本 page を第 2 の正本にすると二重管理のドリフト（轍 #8）が再発する。画面と見本で値が割れたら DESIGN-POLICY.md に日付付きで裁定を残す
+- **token 名の母体にはするが pixel の正本にしない**。値は各画面の実値を正とする — 見本 page を第 2 の正本にすると二重管理のドリフト（轍 #8）が再発する。画面と見本で値が割れたら、まず見本側の生成ぶれを疑って mock へ差し戻す。差し戻せない事情があるときだけ DESIGN-POLICY.md に日付付きの裁定として残す
 - 部品 variant の初期一覧はこの page から取る。足りない状態（disabled / loading / empty / 長文）は Claude Design へ追加発注し、実装側で作らない
 - コピー規則・icon / logo 規則は受入時の checklist にする。違反は実装で直さず mock 側へ差し戻す
 
@@ -37,7 +37,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 2. export 一式を取得し、`export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし。入れる集合は上の「export/ に入れる集合」）。取得経路は 2 つあり、どちらでも以降の gate は変わらない
    - **project 経由**: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool
    - **受け取り**: ユーザーから export 一式（zip 等）を受け取って展開する。この場合 `tools/design_sync verify` による Claude Design との再照合と、実装済み部品のライブラリ書き戻しは使えない — 突合先の出所は sha256 台帳だけが担う
-3. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する。**fullPage・DPR 1** で撮る — ここは承認時点の意匠を人が見返すための参照で、pixel の oracle は self-baseline が持つ。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
+3. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — ここは承認時点の意匠を人が見返すための参照で、pixel の oracle は self-baseline が持つ。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
 4. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
