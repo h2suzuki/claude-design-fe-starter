@@ -130,5 +130,5 @@ pgrep -af "drafts/pw-browsers"
 - mock 側 selector は `npm run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
 - `npm run overlay-diff` で mock/app の全画面オーバーレイ（mock=赤・app=シアン・一致=灰）と文言キーの字体/箱突合を出す。SELECTOR_MAP に載せ忘れた箇所のズレを面で検出する補完で、map が空の序盤から使える
 - 失敗時は `artifacts/<suite>/` の summary/style/geometry JSON を見る。selector・fixture の不一致と実際の parity regression を分けて診断する
-- 意図的差分は `docs/presentation/ui-mock/DESIGN-POLICY.md`（KEEP_IMPL 台帳）に裁定を登録し、spec 側の delta pin で吸収する（`docs/pixel-perfect.md`）
+- 意図的差分は `docs/presentation/ui-mock/DESIGN-POLICY.md`（KEEP_IMPL 台帳）に裁定を登録する。**登録しても parity が緑になるわけではない** — 吸収機構はまだ無く、差分は赤のまま残る。解消は mock を直すのが既定（`docs/pixel-perfect.md`）
 - 実測 px を app の CSS へ転記しない。合わせるのは CSS 契約（clamp/%/flex）の構造（`docs/pixel-perfect.md`）
