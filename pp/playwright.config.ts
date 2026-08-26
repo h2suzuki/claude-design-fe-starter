@@ -1,9 +1,11 @@
 // @playwright/test は ^ なしの完全固定 — 同梱 Chromium の更新は text metrics/AA を揺らし 0-diff gate を壊す
 import { defineConfig } from "@playwright/test";
-import { MOBILE_VIEWPORT, PP_LAUNCH_OPTIONS } from "./src/config";
+import { MOBILE_VIEWPORT, MOCK_ENTRY_FILE, PP_LAUNCH_OPTIONS } from "./src/config";
 
 export default defineConfig({
   testDir: "./tests",
+  // どの画面を検証した run かを report に残す（gate の非適用宣言はこれで画面を突き合わせる）
+  metadata: { mockEntryFile: MOCK_ENTRY_FILE },
   timeout: 30_000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

@@ -45,6 +45,11 @@ function declarationErrors(entries) {
   });
 }
 
+// 検証した画面は suite が report へ書き残す。gate 実行時の env を見ると PJ が config で埋めた既定と食い違う
+function screenFromReport(report, envMockFile) {
+  return screenOf(report?.config?.metadata?.mockEntryFile ?? envMockFile ?? '');
+}
+
 // 宣言は画面と spec の両方が一致したときだけ効く。対象部品を持つ画面が来れば届かず、gate は再び落ちる
 function classifySkips(report, entries, screen) {
   const applies = (spec) => entries.some((entry) => entry.screen === screen && entry.spec === spec);
@@ -113,6 +118,12 @@ function runSelfTest() {
     'a declaration without an ISO date must be rejected');
   assert(declarationErrors(declared).length === 0, 'a well-formed declaration must pass validation');
 
+  // 画面の出所は suite が実際に使った値。env だけ見ると PJ が config で埋めた既定と食い違う
+  const withMeta = { config: { metadata: { mockEntryFile: 'home.dc.html' } } };
+  assert(screenFromReport(withMeta, 'other.html') === 'home', 'the report metadata must win over the environment');
+  assert(screenFromReport({}, 'other.dc.html') === 'other', 'the environment is the fallback when the report carries nothing');
+  assert(screenFromReport({}, undefined) === '', 'with neither source the screen stays empty');
+
   console.log('require-no-skips self-test: skips are caught with their reason; declarations apply per screen+spec and go stale when the gate runs');
 }
 
@@ -152,7 +163,7 @@ function main(args) {
     return;
   }
 
-  const { unverified, declared, stale } = classifySkips(report, entries, screenOf(process.env.PP_MOCK_FILE ?? ''));
+  const { unverified, declared, stale } = classifySkips(report, entries, screenFromReport(report, process.env.PP_MOCK_FILE));
   if (stale.length) {
     console.error('require-no-skips: a gate ran even though it is declared not applicable — the declaration is stale:\n');
     for (const entry of stale) console.error(`  ${entry.spec} › ${entry.screen} (${entry.date}) — ${entry.reason}`);
