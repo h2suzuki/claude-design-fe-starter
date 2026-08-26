@@ -9,10 +9,12 @@ usage() {
 Usage: $PROG
 
 Prints the directory to keep the shared toolchain in (Playwright browsers, bun,
-npm cache). It prefers the main repository's drafts/ so that every worktree
-shares one copy, and falls back to the current worktree's own drafts/ when that
-is not writable -- which is what happens in sandboxes that grant write access
-only to the checkout the session sits in.
+npm cache). A directory that already holds a toolchain wins, so a copy stashed
+in a worktree stays visible when the shared one becomes writable again. With no
+toolchain anywhere it prefers the main repository's drafts/ so that every
+worktree shares one copy, and falls back to the current worktree's own drafts/
+when that is not writable -- which is what happens in sandboxes that grant
+write access only to the checkout the session sits in.
 
 Run it from anywhere inside the repository:
 
@@ -21,6 +23,12 @@ Run it from anywhere inside the repository:
 The fallback is reported on stderr, so a per-worktree copy never looks like the
 shared one. Exit codes: 0 printed a usable directory, 73 neither was writable.
 MSG
+}
+
+# 既に toolchain がある側を優先する。書けるかだけで選ぶと、退避済みの実体が見えなくなる
+has_toolchain() {
+  local dir=$1
+  [[ -d $dir/pw-browsers || -d $dir/bun || -d $dir/npm-cache ]]
 }
 
 # 書けるかの判定そのものなので、probe の失敗は error でなく結果として扱う
@@ -44,13 +52,19 @@ main() {
   shared=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/drafts
   local_dir=$(git rev-parse --show-toplevel)/drafts
 
-  if writable_drafts "$shared"; then
-    printf '%s\n' "$shared"
-    return
+  local dir chosen=""
+  for dir in "$shared" "$local_dir"; do
+    if has_toolchain "$dir" && writable_drafts "$dir"; then chosen=$dir; break; fi
+  done
+  if [[ -z $chosen ]]; then
+    for dir in "$shared" "$local_dir"; do
+      if writable_drafts "$dir"; then chosen=$dir; break; fi
+    done
   fi
-  if writable_drafts "$local_dir"; then
-    printf '%s: %s is not writable, so the toolchain is kept per-worktree instead of shared.\n' "$PROG" "$shared" >&2
-    printf '%s\n' "$local_dir"
+  if [[ -n $chosen ]]; then
+    [[ $chosen == "$shared" ]] ||
+      printf '%s: using %s rather than the shared %s.\n' "$PROG" "$chosen" "$shared" >&2
+    printf '%s\n' "$chosen"
     return
   fi
   if [[ $shared == "$local_dir" ]]; then
