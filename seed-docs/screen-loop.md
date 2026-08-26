@@ -27,7 +27,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 
 ### ② export 凍結 + provenance pin
 
-- /mock-freeze で standalone HTML export を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する (手順詳細: docs/presentation/ui-mock/README.md)
+- /mock-freeze で export 一式を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する (手順詳細: docs/presentation/ui-mock/README.md)
 - 完了条件: mock-provenance spec が緑 (検証 gate が今回凍結した正本を向いている証明)。凍結せずに実装へ入らない — 突合先ドリフトの再発源になる
 
 ### ③ AST 抽出 + 部品候補 3 分類

@@ -8,7 +8,7 @@ UI の新設・改造は次の順で行う。バグ単位の実装 batch を重�
 
 1. **mock を先に直す**: 変更後の画面・モーダル・動線を Claude Design mock 上に作る。mock が壊れている領域は、壊れる前の正 mock を起点に復元してから直す
 2. **mock でユーザー承認**: ローカル描画（pp の mock 配信 / ブラウザ）でユーザーが見た目・動線・文言を承認してから先に進む
-3. **export を凍結する**: 承認済み mock を standalone HTML で export して `docs/presentation/ui-mock/export/` へ置き、`docs/presentation/ui-mock/mock-baseline.sha256` に sha256 を pin する。以後この凍結 export が突合先の正本であり、無断変更を禁ずる
+3. **export を凍結する**: 承認済み mock の export 一式を取得して `docs/presentation/ui-mock/export/` へ置き、`docs/presentation/ui-mock/mock-baseline.sha256` に sha256 を pin する。以後この凍結 export が突合先の正本であり、無断変更を禁ずる
 4. **実装は mock 整合 + 動線 pin つき**: mock との整合は下記「mock 整合と pixel-perfect 検証」の構造一致で機械検証し、画面遷移・行 focus・並び順などのユーザー動線契約は behavioral テストで pin する
 5. **検証は実データ・基準 viewport で行う**: 発注 scope の確認に加えて隣接動線を最低 1 つ歩く
 
