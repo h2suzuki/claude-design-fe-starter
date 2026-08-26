@@ -112,7 +112,9 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 6. **parity**: /ast-extract で screen AST を起こす (SELECTOR_MAP はそこから導出される)。導けない対だけ pp の MANUAL_PAIRS に書き、ast-provenance・ast-conformance・sample-parity を緑にする
 7. **sweep + 回帰**: width-sweep / poststate-sweep / self-baseline / mock-provenance を全て実行して緑にする (self-baseline は初回 `--update-snapshots` で baseline を生成し、再実行で緑を確認する)。生成された `pp/tests/*-snapshots/` の PNG は **commit する** — 追跡しないと clone や新しい worktree で毎回再生成され、比較対象が無いまま緑になる (詳細は pp/README.md)
 
-完了条件: 全 gate が「skip ではなく実行されて緑」。1 spec でも skip のまま「一周した」と宣言しない。ここまで緑になって初めて画面量産 (seed-docs/screen-loop.md) に入る。
+完了条件: 全 gate が「skip ではなく実行されて緑」。1 spec でも未検証の skip を残したまま「一周した」と宣言しない。ここまで緑になって初めて画面量産 (seed-docs/screen-loop.md) に入る。
+
+例外は 1 つだけ。**その画面に検査対象の部品がそもそも無い** gate は、`pp/gate-not-applicable.json` に画面・日付・理由を書いて宣言すれば skip のまま通る (詳細は pp/README.md)。無い部品を作って gate を通すのは轍 #4 と同型なので採らない。
 
 ## モバイルファースト調整 5 点
 

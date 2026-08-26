@@ -17,9 +17,34 @@
 | `list-identity-sweep` | 状態変更操作後の選択・詳細キー・行順序の不変 | 状態 | `EDGES` + `PP_APP_URL` |
 | `self-baseline` | 自分の過去 baseline とのスクショ比較 | （回帰網） | `PP_APP_URL` |
 
-未充足の条件がある spec は理由付きで skip される（端末の list reporter には理由が出ない — 理由は `artifacts/playwright-report.json` の annotations か、spec 冒頭の skip 条件で確認する）。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。
+未充足の条件がある spec は理由付きで skip される（端末の list reporter には理由が出ない — 理由は `artifacts/playwright-report.json` の annotations か、spec 冒頭の skip 条件で確認する）。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。ただし「その画面に検査対象の部品が無い」場合だけは下の宣言で通せる。
 
-この判定は `npm run gate`（= `playwright test` + `scripts/require-no-skips.mjs`）が機械的に行う。skip が 1 件でも残れば exit 1 になり、残った spec と skip 理由を列挙する。`npm test` 単体は skip を素通しするので、完了判定には `gate` を使う。
+この判定は `npm run gate`（= `playwright test` + `scripts/require-no-skips.mjs`）が機械的に行う。未検証の skip が 1 件でも残れば exit 1 になり、残った spec と skip 理由を列挙する。`npm test` 単体は skip を素通しするので、完了判定には `gate` を使う。
+
+## 検査対象の部品が無い gate
+
+条件付き gate（`list-identity-sweep` の `EDGES`、`modal-geometry-sweep` の `MODALS` など）は、その画面に対象の部品が無ければ登録しようがない。そこに無理やり対象を作って通すのは、検査対象が無いところに検査対象を作る行為で、以後「この gate は緑」という誤った安心を残す（轍 #4 と同型）。
+
+この場合だけ `gate-not-applicable.json` に宣言すると、`require-no-skips` が「未検証」でなく「検査対象なし」として扱う。
+
+```json
+{
+  "version": "1",
+  "entries": [
+    {
+      "spec": "list-identity-sweep",
+      "screen": "your-screen",
+      "date": "2026-01-31",
+      "reason": "この画面の表は静的で、状態遷移をまたいで保つ選択・行順序が無い"
+    }
+  ]
+}
+```
+
+- `spec` は spec file 名から `.spec.ts` を除いたもの、`screen` は `PP_MOCK_FILE` の最初の dot までの slug
+- **宣言は画面単位**。別の画面を検証するときは効かないので、対象部品を持つ画面が来れば gate は再び落ちる
+- 宣言した gate が実際に実行されたら、その宣言は古い。`require-no-skips` が stale として落とすので、宣言を消してから走らせる
+- `date` と `reason` は必須。いつ誰の判断で「対象なし」としたかが残らない宣言は、単なる gate の抜け道になる
 
 ## self-baseline の baseline は commit する
 
@@ -78,6 +103,7 @@ npm run lint:mock && npm run gate
 ## 差し替え点（PJ 開始時に確定する）
 
 - `src/config.ts` — 基準 viewport 2 点・スイープ幅・locale/timezone・固定時刻・self-baseline 対象 path
+- `gate-not-applicable.json` — 「この画面には検査対象の部品が無い」宣言（既定は空。上の節）
 - `src/selector-map.ts` — visual id ↔ selector 対応。既定は `PP_MOCK_FILE` に対応する screen AST からの導出（mock 側 = `source.nodeRef`、app 側 = `data-visual-id` 属性）で、AST から導けない対だけ `MANUAL_PAIRS` に手書きする
 - `src/net-block.ts` — vendor 資産の URL 対応表（`vendor/README.md`）
 - `src/fixtures/route-intercept.ts` + `tests/sample-parity.spec.ts` の `APP_API_FIXTURES` — app が読む API の fixture（空でも 404 fallback が実 BE への素通りを塞ぐ）
