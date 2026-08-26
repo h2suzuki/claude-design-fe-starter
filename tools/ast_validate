@@ -113,7 +113,8 @@ def structural_errors(data: dict) -> list[str]:
 
     mock_file = screen.get("provenance", {}).get("mockFile", "")
     slug = screen.get("name", "")
-    if mock_file and slug and mock_file != f"export/{slug}.html":
+    # schema が export/….html を保証済み。slug に dot は入らないので最初の dot 以降は拡張子
+    if mock_file and slug and mock_file.rpartition("/")[2].split(".", 1)[0] != slug:
         errors.append(
             f"AST106 slug mismatch: name={slug} vs provenance.mockFile={mock_file}"
         )
@@ -196,6 +197,24 @@ def self_test() -> int:
         found = validate_screen(data)
         if not any(code in message for message in found):
             failures.append(f"{label}: expected {code}, got {found}")
+
+    def expect_clean(label: str, mutate):
+        data = copy.deepcopy(good_screen())
+        mutate(data)
+        found = validate_screen(data)
+        if found:
+            failures.append(f"{label}: expected clean, got {found}")
+
+    # export の file 名は取得元が決める。slug に dot は入らないので拡張子は複数段でも良い
+    expect_clean(
+        "compound-suffix",
+        lambda d: d["screen"]["provenance"].update(mockFile="export/sample.dc.html"),
+    )
+    expect(
+        "compound-suffix-mismatch",
+        lambda d: d["screen"]["provenance"].update(mockFile="export/other.dc.html"),
+        "AST106",
+    )
 
     expect("schema", lambda d: d.update(version="9.9.9"), "SCHEMA ERROR")
     expect("coverage", lambda d: d["coverage"].update(visual=0.1), "AST101")
