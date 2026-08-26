@@ -17,11 +17,13 @@ const SCRIPT_RE = /\.m?js$/i;
 const SCANNED_RE = /\.(?:html?|css|m?js)$/i;
 // 取得先ではなく識別子として書かれる URL
 const NON_FETCH_URL = /^https?:\/\/(?:www\.)?w3\.org\//i;
+// 接続を温めるだけで資産を取りに行かない link
+const NON_FETCHING_LINK = /\brel\s*=\s*["'][^"']*\b(?:preconnect|dns-prefetch)\b/i;
 
 // 資産を読み込む参照だけを対象にする（本文中の単なる URL 文字列やリンク href は対象外）
 const ASSET_REF_PATTERNS = [
   /<script[^>]+src\s*=\s*["']https?:\/\/[^"']+["']/gi,
-  /<link[^>]+href\s*=\s*["']https?:\/\/[^"']+["']/gi,
+  /<link[^>]*href\s*=\s*["']https?:\/\/[^"']+["'][^>]*>/gi,
   /<img[^>]+src\s*=\s*["']https?:\/\/[^"']+["']/gi,
   /url\(\s*["']?https?:\/\/[^"')]+/gi,
   /@import\s+["']https?:\/\/[^"']+["']/gi,
@@ -45,6 +47,7 @@ function lintFile(file) {
   const violations = [];
   for (const pattern of SCRIPT_RE.test(file) ? SCRIPT_REF_PATTERNS : ASSET_REF_PATTERNS) {
     for (const match of text.matchAll(pattern)) {
+      if (NON_FETCHING_LINK.test(match[0])) continue;
       const url = /https?:\/\/[^"'`)\s]+/.exec(match[0])?.[0] ?? match[0];
       if (/\/\/(?:localhost|127\.0\.0\.1)[:/]/.test(url)) continue;
       if (NON_FETCH_URL.test(url)) continue;
@@ -126,12 +129,17 @@ function runSelfTest() {
     const runtimeViolations = lintFile(runtimeFile);
     assert(runtimeViolations.length === 1 && runtimeViolations[0].id === 'MOCK101', 'runtime fixture did not fire MOCK101 exactly once');
 
+    // preconnect / dns-prefetch は接続を温めるだけで資産を取りに行かない
+    const hintFile = path.join(tempDir, 'hint.html');
+    fs.writeFileSync(hintFile, '<html><head><link rel="preconnect" href="https://fonts.example.com"><link href="https://fonts.example.com" rel="dns-prefetch"></head></html>');
+    assert(lintFile(hintFile).length === 0, 'resource-hint fixture must produce no violations');
+
     // XML namespace は識別子であって取得先ではない
     const nsFile = path.join(tempDir, 'svg.js');
     fs.writeFileSync(nsFile, 'el = document.createElementNS("http://www.w3.org/2000/svg", "path");\n');
     assert(lintFile(nsFile).length === 0, 'namespace fixture must produce no violations');
 
-    assert(fs.readdirSync(tempDir).filter((name) => SCANNED_RE.test(name)).length === 7, 'SCANNED_RE must cover the html/css/js fixtures');
+    assert(fs.readdirSync(tempDir).filter((name) => SCANNED_RE.test(name)).length === 8, 'SCANNED_RE must cover the html/css/js fixtures');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
