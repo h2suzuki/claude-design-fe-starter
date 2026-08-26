@@ -15,7 +15,7 @@ when_to_use: TRIGGER when the user declares a mock complete, when an export need
    - **project 経由**: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool
    - **受け取り**: ユーザーから export 一式（zip 等）を受け取る。`design_sync verify` による再照合は使えないので、突合先の出所は sha256 台帳だけが担う
 
-   取得 API には size cap がある（DesignSync の `get_file` は 256 KiB）。資産を inline した standalone export は容易に超えるので、**切れたものを掴んでいないか台帳へ pin する前に確かめる**。`design_sync` 経由なら記録された `truncated` 列と byte 数を見る。どちらの経路でも手順 6 の `npm run lint:mock`（MOCK103）が閉じタグの欠落を機械検出する。切れた export を凍結すると、台帳は「取得物と一致する」ことしか保証しないので gate は緑のまま突合先だけが壊れる
+   取得 API には size cap がある（DesignSync の `get_file` は 256 KiB）。資産を inline した export は容易に超えるので、**切れたものを掴んでいないか台帳へ pin する前に確かめる**。`design_sync` 経由なら記録された `truncated` 列と byte 数を見る。どちらの経路でも手順 6 の `npm run lint:mock`（MOCK103）が閉じタグの欠落を機械検出する。切れた export を凍結すると、台帳は「取得物と一致する」ことしか保証しないので gate は緑のまま突合先だけが壊れる
 3. 取得物を `docs/presentation/ui-mock/export/` へ配置する。編集 gate が Edit/Write を block するため、配置は cp 等の Bash で行う
 4. 基準 viewport ごとの参照スクショを `docs/presentation/ui-mock/screenshots/` へ保存する
 5. 台帳を更新する（.gitkeep 除外・空白名安全）:
