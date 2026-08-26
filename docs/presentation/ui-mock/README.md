@@ -18,14 +18,16 @@ docs/presentation/ui-mock/
 - 収集は net-block を有効にした状態で行い、**404 と abort が 0 件**になるまで足す。これが「足りている」ことの機械的な証明になる
 - 入れる file は取得時の相対 path のまま置く（flatten・rename しない）。台帳はこの集合と 1:1 で対応する
 - 除外の根拠は上の実測であって、file 名や件数ではない
+- **live な外部 embed は閉包に入らない**。子 frame が外部サービスへ navigate する形（地図・動画・SNS の埋め込み）は export の file ではなく、vendor 化もできない。閉包の「取りこぼし」と分けて扱い、mock 側と実装側の両方で同じく空にする
+- ただし embed の領域は **parity で検証されない**。空同士が一致しても、承認された意匠と一致した証明にはならない。この領域は screen-loop ⑦ の人間受入で見る
 
 ## 凍結手順（/mock-freeze skill が案内する内容）
 
 1. Claude Design 上でユーザーが mock の完成を宣言する
-2. export 一式を取得し、`export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし。入れる集合は下の「export/ に入れる集合」）。取得経路は 2 つあり、どちらでも以降の gate は変わらない
+2. export 一式を取得し、`export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし。入れる集合は上の「export/ に入れる集合」）。取得経路は 2 つあり、どちらでも以降の gate は変わらない
    - **project 経由**: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool
    - **受け取り**: ユーザーから export 一式（zip 等）を受け取って展開する。この場合 `tools/design_sync verify` による Claude Design との再照合と、実装済み部品のライブラリ書き戻しは使えない — 突合先の出所は sha256 台帳だけが担う
-3. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する
+3. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する。**fullPage・DPR 1** で撮る — ここは承認時点の意匠を人が見返すための参照で、pixel の oracle は self-baseline が持つ。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
 4. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
