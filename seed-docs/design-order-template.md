@@ -4,7 +4,7 @@
 
 - docs/ の 5 本 (ui-quality-policy / pixel-perfect / design-sync / ui-caveats / ast-layer) は repo / agent 側の規約であり、Claude Design には持ち込まない
 - Claude Design に持ち込むデザイン規約は、この 1 枚に凝縮する。発注文への組み込みは /design-order が行う
-- 下の block の数値 (390 / 1280 / 44px) は例。pp/src/config.ts で確定した基準 viewport と一致させてから使う
+- 下の block の数値 (320〜1920 / 390 / 1280 / 44px) は例。pp/src/config.ts で確定した基準 viewport と `SWEEP_WIDTHS` の下限・上限に一致させてから使う。**発注した幅の範囲がそのまま検証される範囲**なので、片方だけ変えない
 
 ## day-0 で Claude Design に持ち込む 4 点
 

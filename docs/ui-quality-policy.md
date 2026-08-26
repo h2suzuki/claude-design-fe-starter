@@ -43,7 +43,7 @@ mock-first を運転するときの役割分担・作業場・検分手順を定
 ## 検証の基準 viewport と DoD
 
 - 基準 viewport は 2 点: **mobile 390×844 を第一正本**（DPR 2–3・touch emulation を devices preset で固定）、**desktop 1280×800 を第二正本**とする。数値は例であり、PJ の実値は `pp/src/config.ts` で差し替える。
-- 基準 2 点の間と外（下限 320〜上限 1920）は連続幅スイープで検証する。離散数点の pixel 一致は採らない。
+- 基準 2 点の間と外（下限 320〜上限 1920）は連続幅スイープで検証する。離散数点の pixel 一致は採らない。**下限・上限も例であり、PJ の実値は `pp/src/config.ts` の `SWEEP_WIDTHS` で差し替える。発注規約（`seed-docs/design-order-template.md` 項目 1）と同じ数値にする** — 発注した下限と検証する下限がずれると、守られていない要件を検証し続けることになる。
 - 完成条件（DoD）は 3 分類で判定する: **基準幅 = structural pixel 一致** / **中間幅 = invariant（崩れ・衝突・欠落・横スクロール無し）** / **状態 = 挙動一致**。
 - CSS 規約: page shell は `@media`（viewport 基準）、部品は `@container`（置かれた幅基準）、内容は intrinsic sizing で書く。breakpoint の急変点は境界 ±1px のスイープで検証する。
 

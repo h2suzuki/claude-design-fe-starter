@@ -37,8 +37,9 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 2. export 一式を取得し、`export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし。入れる集合は上の「export/ に入れる集合」）。取得経路は 2 つあり、どちらでも以降の gate は変わらない
    - **project 経由**: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool
    - **受け取り**: ユーザーから export 一式（zip 等）を受け取って展開する。この場合 `tools/design_sync verify` による Claude Design との再照合と、実装済み部品のライブラリ書き戻しは使えない — 突合先の出所は sha256 台帳だけが担う
-3. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — ここは承認時点の意匠を人が見返すための参照で、pixel の oracle は self-baseline が持つ。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
-4. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
+3. 凍結した mock を**発注した下限幅**で描画し、横スクロールとはみ出しが無いことを確かめる。ここで見つかれば mock の修正で済むが、実装後に見つかると実装の欠陥に見える — 発注要件が守られているかは、正本にする前に確かめる
+4. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — ここは承認時点の意匠を人が見返すための参照で、pixel の oracle は self-baseline が持つ。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
+5. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
    cd docs/presentation/ui-mock
@@ -46,7 +47,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    sha256sum --check --quiet mock-baseline.sha256
    ```
 
-5. `pp/` の provenance テストで台帳と実体の一致を確認してから commit する
+6. `pp/` の provenance テストで台帳と実体の一致を確認してから commit する
 
 ## 規律
 
