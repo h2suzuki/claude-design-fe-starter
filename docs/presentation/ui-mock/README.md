@@ -43,9 +43,8 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 6. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
-   cd docs/presentation/ui-mock
-   find export -type f ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > mock-baseline.sha256
-   sha256sum --check --quiet mock-baseline.sha256
+   (cd docs/presentation/ui-mock && find export -type f ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > mock-baseline.sha256)
+   (cd docs/presentation/ui-mock && sha256sum --check --quiet mock-baseline.sha256)
    ```
 
 7. `pp/` の provenance テストで台帳と実体の一致を確認してから commit する
