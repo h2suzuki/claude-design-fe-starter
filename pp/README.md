@@ -1,16 +1,18 @@
 # pp — mock/app parity harness
 
-凍結済み Claude Design mock（`docs/presentation/ui-mock/export/`）と実 frontend を同一条件で描画し、computed-style・geometry・（canvas 部品があれば）pixel を機械 diff する検証ハーネス。DoD 3 分類（`docs/ui-quality-policy.md`）の機械判定部を担う。
+凍結済み Claude Design mock（`docs/presentation/ui-mock/export/`）と実 frontend を同一条件で描画し、computed-style・geometry・pixel を機械 diff する検証ハーネス。DoD 3 分類（`docs/ui-quality-policy.md`）の機械判定部を担う。
 
 ## spec 一覧と DoD 対応
 
 | spec | 検証内容 | DoD 分類 | 有効化条件 |
 |---|---|---|---|
 | `canvas-diff` | 判定器自身の陽性対照（差の検出と 1px 寸法差の crop） | （前提: 判定器の健全性） | 常に実行される |
+| `page-diff` | 判定器自身の陽性対照（差の検出・差の出た行の束ね・寸法差） | （前提: 判定器の健全性） | 常に実行される |
 | `mock-provenance` | 凍結 export と sha256 台帳の一致 | （前提: 突合先の出所） | export が 1 ファイル以上 |
 | `ast-provenance` | screen AST の provenance と凍結 export の一致 | （前提: 突合先の出所） | `docs/presentation/ui-ast/screens/` に AST が 1 件以上 |
 | `ast-conformance` | 実装の `data-visual-id` tree が AST tree と構造一致（親子関係と出現） | （前提: 木の形） | screen AST + `PP_MOCK_FILE` + `PP_APP_URL` |
 | `sample-parity` | 全 visual id の style/geometry diff = 0（基準 2 viewport） | 基準幅 | screen AST（または `MANUAL_PAIRS`）+ `PP_MOCK_FILE` + `PP_APP_URL` |
+| `page-parity` | 画面まるごとの pixel diff = 0（基準 2 viewport・fullPage） | 基準幅 | `PP_MOCK_FILE` + `PP_APP_URL` |
 | `width-sweep` | 320〜1920 連続スイープの invariant | 中間幅 | `PP_APP_URL` |
 | `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_APP_URL` |
 | `modal-geometry-sweep` | モーダルの viewport 収まりと操作要素の箱内収まり（基準 2 viewport） | 状態 | `MODALS` + `PP_APP_URL` |
