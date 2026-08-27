@@ -111,16 +111,29 @@ drop_heredoc_bodies() {
   done <<<"$1"
 }
 
+# 行内の path 候補を cwd 基準で絶対化する。cwd は repo root とは限らない（worktree・下位 dir）
+absolutize_tokens() {
+  local token
+  set -f
+  for token in $1; do
+    token=${token//[\'\"]/}
+    token=${token##*[\>\<]}
+    [[ -n $token ]] || continue
+    [[ $token == /* ]] || token=$CWD/$token
+    printf '%s\n' "$token"
+  done
+  set +f
+}
+
 # 書き込みの形を取る行だけを見る。行をまたぐ照合は離れた語を 1 つの command と誤認する
 while IFS= read -r line; do
-  [[ $line =~ (^|[[:space:]])(\>|\>\>)[[:space:]]*[^[:space:]\|\;\&]*$GUARDED ]] ||
-    [[ $line =~ (^|[[:space:]\;\|\&])(tee|sed[[:space:]]+-i|touch|mkdir|dd)[[:space:]]+[^\;\|\&]*$GUARDED ]] ||
+  [[ $line =~ (^|[[:space:]])(\>|\>\>)[[:space:]]* ]] ||
+    [[ $line =~ (^|[[:space:]\;\|\&])(tee|sed[[:space:]]+-i|touch|mkdir|dd|cp|mv|rsync|install|ln|unzip|tar|git[[:space:]]+mv)[[:space:]] ]] ||
     continue
   # 書き込み先の path から repo を割り出す（Edit/Write 経路と同じ根拠に揃える）
-  [[ $line =~ ([^[:space:]\'\"\;\|\&]*${GUARDED}[^[:space:]\'\"\;\|\&]*) ]] || continue
-  target=${BASH_REMATCH[1]}
-  root=$CWD
-  [[ $target == /* ]] && root=${target%/frontend/src/*}
-  mock_is_frozen "$root/docs/presentation/ui-mock/export" || deny
+  while IFS= read -r target; do
+    [[ $target =~ $GUARDED ]] || continue
+    mock_is_frozen "${target%/frontend/src/*}/docs/presentation/ui-mock/export" || deny
+  done < <(absolutize_tokens "$line")
 done < <(drop_heredoc_bodies "$CMD")
 exit 0

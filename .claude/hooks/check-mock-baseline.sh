@@ -46,27 +46,16 @@ fi
 
 grep -qE '\bgit\b[^;|&]*\bcommit\b' <<<"$CMD" || exit 0
 
-ROOT=${CLAUDE_PROJECT_DIR:-$PWD}
+# command は複数行を取りうるので cwd と分けて読む（1 回の jq に束ねると行境界で壊れる）
+CWD=$(jq -r '.cwd // empty' <<<"$INPUT")
+: "${CWD:=${CLAUDE_PROJECT_DIR:-$PWD}}"
 
-# 別 checkout を名指しで commit する形は、この検査が見る台帳と対象がずれるので黙って通さない
-if [[ $CMD =~ git[[:space:]]+-C[[:space:]]+([^[:space:]]+) ]]; then
-  OTHER=${BASH_REMATCH[1]}
-  if [[ -d $OTHER ]]; then
-    OTHER=$(cd -- "$OTHER" && pwd -P)
-    if [[ $OTHER != "$ROOT" ]]; then
-      cat >&2 <<MSG
-$PROG: this command commits another checkout ($OTHER) while the drift check is
-scoped to $ROOT, so the frozen mock in that checkout was NOT verified (the
-command itself is allowed to run; this hook never modifies any file).
-
-To get it checked, run the commit from a session whose project directory is that
-checkout. To verify it by hand instead:
-
-  cd "$OTHER/docs/presentation/ui-mock" && sha256sum --check mock-baseline.sha256
-MSG
-    fi
-  fi
+# 検査するのは commit が実際に走る checkout。環境に anchor すると worktree の commit を別 checkout の台帳で判定する
+ROOT=$CWD
+if [[ $CMD =~ git[[:space:]]+-C[[:space:]]+([^[:space:]]+) ]] && [[ -d ${BASH_REMATCH[1]} ]]; then
+  ROOT=${BASH_REMATCH[1]}
 fi
+ROOT=$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null) || ROOT=$CWD
 
 BASELINE=$ROOT/docs/presentation/ui-mock/mock-baseline.sha256
 [[ -f $BASELINE ]] || exit 0
