@@ -58,6 +58,9 @@ export const APP_CONFIGURED = APP_BASE_URL !== "";
 
 // docs/presentation/ui-mock/export/ 内の parity 突合先ファイル。walking skeleton の凍結第 1 号で確定する
 export const MOCK_ENTRY_FILE = process.env.PP_MOCK_FILE ?? "";
+
+// その画面に対応する app の route。画面ごとに gate を回すときは PP_MOCK_FILE と対で渡す
+export const APP_ENTRY_PATH = process.env.PP_APP_PATH ?? "/";
 export const MOCK_CONFIGURED = MOCK_ENTRY_FILE !== "";
 
 // 両側の時計をこの瞬間に固定する。mock 内の日付表現と一致させて差し替える

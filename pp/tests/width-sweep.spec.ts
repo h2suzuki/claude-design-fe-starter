@@ -17,6 +17,7 @@ test.describe("app — width sweep", () => {
 
   test(`layout invariants hold across ${WIDTHS[0]}..${WIDTHS[WIDTHS.length - 1]}`, async ({ browser }) => {
     // 全幅を 1 test で回すので、既定 timeout でなく幅数に比例させる（dev server では 1 幅の module load だけで数秒）
+// 他 spec と並列に走ると 1 幅の実時間が伸びる。足りなければ係数を上げるか playwright.config.ts の workers を下げる
     test.setTimeout(WIDTHS.length * 10_000);
     for (const width of WIDTHS) {
       const context = await browser.newContext(sweepContextOptions(width));

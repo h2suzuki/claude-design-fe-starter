@@ -105,6 +105,7 @@ npm run lint:mock && npm run gate
 ## 差し替え点（PJ 開始時に確定する）
 
 - `src/config.ts` — 基準 viewport 2 点・スイープ幅・locale/timezone・固定時刻・self-baseline 対象 path
+- `PP_APP_PATH` — `PP_MOCK_FILE` の画面に対応する app の route（既定 `/`）。画面ごとに gate を回すときは 2 つを対で渡す
 - `gate-not-applicable.json` — 「この画面には検査対象の部品が無い」宣言（既定は空。上の節）
 - `src/selector-map.ts` — visual id ↔ selector 対応。既定は `PP_MOCK_FILE` に対応する screen AST からの導出（mock 側 = `source.nodeRef`、app 側 = `data-visual-id` 属性）で、AST から導けない対だけ `MANUAL_PAIRS` に手書きする
 - `src/net-block.ts` — vendor 資産の URL 対応表（`vendor/README.md`）
