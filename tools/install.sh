@@ -56,13 +56,25 @@ seed_is_git_root() {
 
 # working tree の mode が落ちていても、seed が記録した exec bit で配る（hook が黙って無効化されるのを防ぐ）
 list_seed_exec_files() {
-  local entry
-  seed_is_git_root || return 0
-  while IFS= read -r -d '' entry; do
-    if [[ ${entry%% *} == 100755 ]]; then
-      printf '%s\0' "${entry#*$'\t'}"
-    fi
-  done < <(git -C "$SEED_ROOT" -c core.quotePath=false ls-files -s -z -- "$@")
+  local entry dir head2
+  if seed_is_git_root; then
+    while IFS= read -r -d '' entry; do
+      if [[ ${entry%% *} == 100755 ]]; then
+        printf '%s\0' "${entry#*$'\t'}"
+      fi
+    done < <(git -C "$SEED_ROOT" -c core.quotePath=false ls-files -s -z -- "$@")
+    return 0
+  fi
+  # zip 展開等の copy には記録された mode が無い。shebang を持つ file を実行対象とみなす
+  printf '%s: the seed is not a git checkout, so exec bits are inferred from shebangs.\n' "$PROG" >&2
+  for dir in "$@"; do
+    while IFS= read -r -d '' entry; do
+      read -r -n 2 head2 < "$SEED_ROOT/$entry" || head2=""
+      if [[ $head2 == '#!' ]]; then
+        printf '%s\0' "$entry"
+      fi
+    done < <(list_seed_files "$dir")
+  done
 }
 
 list_seed_files() {
@@ -73,7 +85,7 @@ list_seed_files() {
     (cd -- "$SEED_ROOT" && find "$dir" -type f \
       -not -path '*/node_modules/*' -not -path 'pp/artifacts/*' -not -path '*/dist/*' \
       -not -path '*/.cc-writes/*' -not -name 'settings.local.json' \
-      \( -not -path 'pp/vendor/*' -o -path 'pp/vendor/README.md' \) -print0)
+      \( -not -path 'pp/vendor/*' -o -path 'pp/vendor/README.md' -o -path 'pp/vendor/routes.json' \) -print0)
   fi
 }
 
@@ -261,6 +273,11 @@ commit_installed() {
     return
   fi
   git -C "$target" add -- "${pending[@]}" || die "git add failed in $target" 70
+  # add 後に差分が消えるのは異常ではない（index から外れていた path を書き戻した等）。commit の失敗と混ぜない
+  if git -C "$target" diff --cached --quiet -- "${pending[@]}"; then
+    printf '%s: the seed paths are already committed here.\n' "$PROG"
+    return
+  fi
   git -C "$target" commit -q -m "Install $(basename "$SEED_ROOT")" -- "${pending[@]}" \
     || die "git commit failed in $target (is user.name/user.email set?)" 70
   printf '%s: committed %d path(s).\n' "$PROG" "${#pending[@]}"
