@@ -400,7 +400,14 @@ EOF
     printf 'Review these with git diff before committing — local adaptations in them are gone.\n' >&2
   fi
 
-  local -a commit_paths=("${rels[@]}")
+  # PJ の版を残した path は install が書いていない。混ぜると PJ の未 commit 作業を install の名前で commit する
+  local -a commit_paths=()
+  for rel in "${rels[@]}"; do
+    if ((keep_foreign)) && [[ -v foreign[$rel] ]]; then
+      continue
+    fi
+    commit_paths+=("$rel")
+  done
   for rel in "${marker_files[@]}"; do
     [[ -v dirty_marker[$rel] ]] || commit_paths+=("$rel")
   done
