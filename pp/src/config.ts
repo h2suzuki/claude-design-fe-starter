@@ -11,11 +11,14 @@ export const SWEEP_WIDTHS: readonly number[] = [320, 390, 480, 640, 768, 1024, 1
 // mock/app に breakpoint を導入したら境界 ±1px をここへ足す（急変点の検証）
 export const BREAKPOINT_EDGE_WIDTHS: readonly number[] = [];
 
+// 差し替え点。検証の時計であり、AST の抽出日もこの帯で刻む
+export const TIMEZONE = "Asia/Tokyo";
+
 const SHARED = {
   colorScheme: "light",
   reducedMotion: "reduce",
   locale: "ja-JP",
-  timezoneId: "Asia/Tokyo",
+  timezoneId: TIMEZONE,
 } satisfies BrowserContextOptions;
 
 // 第一正本は touch device emulation ごと固定する（DPR・touch を機械 gate の基準条件に含める）
