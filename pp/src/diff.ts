@@ -24,9 +24,12 @@ export interface MissingEntry {
   matchCount: number;
 }
 
-// Chromium の computed-style は既に正規形 — full opacity の rgba/rgb 二重表現と空白だけ潰す
+// url() は origin 絶対 URL で返る。mock 側の port は run ごとに変わるので、origin は意匠の差ではない
+const CSS_URL_ORIGIN = /url\((["']?)https?:\/\/[^/"')]+/g;
+
+// Chromium の computed-style は既に正規形 — full opacity の rgba/rgb 二重表現と空白、url() の origin だけ潰す
 export function normalizeStyleValue(_prop: string, value: string): string {
-  const v = value.trim().replace(/\s+/g, " ");
+  const v = value.trim().replace(/\s+/g, " ").replace(CSS_URL_ORIGIN, "url($1");
   const m = /^rgba\((\d+), ?(\d+), ?(\d+), ?1\)$/.exec(v);
   if (m) return `rgb(${m[1]}, ${m[2]}, ${m[3]})`;
   return v;
