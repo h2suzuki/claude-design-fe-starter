@@ -36,7 +36,7 @@ Exit Criteria:
 
 - [x] High 5 件が修正され、各件が再現手順の実測で green になる（patch 分は検証済みコピーで 4 ケース green）
 - [x] Medium 6 件 / Low 2 件が修正されるか、扱わない理由が日付付きで記録される
-- [ ] `.claude/` 配下の 4 件が patch として H.S. の実行へ渡り、実行後に commit される
+- [x] `.claude/` 配下の 4 件が patch として H.S. の実行へ渡り、実行後に commit される（2026-08-27 実行、適用結果が検証済みコピーと byte 一致することを確認して commit）
 
 出所: 10 agent の並行監査（未踏 5 面）+ 反証 pass。確定 13 / 棄却 2。
 
