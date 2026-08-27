@@ -117,6 +117,8 @@ def structural_errors(data: dict) -> list[str]:
     if mock_file and slug and mock_file.rpartition("/")[2].split(".", 1)[0] != slug:
         errors.append(
             f"AST106 slug mismatch: name={slug} vs provenance.mockFile={mock_file}"
+            " — 画面 slug は export の file 名から採る。file 名が英小文字・数字・ハイフン以外を"
+            "含むなら mock 側の file 名を直して再 export する (発注規約 項目 12)"
         )
     return errors
 
