@@ -27,43 +27,6 @@ Exit Criteria:
 - [x] pp 結線: ast-provenance (df27b30・陽性対照 8 件)・SELECTOR_MAP の AST 導出 (0bffa50・10 件)・ast-conformance (58e25f7・12 件、screen AST 探索を pp/src/ast-screen.ts へ共通化)。pp typecheck rc=0、suite は 12 spec すべて理由付き skip (mock と AST の実体が入るまで外れない)
 - [x] AST 基盤の残り: ast-tree / ast-viewer / ast-extract skill / docs/ast-layer.md (7e7c51c)。受け入れレビューで source.region の並びの食い違いと node の notes 不能を是正し、screen-loop ③ へ結線。ast-viewer は Chromium 実画面で 3 面・Ctrl+クリック相互ジャンプ・dark theme を実測。screens/ の実体は最初の抽出時に生成される（registry.json を /ast-extract は書かないので、空台帳を配る形へ是正した）
 
-### 先回り監査で確定した seed 欠陥 13 件
-
-起票: opus-5 2026-08-27
-Goal: 消費側がまだ踏んでいない経路の欠陥を、踏まれる前に塞ぐ
-
-Exit Criteria:
-
-- [x] High 5 件が修正され、各件が再現手順の実測で green になる（patch 分は検証済みコピーで 4 ケース green）
-- [x] Medium 6 件 / Low 2 件が修正されるか、扱わない理由が日付付きで記録される
-- [x] `.claude/` 配下の 4 件が patch として H.S. の実行へ渡り、実行後に commit される（2026-08-27 実行、適用結果が検証済みコピーと byte 一致することを確認して commit）
-
-出所: 10 agent の並行監査（未踏 5 面）+ 反証 pass。確定 13 / 棄却 2。
-
-9 件は commit 済み。`.claude/` 配下の 4 件は `drafts/seed-patch/apply-2.sh` に入れ、実 file の copy に対する dry-run で検証済み（適用結果が検証済みコピーと byte 一致）。
-
-High:
-
-- [x] install.sh が PJ の未 commit 作業を「Install」commit に巻き込む（`commit_paths=("${rels[@]}")` が keep_foreign で残した path を除かない。実 repo で再現済み）
-- [x] `backgroundImage` の computed 値が origin 絶対 URL — mock 側は毎 run 変わる ephemeral port なので、`url()` 背景を持つ画面は基準幅 parity が構造的に落ちる
-- [x] API fixture が `sample-parity` にしか効かず、他 5 spec と overlay-diff が実 BE へ素通しする
-- [x] `check-mock-baseline.sh` が `CLAUDE_PROJECT_DIR` に anchor し、worktree の commit を別 checkout の台帳で判定する（両方向とも誤る。`.claude/` → patch）
-- [x] vendor 化しても `mock-lint` の `ALLOWED_EXTERNAL` を教える手順が無く、webfont を持つ export は `lint:mock` が永久に赤 → 再凍結が閉じない
-
-Medium:
-
-- [x] staged deletion が seed path 配下にあると install が exit 70 + 誤診断（「user.name は設定済みか」）で落ちる。全 file を書いた後に落ちる
-- [x] `.git` 無しの seed copy が gate hook 3 本を非実行で配り、成功と報告する
-- [x] `SELECTOR_MAP_ISSUES` を gate が読まず、落ちた visual id が黙って parity 対象外になる
-- [x] `block-ui-before-mock.sh` の Bash 判定が閉じた動詞リストで、cp / mv / git mv / rsync / install / unzip を見逃す（`.claude/` → patch）
-- [x] HTML に inline された script の CDN 注入を `mock-lint` が見逃す（同じ内容が別 `.js` なら落ちる）
-- [x] export の file 名が英小文字・数字・ハイフン以外を含むと AST を起こせない → **挙動は変えない裁定 (2026-08-27)**。slug 化できない file 名は規約違反なので mock 側で直す。発注規約 項目 12 で予防し、AST106 のメッセージに出口を書いた
-
-Low:
-
-- [x] `block-ui-before-mock.sh` が repo root 以外の cwd からの Bash 書き込みで fail open（`.claude/` → patch）
-- [x] `/mock-freeze` 手順の台帳生成 block が `cd` 始まりで、組織 hook に deny される（`.claude/` → patch）
-
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
