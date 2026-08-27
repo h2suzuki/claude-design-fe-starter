@@ -18,11 +18,6 @@ import { dumpVisualIds } from "../src/dump";
 import { diffStyles, diffGeometry } from "../src/diff";
 import { writeRunSummary } from "../src/artifact-writer";
 import type { VisualIdReport } from "../src/artifact-writer";
-import { installApiFixtures } from "../src/fixtures/route-intercept";
-import type { JsonResponder } from "../src/fixtures/route-intercept";
-
-// app が読む API の fixture（差し替え点）。空でも 404 fallback が実 BE への素通りを塞ぐ
-const APP_API_FIXTURES: Record<string, JsonResponder> = {};
 
 const IDS = Object.keys(SELECTOR_MAP);
 
@@ -46,10 +41,7 @@ for (const [label, contextOptions] of BASES) {
         await installNetworkGuard(mockCtx);
         await installNetworkGuard(appCtx);
         const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, anchor.mockSel);
-        const appPage = await openApp(appCtx, {
-          readySelector: anchor.appSel,
-          installFixtures: (page) => installApiFixtures(page, APP_API_FIXTURES),
-        });
+        const appPage = await openApp(appCtx, { readySelector: anchor.appSel });
 
         const selMock = Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.mockSel]));
         const selApp = Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.appSel]));

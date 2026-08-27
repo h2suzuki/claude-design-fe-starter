@@ -19,11 +19,6 @@ import { openMock } from "../src/targets/mock-target";
 import { openApp } from "../src/targets/app-target";
 import { diffPagePngs } from "../src/page-diff";
 import type { PageDiffResult } from "../src/page-diff";
-import { installApiFixtures } from "../src/fixtures/route-intercept";
-import type { JsonResponder } from "../src/fixtures/route-intercept";
-
-// app が読む API の fixture（差し替え点）。空でも 404 fallback が実 BE への素通りを塞ぐ
-const APP_API_FIXTURES: Record<string, JsonResponder> = {};
 
 // app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
 const READY_SELECTOR = "body";
@@ -69,11 +64,7 @@ for (const [label, contextOptions] of BASES) {
         await installNetworkGuard(mockCtx);
         await installNetworkGuard(appCtx);
         const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, READY_SELECTOR);
-        const appPage = await openApp(appCtx, {
-          readySelector: READY_SELECTOR,
-          path: APP_PATH,
-          installFixtures: (page) => installApiFixtures(page, APP_API_FIXTURES),
-        });
+        const appPage = await openApp(appCtx, { readySelector: READY_SELECTOR, path: APP_PATH });
         // 遅れて届く資産で描画が動くと、撮った時刻の違いがそのまま pixel 差になる
         await Promise.all([mockPage.waitForLoadState("networkidle"), appPage.waitForLoadState("networkidle")]);
         const [mockPng, appPng] = await Promise.all([shoot(mockPage), shoot(appPage)]);
