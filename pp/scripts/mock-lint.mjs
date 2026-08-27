@@ -32,6 +32,20 @@ const ASSET_REF_PATTERNS = [
 // script 注入や動的 import は HTML の形を取らないので、URL リテラルを丸ごと候補にする
 const SCRIPT_REF_PATTERNS = [/["'`]https?:\/\/[^"'`\s]+["'`]/g];
 
+// src を持たない script の中身は JS。URL リテラルを本文のリンクと区別するため、この区間だけ切り出す
+const INLINE_SCRIPT = /<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
+
+// 走査は「どの text にどの pattern を当てるか」の列。offset は元 file 内の位置で、行番号に使う
+function scanTargets(file, text) {
+  if (SCRIPT_RE.test(file)) return [{ text, offset: 0, patterns: SCRIPT_REF_PATTERNS }];
+  const targets = [{ text, offset: 0, patterns: ASSET_REF_PATTERNS }];
+  if (!HTML_RE.test(file)) return targets;
+  for (const match of text.matchAll(INLINE_SCRIPT)) {
+    targets.push({ text: match[1], offset: match.index + match[0].indexOf(match[1]), patterns: SCRIPT_REF_PATTERNS });
+  }
+  return targets;
+}
+
 function lineAt(text, offset) {
   return text.slice(0, offset).split('\n').length;
 }
@@ -42,7 +56,9 @@ function vendorPrefixes() {
   return JSON.parse(fs.readFileSync(VENDOR_ROUTES_FILE, 'utf8')).routes.map(({ urlPattern }) => urlPattern.split('*')[0]);
 }
 
-function lintFile(file, allowed = vendorPrefixes()) {
+// callback として渡されると第 2 引数に index が来る。配列でなければ台帳から引く
+function lintFile(file, allowed) {
+  const prefixes = Array.isArray(allowed) ? allowed : vendorPrefixes();
   let bytes;
   try {
     bytes = fs.readFileSync(file);
@@ -51,19 +67,21 @@ function lintFile(file, allowed = vendorPrefixes()) {
   }
   const text = bytes.toString('utf8');
   const violations = [];
-  for (const pattern of SCRIPT_RE.test(file) ? SCRIPT_REF_PATTERNS : ASSET_REF_PATTERNS) {
-    for (const match of text.matchAll(pattern)) {
-      if (NON_FETCHING_LINK.test(match[0])) continue;
-      const url = /https?:\/\/[^"'`)\s]+/.exec(match[0])?.[0] ?? match[0];
-      if (/\/\/(?:localhost|127\.0\.0\.1)[:/]/.test(url)) continue;
-      if (NON_FETCH_URL.test(url)) continue;
-      if (allowed.some((prefix) => url.startsWith(prefix))) continue;
-      violations.push({
-        file,
-        line: lineAt(text, match.index),
-        id: 'MOCK101',
-        message: `external asset reference ${url} — pp/vendor/ へ同梱し pp/vendor/routes.json に登録する`,
-      });
+  for (const target of scanTargets(file, text)) {
+    for (const pattern of target.patterns) {
+      for (const match of target.text.matchAll(pattern)) {
+        if (NON_FETCHING_LINK.test(match[0])) continue;
+        const url = /https?:\/\/[^"'`)\s]+/.exec(match[0])?.[0] ?? match[0];
+        if (/\/\/(?:localhost|127\.0\.0\.1)[:/]/.test(url)) continue;
+        if (NON_FETCH_URL.test(url)) continue;
+        if (prefixes.some((prefix) => url.startsWith(prefix))) continue;
+        violations.push({
+          file,
+          line: lineAt(text, target.offset + match.index),
+          id: 'MOCK101',
+          message: `external asset reference ${url} — pp/vendor/ へ同梱し pp/vendor/routes.json に登録する`,
+        });
+      }
     }
   }
   if (bytes.byteLength > CAP_BYTES) {
@@ -138,6 +156,16 @@ function runSelfTest() {
     // vendor 台帳に載った URL は取得先が pp/vendor/ なので、外部依存ではない
     assert(lintFile(cdnFile, ['https://cdn.example.com/']).length === 0, 'a vendored URL must not fire MOCK101');
 
+    // HTML に直接書かれた script も外部を読みに行く。別 file なら落ちるのにここだけ通るのは穴
+    const inlineFile = path.join(tempDir, 'inline.html');
+    fs.writeFileSync(inlineFile, '<html><body><a href="https://example.com">doc link</a><script>\nconst s = document.createElement("script");\ns.src = "https://cdn.example.com/react.js";\n</script></body></html>');
+    const inlineViolations = lintFile(inlineFile);
+    assert(inlineViolations.length === 1 && inlineViolations[0].id === 'MOCK101', 'inline script fixture did not fire MOCK101 exactly once');
+    assert(inlineViolations[0].line === 3, `inline script violation must point at the injected line, got ${inlineViolations[0].line}`);
+
+    // main は flatMap で呼ぶ。callback の第 2 引数 (index) を allowed と取り違えない
+    assert([cleanFile, cdnFile].flatMap(lintFile).length === 1, 'flatMap 経由でも判定が変わってはいけない');
+
     // preconnect / dns-prefetch は接続を温めるだけで資産を取りに行かない
     const hintFile = path.join(tempDir, 'hint.html');
     fs.writeFileSync(hintFile, '<html><head><link rel="preconnect" href="https://fonts.example.com"><link href="https://fonts.example.com" rel="dns-prefetch"></head></html>');
@@ -148,7 +176,7 @@ function runSelfTest() {
     fs.writeFileSync(nsFile, 'el = document.createElementNS("http://www.w3.org/2000/svg", "path");\n');
     assert(lintFile(nsFile).length === 0, 'namespace fixture must produce no violations');
 
-    assert(fs.readdirSync(tempDir).filter((name) => SCANNED_RE.test(name)).length === 8, 'SCANNED_RE must cover the html/css/js fixtures');
+    assert(fs.readdirSync(tempDir).filter((name) => SCANNED_RE.test(name)).length === 9, 'SCANNED_RE must cover the html/css/js fixtures');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
