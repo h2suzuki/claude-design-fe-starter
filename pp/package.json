@@ -10,6 +10,8 @@
     "test:no-skips": "node scripts/require-no-skips.mjs --self-test",
     "test:provenance": "npm test -- tests/mock-provenance.spec.ts",
     "test:parity": "npm test -- tests/sample-parity.spec.ts",
+    "test:page-parity": "npm test -- tests/page-parity.spec.ts",
+    "test:page-diff": "npm test -- tests/page-diff.spec.ts",
     "test:sweep": "npm test -- tests/width-sweep.spec.ts",
     "test:poststate": "npm test -- tests/poststate-sweep.spec.ts",
     "test:modal-geometry": "npm test -- tests/modal-geometry-sweep.spec.ts",
