@@ -1,12 +1,38 @@
 # Claude Design 初回プロンプト例文と定常作業
 
-事前に seed-docs/design-order-template.md の「day-0 で持ち込む 4 点」を準備しておく。
+事前に seed-docs/design-order-template.md の「day-0 で持ち込む 4 点」を準備しておく。1 点目 (プロダクト概要) の貼れる形は下の「1 通目」。
 
 ## (a) design system 生成
 
 design-system 型 project を新規作成して投げる。publish すると org の新規 project に自動適用される (公式メカニズム)。
 
-> {{PRODUCT_NAME}}（プロダクト概要添付）の design system を作ってください。モバイルファースト（基準 390px・{{MIN_WIDTH}}〜{{MAX_WIDTH}} で成立）。まず tokens（色・タイポ・spacing・radius）、次に基礎部品（Button / Input / Card / リスト行 / AppBar / Tab / Bottom sheet / 空状態バンド）を、部品ごとに default・focus・disabled・loading・error・empty・長文の状態違いを並べた preview で。touch target は 44px 以上。hover でしか到達できない操作は作らない。
+### 1 通目 — プロダクト概要
+
+design system の発注より**先に**渡す。以後の意匠判断はすべてこの 1 枚に乗るので、ここが薄いと色もトーンも部品の粒度も Claude Design の既定で決まる。
+
+> 【{{PRODUCT_NAME}} プロダクト概要】
+>
+> - 何をするものか: …（1〜2 文）
+> - 主な利用者: …（誰が・どんな端末で）
+> - 使う場面: …（いつ・どこで・1 回どのくらい）
+> - トーン: …（3 語程度。例「静か・実務的・余白広め」）
+> - 基準幅: {{MOBILE_WIDTH}}px を第一、{{DESKTOP_WIDTH}}px を第二。{{MIN_WIDTH}}〜{{MAX_WIDTH}} で成立させる
+> - 画面の一覧（分かっている範囲）: …
+> - brand 素材: 色 … / ロゴ … / タイポ …（無ければ「無いので提案してください」と書く）
+> - 参考にしたい UI: 添付の screenshot（2〜3 枚）
+
+書き方の規律:
+
+- **無い情報は「無い」と書く**。欄ごと消すと、その軸は既定値で埋まったまま先へ進み、後から気づいたときには全画面がその上に乗っている
+- brand 素材が無いなら**提案を求める**。ここで出た色とトーンがそのまま token になる
+- 画面の一覧は完全でなくてよい。**必要な部品の種類**が見積もれれば足りる
+- 実装の都合（フレームワーク・API・データ構造）は書かない。デザイン判断に使えないうえ、UI に実装説明が滲む
+
+### 2 通目 — design system の発注
+
+末尾に `seed-docs/design-order-template.md` の発注規約 block を添える（/design-order が組み立てる）。
+
+> {{PRODUCT_NAME}} の design system を作ってください。モバイルファースト（基準 {{MOBILE_WIDTH}}px・{{MIN_WIDTH}}〜{{MAX_WIDTH}} で成立）。まず tokens（色・タイポ・spacing・radius）、次に基礎部品（Button / Input / Card / リスト行 / AppBar / Tab / Bottom sheet / 空状態バンド）を、部品ごとに default・focus・disabled・loading・error・empty・長文の状態違いを並べた preview で。touch target は 44px 以上。hover でしか到達できない操作は作らない。
 
 出力はユーザーが裁定する (色・トーンはここで確定) → publish。
 
