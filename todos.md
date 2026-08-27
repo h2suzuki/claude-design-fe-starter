@@ -112,10 +112,12 @@ Work file: `docs/presentation/ui-mock/README.md`・`pp/scripts/`
 Exit Criteria:
 
 - [ ] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される
-- [ ] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る
+- [x] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る（`npm --prefix pp run mock:screenshots`。引数なしで `export/` 全画面、撮影中の 404 と abort を数えて 1 件でもあれば落ちる）
 - [ ] 一周実証の完了後に着手し、実際に凍結を 1 回通して確認する
 
-適用先が一周の凍結時に自作した（`pp/scripts/collect-mock-closure.ts` / `pp/scripts/mock-screenshot.ts`、いずれも config の viewport・net-block・mock-server を使うだけで PJ 非依存との報告）。判定則を README に書いた時点で道具は付けていないので、次の PJ も同じ自作をする。取り込む際は実装をこちらでレビューしてから入れる。実証の途中で seed に新しい道具を足すのは被検証物の差し替えになるため、一周の完了を待つ。
+適用先が一周の凍結時に自作した（`pp/scripts/collect-mock-closure.ts` / `pp/scripts/mock-screenshot.ts`、いずれも config の viewport・net-block・mock-server を使うだけで PJ 非依存との報告）。判定則を README に書いた時点で道具は付けていないので、次の PJ も同じ自作をする。
+
+2026-08-27 に参照スクショ側だけ先に入れた（当初は一周の完了を待つ方針だった）。適用先が実際に撮り漏れを踏み（design system page の撮り忘れ）、原因が「seed が道具を配らないので消費側が自作し、その自作が引数必須になる」ことだと判明したため。実証で見つかった欠陥の修正であって、被検証物の差し替えではない。閉包収集（file 集合の出力）は未着手のまま。
 
 ### 差し替え点と機構が同じ file に同居し、seed 更新が PJ 編集と必ず衝突する
 
