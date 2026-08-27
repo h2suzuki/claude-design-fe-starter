@@ -94,7 +94,7 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
     const context = await browser.newContext(DESKTOP_CONTEXT_OPTIONS);
     try {
       await installNetworkGuard(context);
-      // 一部の export runtime はこの helper が定義済みであることを前提に初期化する
+      // tsx (esbuild keepNames) が evaluate へ渡す関数に挿入する __name helper は browser 側に無い
       await context.addInitScript("window.__name = (fn) => fn;");
       const page = await openMock(context, mockEntryFile(mockFile), "body");
       try {
