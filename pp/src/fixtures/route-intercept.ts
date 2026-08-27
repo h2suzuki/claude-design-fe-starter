@@ -13,7 +13,8 @@ export async function installApiFixtures(
   exact: Record<string, JsonResponder>,
   patterns: PatternFixture[] = [],
 ): Promise<void> {
-  await page.route(`**${API_PREFIX}**`, async (route) => {
+  // pathname の先頭でだけ判定する。glob の **/api/** は dev server が配る module URL まで捕まえる
+  await page.route((url) => url.pathname.startsWith(API_PREFIX), async (route) => {
     const url = new URL(route.request().url());
     const responder = exact[url.pathname] ?? patterns.find((p) => p.re.test(url.pathname))?.build;
     if (responder) {

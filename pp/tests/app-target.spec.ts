@@ -13,6 +13,11 @@ async function startBackendLikeServer(): Promise<{ url: string; close: () => Pro
       res.end(JSON.stringify({ from: "the real backend" }));
       return;
     }
+    if (req.url?.startsWith("/src/")) {
+      res.writeHead(200, { "content-type": "application/javascript" });
+      res.end("// served by the dev server");
+      return;
+    }
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end('<html><body><div id="ready">ready</div></body></html>');
   });
@@ -31,6 +36,21 @@ test.describe("openApp — fixture bridge", () => {
       const page = await openApp(context, { readySelector: "#ready", baseUrl: backend.url });
       const body = await page.evaluate(async () => (await fetch("/api/anything")).json());
       expect(JSON.stringify(body)).toContain("no fixture registered");
+    } finally {
+      await context.close();
+      await backend.close();
+    }
+  });
+
+  test("a module path that merely contains /api/ is left to the dev server", async ({ browser }) => {
+    // Vite は source を URL で配る。frontend/src/lib/api/ に置いた module が bridge に捕まると、
+    // import が 404 fixture に化けて app が起動しない
+    const backend = await startBackendLikeServer();
+    const context = await browser.newContext();
+    try {
+      const page = await openApp(context, { readySelector: "#ready", baseUrl: backend.url });
+      const body = await page.evaluate(async () => (await fetch("/src/lib/api/client.ts")).text());
+      expect(body).toContain("served by the dev server");
     } finally {
       await context.close();
       await backend.close();
