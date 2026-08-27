@@ -21,8 +21,11 @@ import { openApp } from "../src/targets/app-target";
 import { diffPagePngs } from "../src/page-diff";
 import type { PageDiffResult } from "../src/page-diff";
 
+// mock の描画完了を示すセレクタ。markup は Claude Design 由来なので app 側とは別物になる
+const MOCK_READY_SELECTOR = "body";
+
 // app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
-const READY_SELECTOR = "body";
+const APP_READY_SELECTOR = "body";
 
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "page-parity");
 
@@ -62,8 +65,8 @@ for (const [label, contextOptions] of BASES) {
       try {
         await installNetworkGuard(mockCtx);
         await installNetworkGuard(appCtx);
-        const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, READY_SELECTOR);
-        const appPage = await openApp(appCtx, { readySelector: READY_SELECTOR, path: APP_ENTRY_PATH });
+        const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, MOCK_READY_SELECTOR);
+        const appPage = await openApp(appCtx, { readySelector: APP_READY_SELECTOR, path: APP_ENTRY_PATH });
         // 遅れて届く資産で描画が動くと、撮った時刻の違いがそのまま pixel 差になる
         await Promise.all([mockPage.waitForLoadState("networkidle"), appPage.waitForLoadState("networkidle")]);
         const [mockPng, appPng] = await Promise.all([shoot(mockPage), shoot(appPage)]);
