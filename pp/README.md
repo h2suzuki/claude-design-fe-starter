@@ -130,6 +130,7 @@ pgrep -af "drafts/pw-browsers"
 ## 使い方の型
 
 - mock 側 selector は `npm run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
+- `npm run mock:screenshots` で承認時点の参照スクショを撮る（引数なしで `export/` の全画面・基準 2 viewport・fullPage・DPR 1）。資産の 404 と abort を数え、1 件でもあれば落ちる — 凍結する export の閉包が足りているかの機械判定を兼ねる
 - `npm run overlay-diff` で mock/app の全画面オーバーレイ（mock=赤・app=シアン・一致=灰）と文言キーの字体/箱突合を出す。SELECTOR_MAP に載せ忘れた箇所のズレを面で検出する補完で、map が空の序盤から使える
 - 失敗時は `artifacts/<suite>/` の summary/style/geometry JSON を見る。selector・fixture の不一致と実際の parity regression を分けて診断する
 - 意図的差分は `docs/presentation/ui-mock/DESIGN-POLICY.md`（KEEP_IMPL 台帳）に裁定を登録する。**登録しても parity が緑になるわけではない** — 吸収機構はまだ無く、差分は赤のまま残る。解消は mock を直すのが既定（`docs/pixel-perfect.md`）
