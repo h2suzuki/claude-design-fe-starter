@@ -34,33 +34,35 @@ Goal: 消費側がまだ踏んでいない経路の欠陥を、踏まれる前�
 
 Exit Criteria:
 
-- [ ] High 5 件が修正され、各件が再現手順の実測で green になる
-- [ ] Medium 6 件 / Low 2 件が修正されるか、扱わない理由が日付付きで記録される
+- [x] High 5 件が修正され、各件が再現手順の実測で green になる（patch 分は検証済みコピーで 4 ケース green）
+- [x] Medium 6 件 / Low 2 件が修正されるか、扱わない理由が日付付きで記録される
 - [ ] `.claude/` 配下の 4 件が patch として H.S. の実行へ渡り、実行後に commit される
 
 出所: 10 agent の並行監査（未踏 5 面）+ 反証 pass。確定 13 / 棄却 2。
 
+9 件は commit 済み。`.claude/` 配下の 4 件は `drafts/seed-patch/apply-2.sh` に入れ、実 file の copy に対する dry-run で検証済み（適用結果が検証済みコピーと byte 一致）。
+
 High:
 
-- [ ] install.sh が PJ の未 commit 作業を「Install」commit に巻き込む（`commit_paths=("${rels[@]}")` が keep_foreign で残した path を除かない。実 repo で再現済み）
-- [ ] `backgroundImage` の computed 値が origin 絶対 URL — mock 側は毎 run 変わる ephemeral port なので、`url()` 背景を持つ画面は基準幅 parity が構造的に落ちる
-- [ ] API fixture が `sample-parity` にしか効かず、他 5 spec と overlay-diff が実 BE へ素通しする
-- [ ] `check-mock-baseline.sh` が `CLAUDE_PROJECT_DIR` に anchor し、worktree の commit を別 checkout の台帳で判定する（両方向とも誤る。`.claude/` → patch）
-- [ ] vendor 化しても `mock-lint` の `ALLOWED_EXTERNAL` を教える手順が無く、webfont を持つ export は `lint:mock` が永久に赤 → 再凍結が閉じない
+- [x] install.sh が PJ の未 commit 作業を「Install」commit に巻き込む（`commit_paths=("${rels[@]}")` が keep_foreign で残した path を除かない。実 repo で再現済み）
+- [x] `backgroundImage` の computed 値が origin 絶対 URL — mock 側は毎 run 変わる ephemeral port なので、`url()` 背景を持つ画面は基準幅 parity が構造的に落ちる
+- [x] API fixture が `sample-parity` にしか効かず、他 5 spec と overlay-diff が実 BE へ素通しする
+- [x] `check-mock-baseline.sh` が `CLAUDE_PROJECT_DIR` に anchor し、worktree の commit を別 checkout の台帳で判定する（両方向とも誤る。`.claude/` → patch）
+- [x] vendor 化しても `mock-lint` の `ALLOWED_EXTERNAL` を教える手順が無く、webfont を持つ export は `lint:mock` が永久に赤 → 再凍結が閉じない
 
 Medium:
 
-- [ ] staged deletion が seed path 配下にあると install が exit 70 + 誤診断（「user.name は設定済みか」）で落ちる。全 file を書いた後に落ちる
-- [ ] `.git` 無しの seed copy が gate hook 3 本を非実行で配り、成功と報告する
-- [ ] `SELECTOR_MAP_ISSUES` を gate が読まず、落ちた visual id が黙って parity 対象外になる
-- [ ] `block-ui-before-mock.sh` の Bash 判定が閉じた動詞リストで、cp / mv / git mv / rsync / install / unzip を見逃す（`.claude/` → patch）
-- [ ] HTML に inline された script の CDN 注入を `mock-lint` が見逃す（同じ内容が別 `.js` なら落ちる）
-- [ ] export の file 名が英小文字・数字・ハイフン以外を含むと、AST106 と `screen.name` の pattern を同時に満たせず AST を起こせない
+- [x] staged deletion が seed path 配下にあると install が exit 70 + 誤診断（「user.name は設定済みか」）で落ちる。全 file を書いた後に落ちる
+- [x] `.git` 無しの seed copy が gate hook 3 本を非実行で配り、成功と報告する
+- [x] `SELECTOR_MAP_ISSUES` を gate が読まず、落ちた visual id が黙って parity 対象外になる
+- [x] `block-ui-before-mock.sh` の Bash 判定が閉じた動詞リストで、cp / mv / git mv / rsync / install / unzip を見逃す（`.claude/` → patch）
+- [x] HTML に inline された script の CDN 注入を `mock-lint` が見逃す（同じ内容が別 `.js` なら落ちる）
+- [x] export の file 名が英小文字・数字・ハイフン以外を含むと AST を起こせない → **挙動は変えない裁定 (2026-08-27)**。slug 化できない file 名は規約違反なので mock 側で直す。発注規約 項目 12 で予防し、AST106 のメッセージに出口を書いた
 
 Low:
 
-- [ ] `block-ui-before-mock.sh` が repo root 以外の cwd からの Bash 書き込みで fail open（`.claude/` → patch）
-- [ ] `/mock-freeze` 手順の台帳生成 block が `cd` 始まりで、組織 hook に deny される（`.claude/` → patch）
+- [x] `block-ui-before-mock.sh` が repo root 以外の cwd からの Bash 書き込みで fail open（`.claude/` → patch）
+- [x] `/mock-freeze` 手順の台帳生成 block が `cd` 始まりで、組織 hook に deny される（`.claude/` → patch）
 
 ## Medium
 
