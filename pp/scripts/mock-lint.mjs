@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const EXPORT_DIR = path.resolve(SCRIPT_DIR, '../../docs/presentation/ui-mock/export');
 const CAP_BYTES = 1_048_576; // export 1 file の上限目安。PJ で調整可
-// vendor 同梱済みで net-block の VENDOR_ROUTES が握る URL prefix はここで許可する
-const ALLOWED_EXTERNAL = [];
+// vendor 済み URL は net-block と同じ台帳を見る（許可の二重管理を作らない）
+const VENDOR_ROUTES_FILE = path.resolve(SCRIPT_DIR, '../vendor/routes.json');
 
 const HTML_RE = /\.html?$/i;
 const SCRIPT_RE = /\.m?js$/i;
@@ -36,7 +36,13 @@ function lineAt(text, offset) {
   return text.slice(0, offset).split('\n').length;
 }
 
-function lintFile(file) {
+// urlPattern は glob。最初の * までが取得先の prefix になる
+function vendorPrefixes() {
+  if (!fs.existsSync(VENDOR_ROUTES_FILE)) return [];
+  return JSON.parse(fs.readFileSync(VENDOR_ROUTES_FILE, 'utf8')).routes.map(({ urlPattern }) => urlPattern.split('*')[0]);
+}
+
+function lintFile(file, allowed = vendorPrefixes()) {
   let bytes;
   try {
     bytes = fs.readFileSync(file);
@@ -51,12 +57,12 @@ function lintFile(file) {
       const url = /https?:\/\/[^"'`)\s]+/.exec(match[0])?.[0] ?? match[0];
       if (/\/\/(?:localhost|127\.0\.0\.1)[:/]/.test(url)) continue;
       if (NON_FETCH_URL.test(url)) continue;
-      if (ALLOWED_EXTERNAL.some((prefix) => url.startsWith(prefix))) continue;
+      if (allowed.some((prefix) => url.startsWith(prefix))) continue;
       violations.push({
         file,
         line: lineAt(text, match.index),
         id: 'MOCK101',
-        message: `external asset reference ${url} — vendor 化して pp/src/net-block.ts に登録する`,
+        message: `external asset reference ${url} — pp/vendor/ へ同梱し pp/vendor/routes.json に登録する`,
       });
     }
   }
@@ -128,6 +134,9 @@ function runSelfTest() {
     fs.writeFileSync(runtimeFile, 'const s = document.createElement("script");\ns.src = "https://cdn.example.com/react.production.min.js";\n');
     const runtimeViolations = lintFile(runtimeFile);
     assert(runtimeViolations.length === 1 && runtimeViolations[0].id === 'MOCK101', 'runtime fixture did not fire MOCK101 exactly once');
+
+    // vendor 台帳に載った URL は取得先が pp/vendor/ なので、外部依存ではない
+    assert(lintFile(cdnFile, ['https://cdn.example.com/']).length === 0, 'a vendored URL must not fire MOCK101');
 
     // preconnect / dns-prefetch は接続を温めるだけで資産を取りに行かない
     const hintFile = path.join(tempDir, 'hint.html');

@@ -107,7 +107,7 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 
 1. **mock**: design system の基礎部品 1 つを含む最小画面を Claude Design で作る (seed-docs/first-prompts.md)
 2. **凍結**: /mock-freeze で export 一式を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する
-3. **vendor 化**: `npm run lint:mock` が挙げる外部参照 (フォント・JS ライブラリ) を pp/vendor へ落として `VENDOR_ROUTES` に登録し、取得コマンドを pp/vendor/README.md へ記録する。フォントはここで tokens.css の --font-sans も差し替える
+3. **vendor 化**: `npm run lint:mock` が挙げる外部参照 (フォント・JS ライブラリ) を pp/vendor へ落として `pp/vendor/routes.json` に登録し、取得コマンドを pp/vendor/README.md へ記録する。フォントはここで tokens.css の --font-sans も差し替える
 4. **部品実装**: frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する
 5. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
 6. **parity**: /ast-extract で screen AST を起こす (SELECTOR_MAP はそこから導出される)。導けない対だけ pp の MANUAL_PAIRS に書き、ast-provenance・ast-conformance・sample-parity を緑にする

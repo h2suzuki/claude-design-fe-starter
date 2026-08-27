@@ -7,6 +7,7 @@ pp/artifacts/
 __pycache__/
 pp/vendor/*
 !pp/vendor/README.md
+!pp/vendor/routes.json
 .claude/.cc-writes/
 .claude/settings.local.json
 # fe-starter:end
