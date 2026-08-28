@@ -15,3 +15,6 @@ pp/vendor/*
 # seed bootstrap materials (local-only, not for publication)
 /PLAN.md
 /reference/
+
+# session 境界の引き継ぎ (この checkout 限り)
+/last-session-handoff.md

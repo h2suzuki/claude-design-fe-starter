@@ -28,6 +28,7 @@ Exit Criteria:
 
 起票: opus-5 2026-08-28
 Goal: 既に実装済みの画面について、mock 更新 → 再凍結 → AST 追従 → 実装反映 → gate 緑 までの往復を通し、1 回目で整えた手順が実際に回ることを確かめる。
+Work file: `last-session-handoff.md`（この checkout 限り。`.gitignore` 対象なので、失われたら本 block から起こし直す）
 
 Exit Criteria:
 
