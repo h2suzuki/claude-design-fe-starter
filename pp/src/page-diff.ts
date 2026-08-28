@@ -3,6 +3,14 @@
 import { PNG } from "pngjs";
 import pixelmatch from "pixelmatch";
 
+/** page 全体座標での矩形。fullPage screenshot と同じ原点で持つ */
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface RowCluster {
   start: number;
   end: number;
@@ -22,8 +30,23 @@ export interface PageDiffResult {
 // 差のある行は飛び飛びに出る。この行数以内の隙間は 1 つのズレとして繋ぐ
 const CLUSTER_GAP_ROWS = 20;
 
+// 比較しない領域を敷き詰める。行ごとに区間を塗るので、端をまたぐ矩形が折り返さない
+function maskBitmap(width: number, height: number, masks: readonly Box[]): Uint8Array | null {
+  if (masks.length === 0) return null;
+  const bitmap = new Uint8Array(width * height);
+  for (const box of masks) {
+    const left = Math.max(0, Math.floor(box.x));
+    const right = Math.min(width, Math.ceil(box.x + box.width));
+    const top = Math.max(0, Math.floor(box.y));
+    const bottom = Math.min(height, Math.ceil(box.y + box.height));
+    for (let y = top; y < bottom; y += 1) bitmap.fill(1, y * width + left, y * width + right);
+  }
+  return bitmap;
+}
+
 // canvas-diff と違い寸法差を吸収しない。page の高さの違いは bbox の丸めでなくレイアウトの差
-export function diffPagePngs(mock: PNG, app: PNG): PageDiffResult {
+// masks に渡した領域は比較しない（画像は軽量化してよいので、中身の差を数えると規約に従った実装が落ちる）
+export function diffPagePngs(mock: PNG, app: PNG, masks: readonly Box[] = []): PageDiffResult {
   const totalPixels = mock.width * mock.height;
   if (mock.width !== app.width || mock.height !== app.height) {
     return {
@@ -36,10 +59,12 @@ export function diffPagePngs(mock: PNG, app: PNG): PageDiffResult {
     };
   }
   const { width, height } = mock;
+  const skip = maskBitmap(width, height, masks);
   const dirtyPerRow = new Uint32Array(height);
   let diffPixels = 0;
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
+      if (skip?.[y * width + x]) continue;
       const i = (width * y + x) << 2;
       if (mock.data.readUInt32BE(i) !== app.data.readUInt32BE(i)) {
         dirtyPerRow[y] += 1;

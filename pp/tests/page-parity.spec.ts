@@ -19,7 +19,7 @@ import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
 import { openApp } from "../src/targets/app-target";
 import { diffPagePngs } from "../src/page-diff";
-import type { PageDiffResult } from "../src/page-diff";
+import type { Box, PageDiffResult } from "../src/page-diff";
 
 // mock の描画完了を示すセレクタ。markup は Claude Design 由来なので app 側とは別物になる
 const MOCK_READY_SELECTOR = "body";
@@ -37,6 +37,23 @@ const BASES = [
 
 const shoot = async (page: Page): Promise<PNG> =>
   PNG.sync.read(await page.screenshot({ type: "png", fullPage: true }));
+
+// 画像の中身は比較しない（軽量化してよい）。置かれ方だけを見るので箱を採る
+const imageBoxes = async (page: Page): Promise<Box[]> =>
+  page.evaluate(() =>
+    Array.from(document.querySelectorAll("img, picture, video")).map((el) => {
+      const rect = el.getBoundingClientRect();
+      return { x: rect.left + scrollX, y: rect.top + scrollY, width: rect.width, height: rect.height };
+    }),
+  );
+
+// 1px 未満のずれは縮小時の丸めで出る。ここは「マスクを当ててよいか」の判定なので、寸法の厳密比較は parity に任せる
+const boxesAgree = (mock: readonly Box[], app: readonly Box[]): boolean =>
+  mock.length === app.length &&
+  mock.every((box, index) => {
+    const other = app[index]!;
+    return (["x", "y", "width", "height"] as const).every((key) => Math.abs(box[key] - other[key]) < 1);
+  });
 
 // 落ちた画は必ず残す。pixel 差は数値だけ見ても原因に辿り着けない
 function writeArtifacts(tag: string, mock: PNG, app: PNG, result: PageDiffResult): string {
@@ -69,8 +86,13 @@ for (const [label, contextOptions] of BASES) {
         const appPage = await openApp(appCtx, { readySelector: APP_READY_SELECTOR, path: APP_ENTRY_PATH });
         // 遅れて届く資産で描画が動くと、撮った時刻の違いがそのまま pixel 差になる
         await Promise.all([mockPage.waitForLoadState("networkidle"), appPage.waitForLoadState("networkidle")]);
+        const [mockBoxes, appBoxes] = await Promise.all([imageBoxes(mockPage), imageBoxes(appPage)]);
+        expect(
+          boxesAgree(mockBoxes, appBoxes),
+          `page-parity-${label}: 画像の置かれ方が違う（mock ${mockBoxes.length} 枚 / app ${appBoxes.length} 枚）`,
+        ).toBe(true);
         const [mockPng, appPng] = await Promise.all([shoot(mockPage), shoot(appPage)]);
-        const result = diffPagePngs(mockPng, appPng);
+        const result = diffPagePngs(mockPng, appPng, mockBoxes);
         const detail = result.matched ? "" : `${describeFailure(result)} — 画は ${writeArtifacts(`${label}`, mockPng, appPng, result)}`;
         expect(result.matched, `page-parity-${label}: ${detail}`).toBe(true);
       } finally {

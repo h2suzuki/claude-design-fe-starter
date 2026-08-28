@@ -58,6 +58,26 @@ test.describe("page-diff — judge self-check", () => {
     expect(result.clusters[0]?.start).toBe(60);
   });
 
+  test("a masked region is not compared", () => {
+    // 画像は軽量化してよい（既定の処置）。中身の差を数えると、規約に従った実装が必ず落ちる
+    const changed = makePng(40, 30, (x, y) => (x >= 10 && x < 20 && y >= 5 && y < 15 ? [0, 0, 0] : gradient(x, y)));
+    const result = diffPagePngs(makePng(40, 30, gradient), changed, [{ x: 10, y: 5, width: 10, height: 10 }]);
+    expect(result.matched).toBe(true);
+  });
+
+  test("a difference outside the mask still counts", () => {
+    const changed = makePng(40, 30, (x, y) => (x === 35 && y === 25 ? [0, 0, 0] : gradient(x, y)));
+    const result = diffPagePngs(makePng(40, 30, gradient), changed, [{ x: 10, y: 5, width: 10, height: 10 }]);
+    expect(result.diffPixels).toBe(1);
+  });
+
+  test("a mask reaching past the edge is clipped, not wrapped", () => {
+    // 端をまたぐ矩形で行が折り返すと、反対側の無関係な pixel まで見なくなる
+    const changed = makePng(40, 30, (x, y) => (x === 0 && y === 20 ? [0, 0, 0] : gradient(x, y)));
+    const result = diffPagePngs(makePng(40, 30, gradient), changed, [{ x: 35, y: 19, width: 20, height: 3 }]);
+    expect(result.diffPixels).toBe(1);
+  });
+
   test("a dimension mismatch is reported, not absorbed", () => {
     // canvas と違い page の寸法差は bbox の丸めでなくレイアウトの差 — crop で隠すと本物の差が消える
     const result = diffPagePngs(makePng(40, 31, gradient), makePng(40, 30, gradient));
