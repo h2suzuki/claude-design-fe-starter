@@ -16,7 +16,7 @@ Exit Criteria:
 - [x] stack 置換: design-reference/ 一式が docs/presentation/ui-mock/ へ移設され参照 (実測 58 行/19 file) が張り替わる (凍結保護 hook は同一 commit で更新)。frontend/ が SvelteKit + Bun skeleton に置換され、npm 前提 4 file (README.md・docs/design-sync.md・.claude/skills/fe-kickoff/SKILL.md・.claude/skills/mock-freeze/SKILL.md) が更新される (design-sync.md:12 の「React 相当の DOM 構造」は mock export 自身の性質の記述で、実装スタックとは無関係 — 変更対象ではない)。pp は Node + Playwright 固定のまま全 spec が理由付き skip または緑
 - [x] AST 基盤: ui-ast schema v0.2 + validate gate + 抽出 pass prompts + ast-tree / ast-viewer が seed に同梱される (置き場 = docs/presentation/ui-ast/、共通語彙 registry.json + 画面別 screens/*.ui-ast.json の 2 層。screen slug を ui-mock/export/*.html と共通鍵にする)。docs/ast-layer.md に背景節 (UI AST の why を研究 repo から輸入 + 将来コモディティ IR への置換可能性) を含む (ユーザー裁定 2026-08-22)
 - [x] pp 結線: SELECTOR_MAP の AST 導出・ast-provenance・ast-conformance が pp に結線される
-- [ ] 一周実証: walking skeleton 一周を AST 経由で完走し、全 gate が skip でなく実行されて緑
+- [x] 一周実証: walking skeleton 一周を AST 経由で完走し、全 gate が skip でなく実行されて緑 — **ユーザー裁定 2026-08-28「iac-web を使った実証実験１回目は、完了とします」**。適用先の実測は 1 画面 67 passed / 1 declared / 0 failed。当方が read-only で確認したのは凍結の成立（台帳 26 行と export 26 file が一致・`sha256sum --check` rc=0）と screen AST 7 件・export 画面 8 枚で、gate の緑そのものは適用先の実測
 
 進捗:
 
@@ -25,7 +25,7 @@ Exit Criteria:
 - [x] AST 基盤の第 1 増分: ui-ast schema v0.2 + ui-registry schema + tools/ast_validate (5db755c: self-test rc=0・SCHEMA/AST101..106 各 1 発火・ruff/ty 緑)
 - [x] gate 結線の統合リハーサル: PP_REPO_ROOT で scratch root に差し替え、合成 fixture (export + 同 sha を pin した screen AST + data-visual-id 付き静的 app) に対して ast-provenance と ast-conformance が skip でなく green になることを実測。陰性側 (tree の欠落・親違い・AST 外 id / export を触った後の provenance) も期待どおり fail。実 mock を通していないので一周実証の代替にはならない
 - [x] pp 結線: ast-provenance (df27b30・陽性対照 8 件)・SELECTOR_MAP の AST 導出 (0bffa50・10 件)・ast-conformance (58e25f7・12 件、screen AST 探索を pp/src/ast-screen.ts へ共通化)。pp typecheck rc=0、suite は 12 spec すべて理由付き skip (mock と AST の実体が入るまで外れない)
-- [ ] 一周実証の伴走: 適用先が経路を踏むたびに出る seed 欠陥を、同日中に直して配り直す（2026-08-27 時点で 19 件 — 適用先が実際に踏んだ 6 件 + 先回り監査で確定した 13 件）
+- [x] 一周実証の伴走: 適用先が経路を踏むたびに出る seed 欠陥を、同日中に直して配り直す（1 回目の総計 = 適用先が踏んだ 10 件 + 先回り監査で確定した 13 件）
 - [x] AST 基盤の残り: ast-tree / ast-viewer / ast-extract skill / docs/ast-layer.md (7e7c51c)。受け入れレビューで source.region の並びの食い違いと node の notes 不能を是正し、screen-loop ③ へ結線。ast-viewer は Chromium 実画面で 3 面・Ctrl+クリック相互ジャンプ・dark theme を実測。screens/ の実体は最初の抽出時に生成される（registry.json を /ast-extract は書かないので、空台帳を配る形へ是正した）
 
 ### KEEP_IMPL 台帳が pp と結線されていない
@@ -58,7 +58,7 @@ Exit Criteria:
 
 - [ ] 実装が呼ぶ BE を、書き戻し時に何へ置換するか（`docs/design-sync.md` の「共有 fixture module」が受け皿）と、その変換を書き戻し手順のどこで行うかを書く
 - [ ] mock 側の変更を BE 結合済み FE へ戻すとき、fixture と実 BE の両方へ整合させる調整段を書く
-- [ ] 一周実証の完了後に着手し、文書を先に変えてから文書どおり実行して確認する
+- [x] 一周実証の完了後に着手し、文書を先に変えてから文書どおり実行して確認する — 着手条件は 2026-08-28 に満たされた（作業自体はこれから）
 
 適用先からの報告（2026-08-24）。`first-prompts.md:28` は「実装から生成した preview HTML を書き戻す」としか書いておらず、BE 呼び出しの扱いが無い。そのまま書き戻すと Claude Design 上で外部 fetch できず動かない。受け皿の概念（`design-sync.md:14,107` の共有 fixture module）は既にあるので、欠けているのは変換の位置づけ。`design-sync.md` は mock → 実装の読解と pp での pin を定めるが、既に BE と結合した実装へ戻す調整は扱っていない。新規実装では出ず、旧実装と BE を持つ repo でだけ出る。
 
@@ -84,7 +84,7 @@ Work file: `seed-docs/adoption.md`（§6）
 
 Exit Criteria:
 
-- [ ] 一周実証の完了後に判断する（実証中は §6 を動かさない）
+- [x] 一周実証の完了後に判断する（実証中は §6 を動かさない）— 着手条件は 2026-08-28 に満たされた（判断自体はこれから）
 - [ ] rebase を採るなら、先に §6 を変えてから文書どおり実行し、gate 緑まで確認する。merge のまま据え置くならその理由を §6 に書く
 
 適用先が §6 どおり merge で取り込んで gate 緑（0 failed / 12 skipped / 7 passed）に到達した後、履歴の形を理由に rebase で作り直し、それを §6 の変更として持ち込んだ（4bec574）。実証の途中で被検証物を差し替える形だったので f3c5b67 で revert し、検証済みの merge に戻した。
@@ -103,7 +103,7 @@ Exit Criteria:
 - [ ] モーダルの viewport 収まり・操作要素の重なり・画面間の文言と token の割れを、同じ mock 側 gate で検査する
 - [ ] それぞれの破れを持つ合成 fixture を作り、gate が落ちることを実測する
 - [ ] 凍結手順（README 手順 4）と `/mock-freeze` skill の step を同じ内容に揃える
-- [ ] 一周実証の完了後に着手する
+- [x] 一周実証の完了後に着手する — 着手条件は 2026-08-28 に満たされた（作業自体はこれから）
 
 `width-sweep` は `PP_APP_URL` を要求するので **app しか見ない**。発注規約は「下限〜上限で成立する単一レスポンシブ HTML」を mock の要件にしているのに、それを検証する段が凍結の前にも後にも無く、違反した mock が正本になる。実装後に横スクロールとして現れるので、mock の欠陥が実装の欠陥に見える。適用先の実測（凍結 7 画面を 320 で描画すると全画面で header の nav が 4px はみ出す）で表面化した。当面は README 手順 4 の目視で埋めているが、目視は gate ではない。
 
@@ -139,7 +139,7 @@ Exit Criteria:
 
 - [ ] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される
 - [x] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る（`npm --prefix pp run mock:screenshots`。引数なしで `export/` 全画面、撮影中の 404 と abort を数えて 1 件でもあれば落ちる）
-- [ ] 一周実証の完了後に着手し、実際に凍結を 1 回通して確認する
+- [x] 一周実証の完了後に着手し、実際に凍結を 1 回通して確認する — 着手条件は 2026-08-28 に満たされた（作業自体はこれから）
 
 適用先が一周の凍結時に自作した（`pp/scripts/collect-mock-closure.ts` / `pp/scripts/mock-screenshot.ts`、いずれも config の viewport・net-block・mock-server を使うだけで PJ 非依存との報告）。判定則を README に書いた時点で道具は付けていないので、次の PJ も同じ自作をする。
 
@@ -155,7 +155,7 @@ Exit Criteria:
 
 - [ ] PJ が埋める値（`VENDOR_ROUTES`・`ALLOWED_EXTERNAL` 等）と機構コードが別 file に分かれ、install.sh の 3 分類で機構側が「旧 seed 版」と判定されて黙って更新される
 - [ ] 分離後に、PJ 側の値を埋めた状態で install.sh を再実行し、値が保たれたまま機構だけ更新されることを実測する
-- [ ] 一周実証の完了後に着手する（分離自体が PJ 側に merge を強いるため）
+- [x] 一周実証の完了後に着手する（分離自体が PJ 側に merge を強いるため）— 着手条件は 2026-08-28 に満たされた（作業自体はこれから）
 
 `pp/src/net-block.ts` は `VENDOR_ROUTES`（差し替え点）と `installNetworkGuard`（機構）を同居させており、PJ が値を埋めた時点で install.sh からは foreign file になる。今回 CORS header の修正を seed に入れたが、適用先はこの理由で seed 版を受け取れず、自分で当てた修正を使い続ける。`pp/scripts/mock-lint.mjs` の `ALLOWED_EXTERNAL` も同型。
 
