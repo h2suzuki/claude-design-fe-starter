@@ -109,12 +109,24 @@ git -C <worktree> merge main              # 作業 branch へ運ぶ
 
 install.sh は PJ が育てた file（`pp/src/config.ts`・`pp/src/screens.ts`・`frontend/src/app.html`・PJ 語彙を埋めた docs）を触らずに残し、末尾に列挙する。差し替え点を埋めた repo でも機構更新は届く。
 
-merge で衝突するのは、**seed が配る file を作業 branch でも手で置いた場合**だけである（同じ path を両側が別々に追加した add/add 衝突）。seed 側が正なので、その file は main の版を採る。
+seed を入れた main から作業 branch を切っていれば、更新の merge は衝突しない。差し替え点は install.sh が触らず、機構だけが片側で動くためである（実測: PJ が `pp/src/config.ts` と `frontend/src/app.html` を埋めた作業 branch へ seed の機構更新を merge し、衝突なし・PJ の値は残存・機構更新は到達）。
+
+衝突するのは、**seed を入れる前に作業 branch を切り、seed が配る path を作業 branch でも手で置いた場合**だけである（同じ path を両側が別々に追加した add/add 衝突）。解決はその file の役割で分かれる。
+
+| 衝突した file | 採る側 | コマンド |
+| --- | --- | --- |
+| 機構（spec・script・hook など、§7 の表で「seed が配っている file」に当たり PJ が値を埋めていないもの） | main（seed 側） | `git checkout main -- <path>` |
+| 差し替え点（`pp/src/config.ts`・`pp/src/screens.ts`・`frontend/src/app.html` など、install.sh が「PJ のもの」として末尾に列挙する path） | 作業 branch 側 | `git checkout --ours -- <path>` して `git add <path>` |
 
 ```bash
-git checkout main -- <path>   # index と working tree の両方が解決される（git add は不要）
+git checkout main -- <path>       # 機構: index と working tree の両方が解決される（git add は不要）
+git checkout --ours -- <path>     # 差し替え点: PJ の値を残す。こちらは git add が要る
 git commit --no-edit
 ```
+
+差し替え点で main 側を採ると、day-0 で埋めた値が消えて検証条件が seed の例に戻る。seed 側にその file の変更があるなら、値を保ったまま手で取り込む（install.sh の末尾もそう案内する）。
+
+**取り込みは merge で行い、rebase へは変えない。** 作業 branch には repo を作り替えた履歴が丸ごと乗っており（§1）、seed 更新のたびに rebase すると、そのたびに全 commit の hash が変わる。hash を引いている記述 — `DESIGN-POLICY.md` の裁定、todos の根拠、back-port message の出典 — が更新のたびに参照先を失う。merge の費用は 1 更新あたり merge commit 1 個で、`git log --merges` が「いつ seed が入ったか」をそのまま示し、install.sh が出した「何を更新し、何を PJ のものとして残したか」の報告を後から読み直す起点になる。
 
 hook 登録を含む `.claude/settings.json` が更新されるので、merge 後に session を 1 回再起動する。
 
