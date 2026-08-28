@@ -22,7 +22,9 @@ Exit Criteria:
 
 2026-08-28: 適用先が画像軽量化で 14 spec を赤にし、台帳 entry を立てた。img/picture/video を一律で pixel 比較から外す形（`fb0a7fd`）は承認していない差し替えまで通すので `1164dae` で撤回し、**台帳が `img: <src の一部>` で名指しした画像だけ**を外す形にした（置かれ方＝枚数と箱は常に比較する）。DESIGN-POLICY も同 commit で「既定の処置に従った軽量化**も**載せる」へ改めてある。
 
-残るのは**画像以外**の差分で、こちらは吸収する機構がまだ無い（DESIGN-POLICY に明記）。**着手条件（意匠の意図的差分が 1 件立つ）はまだ来ていない。**
+残るのは**画像以外**の差分で、こちらは吸収する機構がまだ無い（DESIGN-POLICY に明記）。
+
+2026-08-29 に適用先の台帳を読み直した: entry は 3 件で、#3（`docs/presentation/ui-mock/DESIGN-POLICY.md:14`）が `<picture>` + `srcset` の markup 構造差。描画 pixel を変えない差分なので厳密な意匠差ではないが、**`img:` 行では表現できない entry が既に立っている**。着手条件を「意匠の意図的差分」で待つ書き方は現況に合わない。実際に先に効くのは `page-parity.spec.ts:102-105` の件数比較で、KEEP_IMPL の適用（106 行）より前にあるため、#3 のある画面では台帳が 1 件も読まれずに落ちる。
 
 ### 実証 2 回目 — mock を更新して反映する流れ
 
@@ -40,11 +42,13 @@ Exit Criteria:
 
 ユーザー裁定 2026-08-28: 「iac-web を使った実証実験１回目は、完了とします。もう一回、mock のアップデートと反映の流れをやりますので、そのときに再確認しましょう。」
 
+ユーザー裁定 2026-08-29: mock 更新の向きは **branch + worktree + PR merge + branch 削除** を基本とする。FE 更新を mock へ反映する逆向きは branch を作らなくてよい。実証 2 回目は前者なので branch を切って進める。
+
 1 回目で通したのは「mock を作る → 実装する」の向きで、**更新の向きは通していない**。再凍結・AST 追従・KEEP_IMPL の還流は、いずれも今日この session で整えたばかりで実地を経ていない（`/mock-freeze` の棚卸し段・`ast:refresh`・台帳結線）。着手時期はユーザーの判断。
 
-2026-08-28 の実測（seed から適用先の `pp/` を分類）: install.sh が「PJ のもの」と判定して触らない file が 14 件あり、うち 7 件が spec（`ast-conformance` / `list-identity-sweep` / `modal-geometry-sweep` / `page-parity` / `poststate-sweep` / `self-baseline` / `width-sweep`）。**この 7 件へ seed が入れた変更は install.sh では届かない** — `1164dae` の KEEP_IMPL 結線もこの中。spec を機構だけにする「pp の登録点が 1 画面前提」の解消が、二巡目へ seed 更新を届ける前提になる。
+2026-08-29 の実測（seed HEAD `ca0ed76` と適用先を install.sh と同じ規則で照合。`pp/` 配下）: install.sh が「PJ のもの」と判定して触らない file が 15 件あり、うち 7 件が spec（`ast-conformance` / `list-identity-sweep` / `modal-geometry-sweep` / `page-parity` / `poststate-sweep` / `self-baseline` / `width-sweep`）。**この 7 件へ seed が入れた変更は install.sh では届かない** — `1164dae` の KEEP_IMPL 結線もこの中。spec を機構だけにする「pp の登録点が 1 画面前提」の解消が、二巡目へ seed 更新を届ける前提になる。COPY_DIRS 全体では据え置き 26 件・更新 21 件・新規 11 件。件数は seed HEAD と適用先の状態で動くので、取り込み時に install.sh の出力で取り直す。
 
-台帳の書式も要調整。適用先の entry #1 の対象列は「全画面の画像 13 枚 (ロゴ 3・写真 10)」という散文で、gate が読む `img: <src の一部>` の形になっていない。現行 seed を入れると、この 13 枚は台帳に無い画像として `page-parity` で赤になる。`img:` 行へ書き直すか、mock 側へ軽量版を取り込んで entry を閉じる（entry 自身が後者を予定と書いている）。
+台帳の書式も要調整。適用先の台帳は 2026-08-29 時点で 3 entry あり、いずれも対象列が散文で、gate が読む `img: <src の一部>` の形になっていない。#1（画像 13 枚）と #2（会場写真 7 枚）は `img: assets/` と `img: uploads/` のような prefix 2 行で書ける見込み（`imageTargets` は src の部分一致）。**#3（`<picture>` + `srcset`、写真 15 枚の markup）は構造差なので `img:` では表現できない** — 上の「KEEP_IMPL 台帳」block の裁定待ち。
 
 seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使うもの:
 
@@ -57,7 +61,7 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | §6 の取り込み経路 | `seed-docs/adoption.md` | merge 据え置き。差し替え点で衝突したら作業 branch 側を採る |
 | BE 往復の調整段 | `docs/design-sync.md` 2.3 | mock 更新を BE 結合済み FE へ戻すときの 3 か所（mock fixture・pp fixture・実 BE） |
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
-| スタックの構成と出典 | `README.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
+| スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
 seed 側の依存は 2026-08-28 に vite 8.2.2 へ、`pp/` の導入を bun へ揃えた。適用先の `frontend/package.json`・`bun.lock`・`pp/package.json` はいずれも PJ 所有なので、**同じ bump を適用先で当てる作業が二巡目の頭に要る**。
 
