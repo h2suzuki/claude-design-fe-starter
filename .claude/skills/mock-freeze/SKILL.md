@@ -15,18 +15,20 @@ when_to_use: TRIGGER when the user declares a mock complete, when an export need
    - **project 経由**: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool
    - **受け取り**: ユーザーから export 一式（zip 等）を受け取る。`design_sync verify` による再照合は使えないので、突合先の出所は sha256 台帳だけが担う
 
-   取得 API には size cap がある（DesignSync の `get_file` は 256 KiB）。資産を inline した export は容易に超えるので、**切れたものを掴んでいないか台帳へ pin する前に確かめる**。`design_sync` 経由なら記録された `truncated` 列と byte 数を見る。どちらの経路でも手順 7 の `npm run lint:mock`（MOCK103）が閉じタグの欠落を機械検出する。切れた export を凍結すると、台帳は「取得物と一致する」ことしか保証しないので gate は緑のまま突合先だけが壊れる
+   取得 API には size cap がある（DesignSync の `get_file` は 256 KiB）。資産を inline した export は容易に超えるので、**切れたものを掴んでいないか台帳へ pin する前に確かめる**。`design_sync` 経由なら記録された `truncated` 列と byte 数を見る。どちらの経路でも手順 9 の `npm run lint:mock`（MOCK103）が閉じタグの欠落を機械検出する。切れた export を凍結すると、台帳は「取得物と一致する」ことしか保証しないので gate は緑のまま突合先だけが壊れる
 3. 取得物を `docs/presentation/ui-mock/export/` へ配置する。編集 gate が Edit/Write を block するため、配置は cp 等の Bash で行う
-4. 2 回目以降は、前版との差分を `git diff --no-index --word-diff=plain <前版> <新版>` で棚卸しし、依頼した変更・依頼していない変更に仕分ける。後者は採るか差し戻すかを決めてから進む
-5. 参照スクショを撮る: `npm --prefix pp run mock:screenshots`（引数なしで `export/` の全画面。資産の 404 と abort があれば落ちる）
-6. 台帳を更新する（.gitkeep 除外・空白名安全）:
+4. 閉包を実測して集合を確定する: `npm --prefix pp run mock:closure`。読まれなかった file は `export/` から外し、取りこぼしが挙がれば足す（外部 embed は閉包に入らないので取りこぼしと分けて報告される）。取りこぼし 0 件になるまで先へ進まない
+5. 2 回目以降は、前版との差分を `git diff --no-index --word-diff=plain <前版> <新版>` で棚卸しし、依頼した変更・依頼していない変更に仕分ける。後者は採るか差し戻すかを決めてから進む
+6. mock 自身の破れを出す: `npm --prefix pp run mock:integrity`（引数なしで `export/` の全画面。横スクロール・はみ出し・操作要素の重なり・画面間の値の割れ・dialog の収まり）。1 件でも挙がれば mock を直してから凍結する。検査の範囲は `docs/presentation/ui-mock/README.md` 手順 6
+7. 参照スクショを撮る: `npm --prefix pp run mock:screenshots`（引数なしで `export/` の全画面。資産の 404 と abort があれば落ちる）
+8. 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
    (cd docs/presentation/ui-mock && find export -type f ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > mock-baseline.sha256)
    (cd docs/presentation/ui-mock && sha256sum --check --quiet mock-baseline.sha256)
    ```
 
-7. `pp/` で `npm run lint:mock` と `npm run test:provenance` を実行し、緑を確認してから export と台帳を同一 commit にする
+9. `pp/` で `npm run lint:mock` と `npm run test:provenance` を実行し、緑を確認してから export と台帳を同一 commit にする
 
 ## Rules
 
