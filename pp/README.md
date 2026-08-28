@@ -163,6 +163,7 @@ pgrep -af "drafts/pw-browsers"
 
 - mock 側 selector は `npm run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
 - `npm run ast:refresh` で再凍結後の screen AST を追従させる（`source.region` の再計測と `provenance` の更新。全画面 `/ast-extract` のやり直しを避ける）。台帳と実体が一致しない画面は書き戻さず落ちる。文言が描画テキストと合わない props は `COPY_REVIEW` として報告するだけで、書き換えはしない
+- `npm run mock:closure` で凍結候補の閉包を出す（引数なしで `export/` の全画面。読まれた file の集合と、取りこぼし・外部 embed を分けて挙げる。取りこぼしが 1 件でもあれば落ちる — `export/` に何を入れるかはこの実測で決める）
 - `npm run mock:screenshots` で承認時点の参照スクショを撮る（引数なしで `export/` の全画面・基準 2 viewport・fullPage・DPR 1）。資産の 404 と abort を数え、1 件でもあれば落ちる — 凍結する export の閉包が足りているかの機械判定を兼ねる
 - `npm run overlay-diff` で mock/app の全画面オーバーレイ（mock=赤・app=シアン・一致=灰）と文言キーの字体/箱突合を出す。SELECTOR_MAP に載せ忘れた箇所のズレを面で検出する補完で、map が空の序盤から使える
 - 失敗時は `artifacts/<suite>/` の summary/style/geometry JSON を見る。selector・fixture の不一致と実際の parity regression を分けて診断する

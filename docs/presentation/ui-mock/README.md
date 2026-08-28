@@ -15,7 +15,8 @@ docs/presentation/ui-mock/
 入れるのは **その画面を描画するために実際に読まれた file の閉包**であって、配布物に入っていた全 file ではない。Claude Design の handoff bundle のように没案・確認用スクリーンショット・未参照資産を含む形で渡されることがある。
 
 - 集合は実描画で決める。`grep` による静的な参照検出を根拠にしない — 実行時に組み立てられる path を取りこぼす
-- 収集は net-block を有効にした状態で行い、**404 と abort が 0 件**になるまで足す。これが「足りている」ことの機械的な証明になる
+- 収集は `npm --prefix pp run mock:closure` が行う（引数なしで `export/` の全画面を基準 2 viewport で描画し、読まれた file の集合・外部 embed・取りこぼしを `pp/artifacts/mock-closure.json` へ書く）
+- net-block を有効にした状態で回し、**404 と abort が 0 件**になるまで足す。これが「足りている」ことの機械的な証明になり、0 件になるまで tool は exit 1 で落ちる
 - 入れる file は取得時の相対 path のまま置く（flatten・rename しない）。台帳はこの集合と 1:1 で対応する
 - 除外の根拠は上の実測であって、file 名や件数ではない
 - **live な外部 embed は閉包に入らない**。子 frame が外部サービスへ navigate する形（地図・動画・SNS の埋め込み）は export の file ではなく、vendor 化もできない。閉包の「取りこぼし」と分けて扱い、mock 側と実装側の両方で同じく空にする
