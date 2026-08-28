@@ -44,6 +44,17 @@ Exit Criteria:
 
 台帳の書式も要調整。適用先の entry #1 の対象列は「全画面の画像 13 枚 (ロゴ 3・写真 10)」という散文で、gate が読む `img: <src の一部>` の形になっていない。現行 seed を入れると、この 13 枚は台帳に無い画像として `page-parity` で赤になる。`img:` 行へ書き直すか、mock 側へ軽量版を取り込んで entry を閉じる（entry 自身が後者を予定と書いている）。
 
+seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使うもの:
+
+| 何 | どこ | 二巡目での役割 |
+| --- | --- | --- |
+| `npm run mock:closure` | `pp/scripts/mock-closure.ts` | 再凍結で `export/` に入れる集合を実測で決める（凍結手順 4） |
+| `npm run mock:integrity` | `pp/scripts/mock-integrity.ts` | 再凍結の前に mock 自身の破れを出す（凍結手順 6）。適用先の現行 mock では design system page が 360/390 で横スクロールする |
+| `SCREENS` 登録点 | `pp/src/screens.ts` + `screen-registry.ts` | 7 spec を機構だけにしたので、以後 seed の gate 更新が install.sh で届く。適用先は 7 spec の PJ 版を捨てて登録点へ移す |
+| KEEP_IMPL の `img:` 結線 | `pp/src/keep-impl.ts` | 台帳が名指しした画像だけ pixel 比較から外れる。適用先の entry #1 は書き直しが要る |
+| §6 の取り込み経路 | `seed-docs/adoption.md` | merge 据え置き。差し替え点で衝突したら作業 branch 側を採る |
+| BE 往復の調整段 | `docs/design-sync.md` 2.3 | mock 更新を BE 結合済み FE へ戻すときの 3 か所（mock fixture・pp fixture・実 BE） |
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
