@@ -145,8 +145,8 @@ Work file: `pp/src/net-block.ts`・`pp/scripts/mock-lint.mjs`・`tools/install.s
 
 Exit Criteria:
 
-- [ ] PJ が埋める値（`VENDOR_ROUTES`・`ALLOWED_EXTERNAL` 等）と機構コードが別 file に分かれ、install.sh の 3 分類で機構側が「旧 seed 版」と判定されて黙って更新される
-- [ ] 分離後に、PJ 側の値を埋めた状態で install.sh を再実行し、値が保たれたまま機構だけ更新されることを実測する
+- [x] PJ が埋める値（`VENDOR_ROUTES`・`ALLOWED_EXTERNAL` 等）と機構コードが別 file に分かれ、install.sh の 3 分類で機構側が「旧 seed 版」と判定されて黙って更新される — `40e1996` で両方の値が `pp/vendor/routes.json` へ移り、`net-block.ts` と `mock-lint.mjs` は機構だけになった
+- [x] 分離後に、PJ 側の値を埋めた状態で install.sh を再実行し、値が保たれたまま機構だけ更新されることを実測する — 2026-08-28 実測。使い捨て target へ install → `net-block.ts` を旧 seed 版（`590b87d`）へ戻し `routes.json` に PJ の font route を書く → 再実行で `1 refreshed from an older seed version, 1 left to the project`。機構は現行版と `cmp` 一致、PJ の route は残存
 - [x] 一周実証の完了後に着手する（分離自体が PJ 側に merge を強いるため）— 着手条件は 2026-08-28 に満たされた（作業自体はこれから）
 
 `pp/src/net-block.ts` は `VENDOR_ROUTES`（差し替え点）と `installNetworkGuard`（機構）を同居させており、PJ が値を埋めた時点で install.sh からは foreign file になる。今回 CORS header の修正を seed に入れたが、適用先はこの理由で seed 版を受け取れず、自分で当てた修正を使い続ける。`pp/scripts/mock-lint.mjs` の `ALLOWED_EXTERNAL` も同型。
