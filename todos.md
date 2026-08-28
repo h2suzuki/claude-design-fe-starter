@@ -137,18 +137,4 @@ Exit Criteria:
 
 2026-08-27 に参照スクショ側だけ先に入れた（当初は一周の完了を待つ方針だった）。適用先が実際に撮り漏れを踏み（design system page の撮り忘れ）、原因が「seed が道具を配らないので消費側が自作し、その自作が引数必須になる」ことだと判明したため。実証で見つかった欠陥の修正であって、被検証物の差し替えではない。閉包収集（file 集合の出力）は未着手のまま。
 
-### 差し替え点と機構が同じ file に同居し、seed 更新が PJ 編集と必ず衝突する
-
-起票: opus-5 2026-08-27
-Goal: seed の機構更新が、PJ が埋めた差し替え点を巻き込まずに届くようにする。
-Work file: `pp/src/net-block.ts`・`pp/scripts/mock-lint.mjs`・`tools/install.sh`
-
-Exit Criteria:
-
-- [x] PJ が埋める値（`VENDOR_ROUTES`・`ALLOWED_EXTERNAL` 等）と機構コードが別 file に分かれ、install.sh の 3 分類で機構側が「旧 seed 版」と判定されて黙って更新される — `40e1996` で両方の値が `pp/vendor/routes.json` へ移り、`net-block.ts` と `mock-lint.mjs` は機構だけになった
-- [x] 分離後に、PJ 側の値を埋めた状態で install.sh を再実行し、値が保たれたまま機構だけ更新されることを実測する — 2026-08-28 実測。使い捨て target へ install → `net-block.ts` を旧 seed 版（`590b87d`）へ戻し `routes.json` に PJ の font route を書く → 再実行で `1 refreshed from an older seed version, 1 left to the project`。機構は現行版と `cmp` 一致、PJ の route は残存
-- [x] 一周実証の完了後に着手する（分離自体が PJ 側に merge を強いるため）— 着手条件は 2026-08-28 に満たされた（作業自体はこれから）
-
-`pp/src/net-block.ts` は `VENDOR_ROUTES`（差し替え点）と `installNetworkGuard`（機構）を同居させており、PJ が値を埋めた時点で install.sh からは foreign file になる。今回 CORS header の修正を seed に入れたが、適用先はこの理由で seed 版を受け取れず、自分で当てた修正を使い続ける。`pp/scripts/mock-lint.mjs` の `ALLOWED_EXTERNAL` も同型。
-
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
