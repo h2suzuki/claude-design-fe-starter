@@ -12,7 +12,7 @@
 | `ast-provenance` | screen AST の provenance と凍結 export の一致 | （前提: 突合先の出所） | `docs/presentation/ui-ast/screens/` に AST が 1 件以上 |
 | `ast-conformance` | 実装の `data-visual-id` tree が AST tree と構造一致（親子関係と出現） | （前提: 木の形） | screen AST + `PP_MOCK_FILE` + `PP_APP_URL` |
 | `sample-parity` | 全 visual id の style/geometry diff = 0（基準 2 viewport） | 基準幅 | screen AST（または `MANUAL_PAIRS`）+ `PP_MOCK_FILE` + `PP_APP_URL` |
-| `page-parity` | 画面まるごとの pixel diff = 0（基準 2 viewport・fullPage・画像領域は除外） | 基準幅 | `PP_MOCK_FILE` + `PP_APP_URL` |
+| `page-parity` | 画面まるごとの pixel diff = 0（基準 2 viewport・fullPage。KEEP_IMPL 台帳が名指しした画像の中身だけ除外） | 基準幅 | `PP_MOCK_FILE` + `PP_APP_URL` |
 | `width-sweep` | 320〜1920 連続スイープの invariant | 中間幅 | `PP_APP_URL` |
 | `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_APP_URL` |
 | `modal-geometry-sweep` | モーダルの viewport 収まりと操作要素の箱内収まり（基準 2 viewport） | 状態 | `MODALS` + `PP_APP_URL` |
