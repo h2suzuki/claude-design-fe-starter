@@ -87,31 +87,6 @@ Exit Criteria:
 
 2026-08-28 に §2 の突合表と §9 の land 手順を書いた。出典は適用先が実際に通した land（本番アドレスへ promote → 7 route 200・稽古予定 4 回とカレンダー 11 件と祝日 1067 件が旧サイトと同じ実データ・申込み API が不正 method に 405・favicon 200 を本番で確認 → 旧 URL の転送は不要と裁定して転送 commit を revert → 旧 main を `old-main` として残し作業 branch を main へ fast-forward → worktree 削除）。
 
-### mock 自身の破れを凍結前に機械で出す
-
-起票: opus-5 2026-08-27
-Goal: 正本にする前に、mock 自身が発注どおり成立しているかを機械で確かめられるようにする。
-Work file: `pp/tests/`・`docs/presentation/ui-mock/README.md`・`.claude/skills/mock-freeze/SKILL.md`
-
-Exit Criteria:
-
-- [x] 凍結 export を `SWEEP_WIDTHS` の下限で描画し、横スクロールとはみ出しが無いことを検査する gate が pp に入る（対象は app でなく mock）— `npm --prefix pp run mock:integrity`。下限だけでなく全幅で見る（MOCK201 / MOCK202）
-- [x] モーダルの viewport 収まり・操作要素の重なり・画面間の文言と token の割れを、同じ mock 側 gate で検査する — MOCK205 / MOCK203 / MOCK204。click で初めて mount する dialog と本文中のリンク文言は検査外で、範囲は README 手順 6 に明記した
-- [x] それぞれの破れを持つ合成 fixture を作り、gate が落ちることを実測する — `pp/tests/mock-integrity.spec.ts` の 13 件。5 種の破れがそれぞれ 1 回だけ発火し、健全な mock と「横スクロールが無いはみ出し」「本文中のリンク」では 0 件
-- [x] 凍結手順（README 手順 4）と `/mock-freeze` skill の step を同じ内容に揃える — 双方 9 step の同じ並びで書いた
-- [x] `/mock-freeze` skill に閉包（`mock:closure`）と破れ検査（`mock:integrity`）の段を入れ、`docs/presentation/ui-mock/README.md` の凍結手順と同じ 9 step に揃える — H.S. の許可（2026-08-28）を得て Edit tool で反映。Bash からは read-only のままだが、dedicated tool は通った
-- [x] 一周実証の完了後に着手する — 着手条件は 2026-08-28 に満たされた
-
-`width-sweep` は `PP_APP_URL` を要求するので **app しか見ない**。発注規約は「下限〜上限で成立する単一レスポンシブ HTML」を mock の要件にしているのに、それを検証する段が凍結の前にも後にも無く、違反した mock が正本になる。実装後に横スクロールとして現れるので、mock の欠陥が実装の欠陥に見える。適用先の実測（凍結 7 画面を 320 で描画すると全画面で header の nav が 4px はみ出す）で表面化した。
-
-2026-08-28 に `mock:integrity` として入れ、適用先の凍結 mock（7 画面 + design system page）を `PP_REPO_ROOT` で指して実測した。実装済みの 7 画面は 0 件で、design system page だけが 360px と 390px で横スクロールし（document 476px）、原因の `section` 7 つを名指しした。リンク文言の割れも 1 件（同 page の header が index を「サイトを見る →」と呼ぶ）。**適用先はこれを直していない** — 二巡目の再凍結でこの検査を通す。
-
-2026-08-28 に検査項目を広げた。適用先が FE 構築の**途中で** mock 修正を 1 回挟み（固定寸法の overflow・モーダルの 12px はみ出し・footer が click を遮る・文言の割れ・token の割れ の 5 件）、H.S. から「mock 自体の整合性の問題は、FE 構築を始める前にできた方が安い」と要望が出た。5 件はいずれも人に聞く話ではなく機械で出せる — 幅・収まり・重なり・値の割れ。`screen-loop.md ②` に「凍結前に確かめる」段を書いたので、この gate はその段の実行手段になる。
-
-資産の重さは `mock-lint` の MOCK104 で実装済み（`d579d79`。個別 1 MB 超を挙げ、合計も出す）。処置の既定（JPEG 化・解像度・先読み・data URI）は `docs/ui-quality-policy.md` と質問票に置いた。
-
-**ネットワークが多くなる箇所は gate にしない。** `screen-loop ④` の手順として、mock を読んで挙げる形にした（2026-08-28）。取りに行く回数は mock を見れば分かり、読むのも実装するのも同じ LLM なので、正規表現の検出器を挟む理由が無い。H.S. 指摘: 「mock を見れば時間の掛かりそうなところは見た目で判別がつく」「結局、FE 実装するのも Opus や Fable なんだから、みただけでは分かりません、という嘘は通りませんよ」。
-
 ### pp の登録点が 1 画面前提で、画面が増えると破綻する
 
 起票: opus-5 2026-08-27
