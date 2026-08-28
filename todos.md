@@ -82,13 +82,16 @@ Work file: `pp/tests/`・`docs/presentation/ui-mock/README.md`・`.claude/skills
 
 Exit Criteria:
 
-- [ ] 凍結 export を `SWEEP_WIDTHS` の下限で描画し、横スクロールとはみ出しが無いことを検査する gate が pp に入る（対象は app でなく mock）
-- [ ] モーダルの viewport 収まり・操作要素の重なり・画面間の文言と token の割れを、同じ mock 側 gate で検査する
-- [ ] それぞれの破れを持つ合成 fixture を作り、gate が落ちることを実測する
-- [ ] 凍結手順（README 手順 4）と `/mock-freeze` skill の step を同じ内容に揃える
-- [x] 一周実証の完了後に着手する — 着手条件は 2026-08-28 に満たされた（作業自体はこれから）
+- [x] 凍結 export を `SWEEP_WIDTHS` の下限で描画し、横スクロールとはみ出しが無いことを検査する gate が pp に入る（対象は app でなく mock）— `npm --prefix pp run mock:integrity`。下限だけでなく全幅で見る（MOCK201 / MOCK202）
+- [x] モーダルの viewport 収まり・操作要素の重なり・画面間の文言と token の割れを、同じ mock 側 gate で検査する — MOCK205 / MOCK203 / MOCK204。click で初めて mount する dialog と本文中のリンク文言は検査外で、範囲は README 手順 6 に明記した
+- [x] それぞれの破れを持つ合成 fixture を作り、gate が落ちることを実測する — `pp/tests/mock-integrity.spec.ts` の 13 件。5 種の破れがそれぞれ 1 回だけ発火し、健全な mock と「横スクロールが無いはみ出し」「本文中のリンク」では 0 件
+- [x] 凍結手順（README 手順 4）と `/mock-freeze` skill の step を同じ内容に揃える — 双方 9 step の同じ並びで書いた
+- [ ] `/mock-freeze` skill に閉包と破れ検査の段を入れる — sandbox から `.claude/skills/` へ書けないので、`drafts/seed-patch/mock-freeze-SKILL.md` を H.S. が cp して commit する
+- [x] 一周実証の完了後に着手する — 着手条件は 2026-08-28 に満たされた
 
-`width-sweep` は `PP_APP_URL` を要求するので **app しか見ない**。発注規約は「下限〜上限で成立する単一レスポンシブ HTML」を mock の要件にしているのに、それを検証する段が凍結の前にも後にも無く、違反した mock が正本になる。実装後に横スクロールとして現れるので、mock の欠陥が実装の欠陥に見える。適用先の実測（凍結 7 画面を 320 で描画すると全画面で header の nav が 4px はみ出す）で表面化した。当面は README 手順 4 の目視で埋めているが、目視は gate ではない。
+`width-sweep` は `PP_APP_URL` を要求するので **app しか見ない**。発注規約は「下限〜上限で成立する単一レスポンシブ HTML」を mock の要件にしているのに、それを検証する段が凍結の前にも後にも無く、違反した mock が正本になる。実装後に横スクロールとして現れるので、mock の欠陥が実装の欠陥に見える。適用先の実測（凍結 7 画面を 320 で描画すると全画面で header の nav が 4px はみ出す）で表面化した。
+
+2026-08-28 に `mock:integrity` として入れ、適用先の凍結 mock（7 画面 + design system page）を `PP_REPO_ROOT` で指して実測した。実装済みの 7 画面は 0 件で、design system page だけが 360px と 390px で横スクロールし（document 476px）、原因の `section` 7 つを名指しした。リンク文言の割れも 1 件（同 page の header が index を「サイトを見る →」と呼ぶ）。**適用先はこれを直していない** — 二巡目の再凍結でこの検査を通す。
 
 2026-08-28 に検査項目を広げた。適用先が FE 構築の**途中で** mock 修正を 1 回挟み（固定寸法の overflow・モーダルの 12px はみ出し・footer が click を遮る・文言の割れ・token の割れ の 5 件）、H.S. から「mock 自体の整合性の問題は、FE 構築を始める前にできた方が安い」と要望が出た。5 件はいずれも人に聞く話ではなく機械で出せる — 幅・収まり・重なり・値の割れ。`screen-loop.md ②` に「凍結前に確かめる」段を書いたので、この gate はその段の実行手段になる。
 
@@ -123,7 +126,7 @@ Exit Criteria:
 
 - [x] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される — `npm --prefix pp run mock:closure`。引数なしで `export/` 全画面、`pp/artifacts/mock-closure.json` に閉包・外部 embed・取りこぼしを分けて書く
 - [x] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る（`npm --prefix pp run mock:screenshots`。引数なしで `export/` 全画面、撮影中の 404 と abort を数えて 1 件でもあれば落ちる）
-- [ ] `/mock-freeze` skill に閉包の段を入れる — sandbox から `.claude/skills/` へ書けないので、`drafts/seed-patch/mock-freeze-SKILL.md` を H.S. が cp して commit する
+- [ ] `/mock-freeze` skill に閉包と破れ検査の段を入れる — sandbox から `.claude/skills/` へ書けないので、`drafts/seed-patch/mock-freeze-SKILL.md` を H.S. が cp して commit する
 - [ ] 適用先の再凍結で 2 つの tool を実際に通す — 実証 2 回目で行う
 
 適用先が一周の凍結時に自作した（`pp/scripts/collect-mock-closure.ts` / `pp/scripts/mock-screenshot.ts`、いずれも config の viewport・net-block・mock-server を使うだけで PJ 非依存との報告）。判定則を README に書いた時点で道具は付けていないので、次の PJ も同じ自作をする。
