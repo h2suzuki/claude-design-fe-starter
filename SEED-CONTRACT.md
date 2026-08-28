@@ -46,3 +46,17 @@ installer は既存 file を 3 分類する。**seed の現行版と一致**す�
 | AST から導けない selector 対 | `pp/src/selector-map.ts` の `MANUAL_PAIRS`（既定は screen AST からの導出） |
 | design token の実値 | `frontend/src/lib/ui/tokens/tokens.css` |
 | Claude Design project ID | 環境変数 `DESIGN_PROJECT_ID`（`tools/design_sync`） |
+
+## 規則をどこに置くか
+
+**規則は、機械が判定できる一番強い層に置く。** 表の上ほど強制力が強く、下へ行くほど「読んでもらえれば効く」に近づく。
+同じ規則を下の層へ書き足す前に、上の層で表現できないかを先に試す — 散文で頼むより、落ちるテストの方が確実に守られる。
+逆に、機械で判定できないものを上の層へ押し込むと、通すためだけの検査対象が生まれて緑が意味を失う。
+
+| 層 | 置くもの | この seed での実体 |
+|---|---|---|
+| テスト/CI | FE の不変条件ほぼ全部 | `pp/` の parity・sweep・provenance・self-baseline |
+| hooks | 機械判定できる少数の門だけ | 凍結 mock の編集 block・mock 未凍結での UI 実装 block・commit 前の sha256 照合の 3 本 |
+| CLAUDE.md | outcome 原則の数行 | `CLAUDE.md` |
+| skills | on-demand の手順書 | `/fe-kickoff`・`/design-order`・`/mock-freeze` |
+| docs | 参照知識 | `docs/` 5 本（発注書から必須参照でリンク） |
