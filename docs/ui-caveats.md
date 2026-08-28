@@ -23,7 +23,7 @@
 
 ## タブ毎の状態
 
-画面選択・ナビゲーション・タブ内選択など、タブ毎の状態を localStorage に置かない。localStorage は全タブ共有であり、リロードが他タブの状態を復元する事故になる。per-tab 状態は sessionStorage または URL で保持する。localStorage に置いてよいのは全タブ共有が正しい非ナビゲーション設定のみ。
+画面選択・ナビゲーション・タブ内選択など、タブ毎の状態を localStorage に置かない。localStorage は全タブ共有であり、リロードが他タブの状態を復元する事故になる。per-tab 状態は sessionStorage または URL で保持する。localStorage に置いてよいのは全タブ共有が正しい非ナビゲーション設定のみ（例: テーマ切替の選択。design system がキー名と初期値を定める）。
 
 ## 配色
 
