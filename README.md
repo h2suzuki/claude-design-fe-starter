@@ -46,35 +46,61 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 
 ## 採用スタックとその理由（2026-08 時点）
 
-役割が違う 4 つを重ねている。**bun と Vite は競合ではなく分担**で、どちらか一方に寄せる形にはならない。
+**上から下へ「何に支えられているか」** を並べたもの。bun と Vite は競合ではなく分担で、どちらか一方へ寄せる形にはならない。
 
 ```mermaid
 flowchart TB
-  subgraph DEV["開発機 / CI"]
-    BUN["bun<br/>package manager + script runner"]
-    BUN --> FE["frontend/<br/>bun.lock"]
-    BUN --> PP["pp/<br/>bun.lock"]
-    FE --> VITE["Vite<br/>bundler + dev server"]
-    VITE --> KIT["SvelteKit<br/>routing / SSR / adapter"]
-    KIT --> SVELTE["Svelte 5<br/>component"]
-    PP --> NODE["Node<br/>Playwright を走らせる"]
-    NODE --> CHROME["固定 Chromium<br/>pixel の出所"]
+  BROWSER(["Web Browser"])
+
+  subgraph PROD["本番 — Vercel"]
+    EDGE["Edge Network<br/>client bundle・静的資産"]
+    FN["SvelteKit server<br/>Vercel Function（Node runtime）"]
+    EDGE --> FN
   end
-  subgraph SHIP["本番"]
-    ADAPTER["adapter-auto<br/>→ adapter-vercel"] --> VERCEL{{"Vercel"}}
+
+  subgraph BUILD["ビルド — 開発機 / CI"]
+    ADAPTER["adapter-auto → adapter-vercel<br/>Build Output API 形式"]
+    KIT["SvelteKit<br/>routing / SSR / adapter 呼び出し"]
+    VITE["Vite<br/>bundler + dev server"]
+    SVELTE["Svelte 5<br/>component"]
+    BUN["bun<br/>依存導入 + script"]
+    ADAPTER --> KIT
+    KIT --> VITE
+    KIT --> SVELTE
+    VITE --> BUN
   end
-  KIT --> ADAPTER
-  CHROME -. "app を描画して突合" .-> VITE
+
+  subgraph VERIFY["検証 — 開発機 / CI"]
+    PP["pp harness<br/>Node + 固定 Playwright"]
+    CHROME["固定 Chromium"]
+    MOCK["凍結 mock<br/>ui-mock/export/"]
+    PP --> CHROME
+    MOCK --> CHROME
+  end
+
+  BROWSER -->|HTTPS| EDGE
+  FN -->|API| BE[("Backend<br/>PJ が用意する")]
+  FN -.->|この成果物を配る| ADAPTER
+  VITE -.->|dev server を描かせる| PP
+
+  classDef outside fill:#eeeeee,stroke:#999999,color:#555555
+  class BE outside
 ```
 
-| 層 | 採ったもの | 何を担うか | 実体 |
-|---|---|---|---|
-| 依存導入 / script | **bun** | `frontend/` と `pp/` の両方。lockfile は `bun.lock` に統一 | `frontend/bun.lock`・`pp/bun.lock` |
-| bundler / dev server | **Vite** | mock と app を同じ条件で描かせるための素地 | `frontend/vite.config.ts` |
-| framework | **SvelteKit** | file-based routing・SSR/prerender・`$app/*`・adapter | `sveltekit()` plugin |
-| UI | **Svelte 5** | runes ベースの component | `frontend/src/lib/ui/` |
-| deploy | **adapter-auto → adapter-vercel** | Vercel の Build Output API 形式を生成 | `frontend/svelte.config.js` |
-| 検証 | **Node + 固定 Playwright** | 固定 Chromium で pixel を出す。**version を上げると text metrics/AA が動く** | `pp/package.json`（`^` なしの完全固定） |
+灰色の `Backend` と、Vercel への deploy 配線は seed の範囲外である（`docs/design-sync.md` 2.3 と、下の「全体の流れ」の Phase 4）。
+
+チャートの上から順に、それぞれが何をして、どの file が実体か。
+
+| モジュール | 役割 | 実体 |
+|---|---|---|
+| **Vercel** | client bundle を配り、SvelteKit server を Node runtime の Function で走らせる | deploy 先（配線は seed の範囲外） |
+| **Backend** | PJ の API。seed は持たない | 検証中は `pp/src/fixtures/` が代わりに応答する |
+| **adapter-auto → adapter-vercel** | build 出力を Vercel の Build Output API 形式にする | `frontend/svelte.config.js` |
+| **SvelteKit** | file-based routing・SSR/prerender・`$app/*`・adapter 呼び出し | `sveltekit()` plugin |
+| **Vite** | bundler と dev server。mock と app を同じ条件で描かせる素地 | `frontend/vite.config.ts` |
+| **Svelte 5** | runes ベースの component | `frontend/src/lib/ui/` |
+| **bun** | 依存導入と script 実行。`frontend/` と `pp/` の両方 | `frontend/bun.lock`・`pp/bun.lock` |
+| **Node + 固定 Playwright** | 固定 Chromium で app と mock を描き、pixel を突き合わせる。**version を上げると text metrics/AA が動く** | `pp/package.json`（`^` なしの完全固定） |
 
 ### Vite は外せない — SvelteKit の実装本体だから
 
