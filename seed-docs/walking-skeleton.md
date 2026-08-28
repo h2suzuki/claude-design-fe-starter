@@ -97,7 +97,7 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 ### 5. 台帳・規約 docs の確認
 
 - KEEP_IMPL 台帳 (docs/presentation/ui-mock/DESIGN-POLICY.md) が空台帳として在ること
-- docs/ の 5 本を読み、PJ 固有の差し替え点 (意味色の名前・語彙など) を埋めること
+- docs/ の 6 本を読み、PJ 固有の差し替え点 (意味色の名前・語彙など) を埋めること
 
 ### 6. 発注規約 1 枚の準備
 

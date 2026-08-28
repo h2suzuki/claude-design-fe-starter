@@ -25,7 +25,7 @@ installer は既存 file を 3 分類する。**seed の現行版と一致**す�
 
 | 領域 | 寄与 | 冪等化の方法 |
 |---|---|---|
-| `docs/` | `ui-quality-policy.md` `pixel-perfect.md` `design-sync.md` `ui-caveats.md` `ast-layer.md` | file 単位の add-only |
+| `docs/` | `ui-quality-policy.md` `pixel-perfect.md` `design-sync.md` `ui-caveats.md` `ast-layer.md` `stack.md` | file 単位の add-only |
 | `tools/` | `design_sync` `ast_validate` `ast-tree` `ast-viewer` `toolchain-dir` `install.sh` | file 単位の add-only |
 | `.claude/skills/` | `fe-kickoff/` `design-order/` `mock-freeze/` `ast-extract/` | file 単位の add-only（新規 dir として追加される） |
 | `.claude/hooks/` | `block-frozen-mock-edit.sh` `block-ui-before-mock.sh` `check-mock-baseline.sh` | file 単位の add-only（exec bit は seed が記録した mode で配る） |
@@ -59,4 +59,4 @@ installer は既存 file を 3 分類する。**seed の現行版と一致**す�
 | hooks | 機械判定できる少数の門だけ | 凍結 mock の編集 block・mock 未凍結での UI 実装 block・commit 前の sha256 照合の 3 本 |
 | CLAUDE.md | outcome 原則の数行 | `CLAUDE.md` |
 | skills | on-demand の手順書 | `/fe-kickoff`・`/design-order`・`/mock-freeze` |
-| docs | 参照知識 | `docs/` 5 本（発注書から必須参照でリンク） |
+| docs | 参照知識 | `docs/` 6 本（発注書から必須参照でリンク） |
