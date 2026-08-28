@@ -99,7 +99,7 @@ PP_MOCK_FILE="your-screen.html" \
 
 browser の置き場は `test` script が `tools/toolchain-dir` から解決するので、env の前置は要らない（`gate` と `test:*` はいずれも `test` 経由）。`playwright test` を直に叩くときだけ `PLAYWRIGHT_BROWSERS_PATH` を自分で渡す。
 
-script は runner を選ばない。`bun run gate` でも `bun run gate` でも同じものが走る（repo の doc は bun で書いてある）。
+script は `bun run` で回す。ただし `gate` と `test:*` は内部で `npm test` を呼ぶので、npm も同居している必要がある。
 
 完了判定には `test` でなく `gate` を使う — `test` は skip を素通しする。
 
