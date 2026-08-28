@@ -107,6 +107,7 @@ pp の差分を見つけたら、次の規則で triage する。
 7. mock 内の表示データと app 側 fixture を同じ値に揃え（mock 発注時に fixture 値を与えておく）、同じ時計、viewport、操作列で pp の全 pack を通す。
 8. artifact と差分をレビューし、未登録差分は直し、登録済み差分は台帳の裁定と突合する。
 9. app の通常の build、lint、対象 test を通し、レビュー後に変更を land する。
+10. 既に BE を呼んでいる実装なら、fixture と実 BE の両方へ揃える（2.3）。
 
 pp spec は実装の内部関数ではなく、ユーザーから観測できる結果を固定する。
 操作を伴う UI では、初期画面の screenshot だけでなく、開閉、選択、確定、取消、hover、
@@ -118,7 +119,7 @@ drag など状態遷移の前後を対称に検証する。
 
 1. ユーザーの日付付き裁定と、app で正となる表示・振る舞いを明文化する。
 2. `docs/presentation/ui-mock/DESIGN-POLICY.md` を確認し、意図的差分か通常の鏡映かを triage する。
-3. 通常の鏡映なら app の DOM、寸法、文言、状態遷移を対応する export HTML と共有 module に移す。
+3. 通常の鏡映なら app の DOM、寸法、文言、状態遷移を対応する export HTML と共有 module に移す。BE を呼んでいる実装は、取得層を共有 fixture module へ置き換えてから移す（2.3）。
 4. fixture を app と同じ意味に揃え、単一レスポンシブ mock が全基準幅で成立する状態を保つ。
 5. mock lint と pp の全 pack を通す。
 6. DesignSync tool の `list_files`、`get_file` で push 直前の remote を確認する。
@@ -128,7 +129,34 @@ drag など状態遷移の前後を対称に検証する。
 共有 module の契約変更、fixture schema の変更は関連ファイルを一括して扱う。
 app の改善を理由に、裁定なしで KEEP_IMPL 台帳へ新規登録してはならない。
 
-### 2.3 pixel-perfect 化
+### 2.3 BE と結合した実装での往復
+
+新規実装では出ないが、**既に BE を呼んでいる実装**を持つ repo では、往復の両向きに 1 段ずつ調整が要る。
+mock は Claude Design 上で外部 fetch できないため、実装をそのまま書き戻すと mock が動かない。
+
+**code → mock（書き戻し）**: BE 呼び出しを共有 fixture module の同期読み出しへ置き換える。受け皿は 1.2 の
+共有 module で、置換は preview HTML を生成する時点、`finalize_plan` の前に行う。
+
+- 置換するのは取得層だけで、**状態機械は残す**。loading・error・empty は mock 上で到達できる形に保つ
+  （fixture を切り替える操作を preview に持たせる）。取得層ごと消すとこれらの状態が正本から消え、
+  次の発注で「無かったこと」になる
+- fixture の値は `pp/src/fixtures/` が app へ与えているものと同じ意味に揃える。ここが割れると、
+  mock と app が別のデータを見た状態で pixel を比べることになる
+- 認証・権限で表示が変わる画面は、**変種ごとに preview を分ける**。mock 側に認証は無いので、
+  「どの状態を見せる mock か」を preview の単位で決める
+
+**mock → code（取り込み）**: mock 側で表示項目が増減・改名したら、揃える先は 3 か所ある。
+
+1. mock の共有 fixture — 表示に必要な項目を読み出す
+2. `pp/src/fixtures/` — app 側の fixture を同じ意味へ揃える。ここまでで pp は緑になる
+3. 実 BE の応答 — 同じ項目を返せるか確認する。返せないなら BE を変えるか FE で導出するかを決め、
+   決めた内容を screen-loop ⑨ の裁定として残す
+
+**2 と 3 の間が gate の死角である。** fixture だけ揃えると pp は緑になり、実 BE に項目が無いことは
+機械側から見えない。実データで動線を歩く screen-loop ⑧ が唯一の網なので、この経路を通った画面は
+⑧ を省略しない。
+
+### 2.4 pixel-perfect 化
 
 pixel-perfect 検証の実装と pack 一覧は `pp/README.md` を正とする。
 完了条件は、対象として map された全要素で computed-style diff が 0、

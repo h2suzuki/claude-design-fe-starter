@@ -78,4 +78,5 @@ design system の発注より**先に**渡す。以後の意匠判断はすべ�
 | 完成 | 完成宣言 → export 一式の取得 → /mock-freeze で docs/presentation/ui-mock/ へ凍結 + sha256 pin → FE 実装 → parity (seed-docs/screen-loop.md) |
 | 新部品の昇格 | mock 中に生まれた新部品は design system 側へ登録させる。mock project 内に孤立させない |
 | 実装済み部品への置換 | FE 実装が確定した部品は、実装から生成した preview HTML を tools/design_sync でライブラリへ書き戻し、Design 生成の「想像部品」を「実装済み部品」へ順次置換する。以後 Claude Design は実物部品で新画面を組む = mock と実装の乖離が構造的に縮む |
+| BE 呼び出しの置換 | BE を呼ぶ部品はそのまま書き戻しても Claude Design 上で動かない。取得層を共有 fixture module の同期読み出しへ置き換えてから書き戻す（状態機械は残す。docs/design-sync.md 2.3） |
 | push 後の検証 | ライブラリへ push したら再取得して SHA-256 照合 (docs/design-sync.md の fetch / verify 運用。対象 project は環境変数 DESIGN_PROJECT_ID で指定) |
