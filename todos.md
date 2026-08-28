@@ -145,7 +145,7 @@ Exit Criteria:
 
 現状は**要求と形の一覧まで**しかない。`seed-docs/design-order-template.md:40` が「正方形・余白込み・単色背景の元画像を渡す（透過 PNG または SVG）」と発注側へ求め、`seed-docs/pre-implementation-questions.md:29` が必要な形（`.ico` 16/32/48 の多重 + PNG 180×180 + 512×512）を挙げるが、元画像からその形を作って HTML へ繋ぐ側が無い。
 
-iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-web session 経由の伝聞、2026-08-29）:「favicon は、普段は元ネタしか渡せないので、適切なサイズのファイルに変換して配備するルールにしてほしい。fe-starter の仕事なら、そうしてもらって」。**承認 scope は規約をその向きへ改めることまで**で、着手時期は同日の H.S. 指示「実作業は今度にします」により未定。
+iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-web session 経由の伝聞、2026-08-29）:「favicon は、普段は元ネタしか渡せないので、適切なサイズのファイルに変換して配備するルールにしてほしい。fe-starter の仕事なら、そうしてもらって」。**承認 scope は規約をその向きへ改めることまで**で、着手時期は未定 — H.S.（2026-08-29、当 session へ直接）「また後で考えます」。
 
 還流できる実装が iac-web 側にある（commit f631cf4 / 427b85f、そのまま持ち込めるとの報告）:
 
@@ -170,6 +170,8 @@ Exit Criteria:
 - [ ] `<picture>` を既定の処置に含めるかどうかを決める。含めないなら規約は現状（JPEG 化・表示寸法の 2 倍・先読み・data URI）のままにする
 
 iac-web からの依頼（2026-08-29）。**`picture { display: contents }` だけだと `<source>` が親の flex item として数えられ、gap がもう 1 つ増える。** iac-web ではトップの `hero-logo-badge` が 10px 広がり sample-parity が落ちた。Chromium で `getComputedStyle(source).display` が `block` になることを実測したとの報告。塞ぎ方は `picture > source { display: none }` の併記。
+
+着手時期は未定 — favicon の block と同じく H.S.（2026-08-29）「また後で考えます」。
 
 同日に AVIF + srcset を一周した実測も受け取った（**依頼ではなく材料**）:
 
