@@ -48,8 +48,8 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 
 | 何 | どこ | 二巡目での役割 |
 | --- | --- | --- |
-| `npm run mock:closure` | `pp/scripts/mock-closure.ts` | 再凍結で `export/` に入れる集合を実測で決める（凍結手順 4） |
-| `npm run mock:integrity` | `pp/scripts/mock-integrity.ts` | 再凍結の前に mock 自身の破れを出す（凍結手順 6）。適用先の現行 mock では design system page が 360/390 で横スクロールする |
+| `bun run --cwd pp mock:closure` | `pp/scripts/mock-closure.ts` | 再凍結で `export/` に入れる集合を実測で決める（凍結手順 4） |
+| `bun run --cwd pp mock:integrity` | `pp/scripts/mock-integrity.ts` | 再凍結の前に mock 自身の破れを出す（凍結手順 6）。適用先の現行 mock では design system page が 360/390 で横スクロールする |
 | `SCREENS` 登録点 | `pp/src/screens.ts` + `screen-registry.ts` | 7 spec を機構だけにしたので、以後 seed の gate 更新が install.sh で届く。適用先は 7 spec の PJ 版を捨てて登録点へ移す |
 | KEEP_IMPL の `img:` 結線 | `pp/src/keep-impl.ts` | 台帳が名指しした画像だけ pixel 比較から外れる。適用先の entry #1 は書き直しが要る |
 | §6 の取り込み経路 | `seed-docs/adoption.md` | merge 据え置き。差し替え点で衝突したら作業 branch 側を採る |
@@ -97,7 +97,7 @@ Exit Criteria:
 
 - [x] `READY_SELECTOR` / `MODALS` / `EDGES` / fixture / self-baseline 対象などの登録点が画面ごとに引ける形になり、各 spec は出所の参照だけを持つ — `pp/src/screens.ts`（表）と `pp/src/screen-registry.ts`（引く機構）に分け、8 spec から定数を外した
 - [x] 画面を 2 枚登録して画面ごとに回し、登録点が画面ごとに解決されることを実測する — 2026-08-28 実測。seed の frontend（`/` と `/states`）へ app 側 3 spec を 2 slug 分。どちらも 4 passed / 0 skipped で、self-baseline が別名・別内容の PNG を 4 枚吐いた（16986B と 46126B）＝ route が実際に切り替わっている。未登録 slug は skip でなく error になることも実測
-- [ ] 凍結 mock を持つ適用先で `npm run gate` を画面ごとに回し、どちらも skip 無しで緑になることを実測する — seed には凍結 mock が無く mock 側 spec を回せないので、実証 2 回目でここを埋める
+- [ ] 凍結 mock を持つ適用先で `bun run --cwd pp gate` を画面ごとに回し、どちらも skip 無しで緑になることを実測する — seed には凍結 mock が無く mock 側 spec を回せないので、実証 2 回目でここを埋める
 - [x] 適用先が先行実装した形の結果報告を受け取ってから設計を確定する — 2026-08-27 受領。7 spec の diff は定数の出所だけで assertion / skip 条件は不変、slug 規則も `screenOf` と一致
 
 先方の設計上の注意 2 点への処置: (a) 循環は型だけの import にして切った（`screens.ts` が型を `screen-registry.ts` から取り、機構が表を取る）。素の定数は `config.ts` に残してある。(b) `SELF_BASELINE_PATHS` は廃止し、self-baseline は今の画面 1 枚だけを撮る — 画面ごとに回せば全画面が 1 回ずつ撮られる。
@@ -112,8 +112,8 @@ Work file: `docs/presentation/ui-mock/README.md`・`pp/scripts/`
 
 Exit Criteria:
 
-- [x] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される — `npm --prefix pp run mock:closure`。引数なしで `export/` 全画面、`pp/artifacts/mock-closure.json` に閉包・外部 embed・取りこぼしを分けて書く
-- [x] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る（`npm --prefix pp run mock:screenshots`。引数なしで `export/` 全画面、撮影中の 404 と abort を数えて 1 件でもあれば落ちる）
+- [x] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される — `bun run --cwd pp mock:closure`。引数なしで `export/` 全画面、`pp/artifacts/mock-closure.json` に閉包・外部 embed・取りこぼしを分けて書く
+- [x] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る（`bun run --cwd pp mock:screenshots`。引数なしで `export/` 全画面、撮影中の 404 と abort を数えて 1 件でもあれば落ちる）
 - [x] `/mock-freeze` skill に閉包（`mock:closure`）と破れ検査（`mock:integrity`）の段を入れ、`docs/presentation/ui-mock/README.md` の凍結手順と同じ 9 step に揃える — H.S. の許可（2026-08-28）を得て Edit tool で反映。Bash からは read-only のままだが、dedicated tool は通った
 - [ ] 適用先の再凍結で 2 つの tool を実際に通す — 実証 2 回目で行う
 

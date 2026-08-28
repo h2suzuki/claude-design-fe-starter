@@ -177,8 +177,8 @@ mock を変更したときの必須 gate は次のとおりである。
 
 ```bash
 cd "$(git rev-parse --show-toplevel)/pp"
-npm run lint:mock
-npm test
+bun run lint:mock
+bun run gate
 ```
 
 失敗時は `pp/artifacts/` の summary、style、geometry、pixel、trace を確認し、

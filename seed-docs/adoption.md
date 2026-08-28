@@ -50,7 +50,7 @@ hooks 登録を含む settings の変更は hot-reload されないので、inst
 | 対象 | 引き方 | 理由 |
 | --- | --- | --- |
 | 作業対象（`frontend/` `pp/` `docs/`） | `git rev-parse --show-toplevel` | 検証するのは今いる worktree の実装 |
-| 共有 toolchain（browser・bun・npm cache） | `tools/toolchain-dir` | main repo 側に 1 つ置いて全 worktree で共有する。書けない環境では worktree 側へ退避して、その旨を stderr に出す |
+| 共有 toolchain（browser・bun・cache） | `tools/toolchain-dir` | main repo 側に 1 つ置いて全 worktree で共有する。書けない環境では worktree 側へ退避して、その旨を stderr に出す |
 
 `drafts/` は gitignore 対象なので worktree には materialize されない。新しい worktree で browser や bun が「無い」ように見えたら、まず上表の引き方を疑う。
 
@@ -110,7 +110,7 @@ walking skeleton の目的は「harness が動くことの証明」なので、*
 - `pp/vendor/` — mock の描画に要る外部資産（JS ライブラリ・フォント）を落として `VENDOR_ROUTES` に登録する。検証中の CDN 取得は `pp/src/net-block.ts` が abort するので、登録漏れは loud に失敗する。取得コマンドは `pp/vendor/README.md` に追記して再取得可能にしておく
 - `frontend/src/app.html` ほかの `{{...}}` placeholder — grep で列挙し、残る差し替え点を確定させる。`seed-docs/first-prompts.md` の `{{...}}` は `/design-order` が発注ごとに実値で埋める template なので、ここでは差し替えない
 
-mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等）なら、その URL も vendor 対象になる。`npm run lint:mock` が外部参照を検出する。
+mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等）なら、その URL も vendor 対象になる。`bun run --cwd pp lint:mock` が外部参照を検出する。
 
 ## 6. seed の更新を受け取る
 

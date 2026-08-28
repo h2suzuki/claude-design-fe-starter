@@ -88,7 +88,7 @@ flowchart TD
     H --> I["/ast-extract<br/>AST + 重い箇所の目星"]
     I --> J["実装前ヒアリング<br/>対策を示して承認を得る (必須)"]
     J --> K["部品実装 → page composition"]
-    K --> L["npm --prefix pp run gate"]
+    K --> L["bun run --cwd pp gate"]
     L --> M["LLM 一次レビュー + 人間受入"]
     M --> N["差分の裁定 (KEEP_IMPL)"]
   end

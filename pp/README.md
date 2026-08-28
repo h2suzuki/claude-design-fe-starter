@@ -23,7 +23,7 @@
 
 未充足の条件がある spec は理由付きで skip される（端末の list reporter には理由が出ない — 理由は `artifacts/playwright-report.json` の annotations か、spec 冒頭の skip 条件で確認する）。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。ただし「その画面に検査対象の部品が無い」場合だけは下の宣言で通せる。
 
-この判定は `npm run gate`（= `playwright test` + `scripts/require-no-skips.mjs`）が機械的に行う。未検証の skip が 1 件でも残れば exit 1 になり、残った spec と skip 理由を列挙する。`npm test` 単体は skip を素通しするので、完了判定には `gate` を使う。
+この判定は `bun run gate`（= `playwright test` + `scripts/require-no-skips.mjs`）が機械的に行う。未検証の skip が 1 件でも残れば exit 1 になり、残った spec と skip 理由を列挙する。`bun run test` 単体は skip を素通しするので、完了判定には `gate` を使う。
 
 ## 検査対象の部品が無い gate
 
@@ -64,11 +64,14 @@ file 名は `<name>-<project>-<platform>.png`（例 `desktop---pp-linux.png`）�
 cd pp
 # 共有 toolchain の置き場。main repo 側を優先し、書けない環境では worktree 側へ退避する
 DRAFTS="$(../tools/toolchain-dir)"
-# cache もブラウザも repo ローカルへ（sandbox 環境では既定 cache dir が書けず、
-# npm install は EROFS で落ちる）
-npm_config_cache="$DRAFTS/npm-cache" npm install
+# host に bun が無い環境では下で落とす実体を使う（PATH には載らない。取得は walking-skeleton.md §3）
+BUN="$(command -v bun || echo "$DRAFTS/bun/bun-linux-x64/bun")"
+# cache もブラウザも repo ローカルへ（sandbox 環境では既定 cache dir が書けない）
+BUN_INSTALL_CACHE_DIR="$DRAFTS/bun/cache" "$BUN" install
 PLAYWRIGHT_BROWSERS_PATH="$DRAFTS/pw-browsers" npx playwright install chromium
 ```
+
+**導入は bun、実行は Node である。** `frontend/` と揃えて lockfile を `bun.lock` 1 種類にし、`npm_config_cache` の EROFS 回避も要らなくなる。一方 spec を走らせるのは Playwright で、これは Node 向けに固定してある（下の「実行」節）。
 
 `@playwright/test` は完全固定 version。上げるときは vendor 資産と selector map の再検証をセットで行う（同梱 Chromium の更新は text metrics/AA を揺らす）。
 
@@ -91,17 +94,19 @@ until curl -sf http://127.0.0.1:5173 >/dev/null; do sleep 1; done
 cd ../pp
 PP_APP_URL="http://127.0.0.1:5173" \
 PP_MOCK_FILE="your-screen.html" \
-  timeout 600 npm run gate
+  timeout 600 "$BUN" run gate
 ```
 
-browser の置き場は `npm test` が `tools/toolchain-dir` から解決するので、env の前置は要らない（`npm run gate` と `test:*` はいずれも `npm test` 経由）。`npx playwright test` を直に叩くときだけ `PLAYWRIGHT_BROWSERS_PATH` を自分で渡す。
+browser の置き場は `test` script が `tools/toolchain-dir` から解決するので、env の前置は要らない（`gate` と `test:*` はいずれも `test` 経由）。`playwright test` を直に叩くときだけ `PLAYWRIGHT_BROWSERS_PATH` を自分で渡す。
 
-完了判定には `npm test` でなく `npm run gate` を使う — `npm test` は skip を素通しする。
+script は runner を選ばない。`bun run gate` でも `bun run gate` でも同じものが走る（repo の doc は bun で書いてある）。
+
+完了判定には `test` でなく `gate` を使う — `test` は skip を素通しする。
 
 mock を変更（再凍結）したら必須 gate:
 
 ```bash
-npm run lint:mock && npm run gate
+"$BUN" run lint:mock && "$BUN" run gate
 ```
 
 ## 差し替え点（PJ 開始時に確定する）
@@ -162,12 +167,12 @@ pgrep -af "drafts/pw-browsers"
 
 ## 使い方の型
 
-- mock 側 selector は `npm run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
-- `npm run ast:refresh` で再凍結後の screen AST を追従させる（`source.region` の再計測と `provenance` の更新。全画面 `/ast-extract` のやり直しを避ける）。台帳と実体が一致しない画面は書き戻さず落ちる。文言が描画テキストと合わない props は `COPY_REVIEW` として報告するだけで、書き換えはしない
-- `npm run mock:integrity` で凍結前に mock 自身の破れを出す（引数なしで `export/` の全画面。横スクロール・はみ出し・操作要素の重なり・画面間の値の割れ・dialog の収まり。1 件でもあれば落ちる。検査の範囲は `docs/presentation/ui-mock/README.md` 手順 6）
-- `npm run mock:closure` で凍結候補の閉包を出す（引数なしで `export/` の全画面。読まれた file の集合と、取りこぼし・外部 embed を分けて挙げる。取りこぼしが 1 件でもあれば落ちる — `export/` に何を入れるかはこの実測で決める）
-- `npm run mock:screenshots` で承認時点の参照スクショを撮る（引数なしで `export/` の全画面・基準 2 viewport・fullPage・DPR 1）。資産の 404 と abort を数え、1 件でもあれば落ちる — 凍結する export の閉包が足りているかの機械判定を兼ねる
-- `npm run overlay-diff` で mock/app の全画面オーバーレイ（mock=赤・app=シアン・一致=灰）と文言キーの字体/箱突合を出す。SELECTOR_MAP に載せ忘れた箇所のズレを面で検出する補完で、map が空の序盤から使える
+- mock 側 selector は `bun run verify-selectors` で実在確認してから diff を信じる（MISS/AMBI は selector-map 側のバグとして先に潰す）
+- `bun run ast:refresh` で再凍結後の screen AST を追従させる（`source.region` の再計測と `provenance` の更新。全画面 `/ast-extract` のやり直しを避ける）。台帳と実体が一致しない画面は書き戻さず落ちる。文言が描画テキストと合わない props は `COPY_REVIEW` として報告するだけで、書き換えはしない
+- `bun run mock:integrity` で凍結前に mock 自身の破れを出す（引数なしで `export/` の全画面。横スクロール・はみ出し・操作要素の重なり・画面間の値の割れ・dialog の収まり。1 件でもあれば落ちる。検査の範囲は `docs/presentation/ui-mock/README.md` 手順 6）
+- `bun run mock:closure` で凍結候補の閉包を出す（引数なしで `export/` の全画面。読まれた file の集合と、取りこぼし・外部 embed を分けて挙げる。取りこぼしが 1 件でもあれば落ちる — `export/` に何を入れるかはこの実測で決める）
+- `bun run mock:screenshots` で承認時点の参照スクショを撮る（引数なしで `export/` の全画面・基準 2 viewport・fullPage・DPR 1）。資産の 404 と abort を数え、1 件でもあれば落ちる — 凍結する export の閉包が足りているかの機械判定を兼ねる
+- `bun run overlay-diff` で mock/app の全画面オーバーレイ（mock=赤・app=シアン・一致=灰）と文言キーの字体/箱突合を出す。SELECTOR_MAP に載せ忘れた箇所のズレを面で検出する補完で、map が空の序盤から使える
 - 失敗時は `artifacts/<suite>/` の summary/style/geometry JSON を見る。selector・fixture の不一致と実際の parity regression を分けて診断する
 - 意図的差分は `docs/presentation/ui-mock/DESIGN-POLICY.md`（KEEP_IMPL 台帳）に裁定を登録する。**登録しても parity が緑になるわけではない** — 吸収機構はまだ無く、差分は赤のまま残る。解消は mock を直すのが既定（`docs/pixel-perfect.md`）
 - 実測 px を app の CSS へ転記しない。合わせるのは CSS 契約（clamp/%/flex）の構造（`docs/pixel-perfect.md`）

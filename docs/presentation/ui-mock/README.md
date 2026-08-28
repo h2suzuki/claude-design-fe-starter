@@ -15,7 +15,7 @@ docs/presentation/ui-mock/
 入れるのは **その画面を描画するために実際に読まれた file の閉包**であって、配布物に入っていた全 file ではない。Claude Design の handoff bundle のように没案・確認用スクリーンショット・未参照資産を含む形で渡されることがある。
 
 - 集合は実描画で決める。`grep` による静的な参照検出を根拠にしない — 実行時に組み立てられる path を取りこぼす
-- 収集は `npm --prefix pp run mock:closure` が行う（引数なしで `export/` の全画面を基準 2 viewport で描画し、読まれた file の集合・外部 embed・取りこぼしを `pp/artifacts/mock-closure.json` へ書く）
+- 収集は `bun run --cwd pp mock:closure` が行う（引数なしで `export/` の全画面を基準 2 viewport で描画し、読まれた file の集合・外部 embed・取りこぼしを `pp/artifacts/mock-closure.json` へ書く）
 - net-block を有効にした状態で回し、**404 と abort が 0 件**になるまで足す。これが「足りている」ことの機械的な証明になり、0 件になるまで tool は exit 1 で落ちる
 - 入れる file は取得時の相対 path のまま置く（flatten・rename しない）。台帳はこの集合と 1:1 で対応する
 - 除外の根拠は上の実測であって、file 名や件数ではない
@@ -39,9 +39,9 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    - **project 経由**: `tools/design_sync fetch`（要 `DESIGN_PROJECT_ID`）または DesignSync tool
    - **受け取り**: ユーザーから export 一式（zip 等）を受け取って展開する。この場合 `tools/design_sync verify` による Claude Design との再照合と、実装済み部品のライブラリ書き戻しは使えない — 突合先の出所は sha256 台帳だけが担う
 3. `export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし。編集 gate が Edit/Write を止めるので、配置は cp 等の Bash で行う）
-4. 閉包を実測して集合を確定する（`npm --prefix pp run mock:closure`。上の「export/ に入れる集合」）。読まれなかった file は外し、取りこぼしが挙がれば足す
+4. 閉包を実測して集合を確定する（`bun run --cwd pp mock:closure`。上の「export/ に入れる集合」）。読まれなかった file は外し、取りこぼしが挙がれば足す
 5. **2 回目以降の凍結では、前版との差分を棚卸しする**。修正を依頼した箇所以外にも手が入った export が返ることがある。`git diff --no-index --word-diff=plain <前版> <新版>` を file ごとに読み、依頼した変更・依頼していない変更に仕分ける。後者は採るか差し戻すかを決めてから先へ進む — 決めずに凍結すると、正本が黙って動いたことになる
-6. mock 自身の破れを機械で出す（`npm --prefix pp run mock:integrity`。引数なしで `export/` の全画面）。1 件でも挙がれば mock を直してから凍結する — ここで見つかれば mock の修正で済むが、実装後に見つかると実装の欠陥に見える
+6. mock 自身の破れを機械で出す（`bun run --cwd pp mock:integrity`。引数なしで `export/` の全画面）。1 件でも挙がれば mock を直してから凍結する — ここで見つかれば mock の修正で済むが、実装後に見つかると実装の欠陥に見える
 
    | id | 検査 | 見る条件 |
    |---|---|---|
@@ -52,7 +52,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    | MOCK205 | dialog が viewport に収まらない | 基準 2 viewport・DOM にある dialog を 1 つずつ現して測る |
 
    **検査していないもの**: click で初めて mount する dialog（DOM に無いので測れない）、本文中のリンク文言（文脈で言い方が変わってよい）、意匠そのものの良し悪し。これらは screen-loop ⑧ の人間受入で見る
-7. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する（`npm --prefix pp run mock:screenshots`。引数なしで `export/` の全画面を撮り、資産の 404 と abort があれば落ちる）。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — 同じ viewport・同じ DPR で撮った app 側の画と寸法が揃うので、mock と実装の pixel 差はここから直接取れる（`pp/` の self-baseline は app 自身の過去としか比べないため、mock との一致は見ていない）。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
+7. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する（`bun run --cwd pp mock:screenshots`。引数なしで `export/` の全画面を撮り、資産の 404 と abort があれば落ちる）。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — 同じ viewport・同じ DPR で撮った app 側の画と寸法が揃うので、mock と実装の pixel 差はここから直接取れる（`pp/` の self-baseline は app 自身の過去としか比べないため、mock との一致は見ていない）。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
 8. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
@@ -60,7 +60,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    (cd docs/presentation/ui-mock && sha256sum --check --quiet mock-baseline.sha256)
    ```
 
-9. `pp/` で `npm run lint:mock` と provenance テストを実行し、台帳と実体の一致を確認してから commit する
+9. `pp/` で `bun run lint:mock` と provenance テストを実行し、台帳と実体の一致を確認してから commit する
 
 ## 規律
 

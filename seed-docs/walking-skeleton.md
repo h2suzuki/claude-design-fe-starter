@@ -54,23 +54,25 @@ seed-docs/          本書ほかプロセス文書
 
 ### 3. 依存の導入
 
-`frontend/` は bun、`pp/` は npm (Node + Playwright 固定) で導入する。host に bun があり既定 cache も書けるなら、この形で足りる。
+**`frontend/` も `pp/` も bun で導入する** (lockfile は `bun.lock` の 1 種類)。host に bun があり既定 cache も書けるなら、この形で足りる。
 
 ```bash
 bun install --cwd frontend
-npm --prefix pp install
+bun install --cwd pp
 ```
 
-**どちらかが満たせない環境では下の形を使う。** 満たしているかは打ってみれば分かる — bun が無ければ `command not found`、cache が書けなければ npm が EROFS で落ちる。
+`pp/` の spec を走らせるのは Playwright で、こちらは Node 向けに固定してある。**導入は bun、実行は Node** という分担で、混ぜても壊れない (`pp/README.md` setup 節)。
 
-既定の cache 先へ書けない環境（sandbox 等）では、cache を repo-local へ振る。省くと npm は EROFS で落ちる。置き場は `tools/toolchain-dir` が決める（main repo 側を優先し、書けなければ worktree 側へ退避する）。
+**どちらかが満たせない環境では下の形を使う。** 満たしているかは打ってみれば分かる — bun が無ければ `command not found`、cache が書けなければ EROFS で落ちる。
+
+既定の cache 先へ書けない環境（sandbox 等）では、cache を repo-local へ振る。置き場は `tools/toolchain-dir` が決める（main repo 側を優先し、書けなければ worktree 側へ退避する）。
 
 ```bash
 DRAFTS="$(tools/toolchain-dir)"
 # host に bun が無い環境では下で落とす実体を使う（PATH には載らない）
 BUN="$(command -v bun || echo "$DRAFTS/bun/bun-linux-x64/bun")"
 BUN_INSTALL_CACHE_DIR="$DRAFTS/bun/cache" "$BUN" install --cwd frontend
-npm_config_cache="$DRAFTS/npm-cache" npm --prefix pp install
+BUN_INSTALL_CACHE_DIR="$DRAFTS/bun/cache" "$BUN" install --cwd pp
 ```
 
 host に bun が無くても、Playwright browser と同じく repo-local に置けば足りる (実体は gitignore 下・installer は配らない)。先に下の取得を済ませてから上を実行する。
@@ -107,7 +109,7 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 
 1. **mock**: design system の基礎部品 1 つを含む最小画面を Claude Design で作る (seed-docs/first-prompts.md)
 2. **凍結**: /mock-freeze で export 一式を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する
-3. **vendor 化**: `npm run lint:mock` が挙げる外部参照 (フォント・JS ライブラリ) を pp/vendor へ落として `pp/vendor/routes.json` に登録し、取得コマンドを pp/vendor/README.md へ記録する。フォントはここで tokens.css の --font-sans も差し替える
+3. **vendor 化**: `bun run lint:mock` が挙げる外部参照 (フォント・JS ライブラリ) を pp/vendor へ落として `pp/vendor/routes.json` に登録し、取得コマンドを pp/vendor/README.md へ記録する。フォントはここで tokens.css の --font-sans も差し替える
 4. **部品実装**: frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する
 5. **states fixture**: default / empty / loading / error / 長文 + touch 操作を単体 fixture で揃える
 6. **parity**: /ast-extract で screen AST を起こす (SELECTOR_MAP はそこから導出される)。導けない対だけ pp の MANUAL_PAIRS に書き、ast-provenance・ast-conformance・sample-parity を緑にする

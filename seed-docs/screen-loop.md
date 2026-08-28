@@ -28,7 +28,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 ### ② export 凍結 + provenance pin
 
 - /mock-freeze で export 一式を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する (手順詳細: docs/presentation/ui-mock/README.md)
-- 凍結の前に、mock 自身が発注どおり成立しているかを `npm --prefix pp run mock:integrity` で確かめる (全幅での横スクロールとはみ出し、dialog の収まり、操作要素の重なり、画面間の文言と token の割れ)。破れは (c) 修正依頼として Claude Design へ差し戻す — **FE 実装の途中で mock を直すより桁違いに安い**
+- 凍結の前に、mock 自身が発注どおり成立しているかを `bun run --cwd pp mock:integrity` で確かめる (全幅での横スクロールとはみ出し、dialog の収まり、操作要素の重なり、画面間の文言と token の割れ)。破れは (c) 修正依頼として Claude Design へ差し戻す — **FE 実装の途中で mock を直すより桁違いに安い**
 - 完了条件: mock-provenance spec が緑 (検証 gate が今回凍結した正本を向いている証明)。凍結せずに実装へ入らない — 突合先ドリフトの再発源になる
 
 ### ③ AST 抽出 + 部品候補 3 分類
@@ -44,7 +44,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 
 - mock に写らないこと (実データの量・状態の頻度・外部依存・権限・保持) を発注側に聞く。質問票: seed-docs/pre-implementation-questions.md
 - **機械で分かることは聞かない**。mock 自身の破れは②の凍結時に検査で出す
-- 重い資産は `npm --prefix pp run lint:mock` の MOCK104 が挙げる。**処置は既定で決まっている** (写真の JPEG 化・表示寸法に合わせた解像度・先読み・小さいものの data URI 埋め込み) ので、聞くのは「この既定でよいか」と「粗くしてはいけないものはどれか」
+- 重い資産は `bun run --cwd pp lint:mock` の MOCK104 が挙げる。**処置は既定で決まっている** (写真の JPEG 化・表示寸法に合わせた解像度・先読み・小さいものの data URI 埋め込み) ので、聞くのは「この既定でよいか」と「粗くしてはいけないものはどれか」
 - **mock を読んで、実装するとネットワークが多くなる箇所を挙げる** — 月送りのカレンダー、無限スクロール、絞り込みのたびに取り直す一覧、地図。取りに行く回数は mock を見れば分かる。部品の数は大抵問題にならない
 - 重い箇所ごとに **「何が重いか / どう対策するか」を組にして示し、ユーザーの承認を得る**。承認は必須で、口頭で流さず PR 説明に残す
 - 完了条件: 質問票の各項目に答えか「未定」が入り、**重い箇所への対策がユーザーに承認されている**こと。空欄や未承認のまま実装へ入らない — 対策は実装の形を決めるので、後から変えると作り直しになる
