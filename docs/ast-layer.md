@@ -40,7 +40,7 @@ frontend 実装（framework component）は粒度が揃っていない。
 
 ### 1.3 層が無いと人の記憶に依存する作業
 
-部品 3 分類（既存再利用 / 新規部品 / ページ固有）の判定、pp の `SELECTOR_MAP` 結線、
+部品 3 分類（既存再利用 / 新規部品 / ページ固有。「既存」の母体は design system の部品一覧）の判定、pp の `SELECTOR_MAP` 結線、
 mock 再凍結時の影響範囲の追跡は、いずれも層が無ければ目視と記憶に依存する。
 AST があれば、kind census と wrapper registry の突合、`binding.visualId` からの結線導出、
 `logicalId` キーの structural diff として機械が担える。

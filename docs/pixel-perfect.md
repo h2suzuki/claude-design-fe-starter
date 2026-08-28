@@ -36,6 +36,8 @@ app を mock へ合わせる前に、比較 viewport での mock 描画が設計
 ### 2.2 構造一致
 
 合わせるのは CSS 契約 — `clamp`、`%`、`flex`、`table-layout` といった規則そのもの — である。
+契約の中で使う値は token 名で書き、生の数値を置かない。token の母体は design system である
+（`docs/presentation/ui-mock/README.md`「デザインシステム page が混ざっている場合」）。
 実行時計測ピクセルの転記は禁止する。
 diff に端数ピクセル（例: `120.21875px`）が現れたら、計測値転記の red flag として手を止める。
 

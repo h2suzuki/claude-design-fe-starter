@@ -37,11 +37,19 @@ HTML は共有 module を import して使い、HTML 側と共有 module 側の�
 
 ### 1.3 Claude Design project との同期経路
 
+Claude Design 側は 2 project からなる。**design system project** が token（色・タイポ・spacing・radius）と基礎部品を持ち、**通常 project** がそれを継承して画面 mock を組む（`seed-docs/first-prompts.md`）。repo が凍結するのは通常 project の export で、design system は見本 page として同じ export に混ざって届く（`docs/presentation/ui-mock/README.md`）。
+
 同期経路は次の双方向である。
 
 ```text
-Claude Design project ⇄ DesignSync tool ⇄ repo の docs/presentation/ui-mock/export/ ⇄ frontend/
+design system project ──継承──▶ 通常 project（画面 mock）
+                                      ⇅ DesignSync tool
+                       repo の docs/presentation/ui-mock/export/
+                                      ⇅
+                                  frontend/
 ```
+
+`DESIGN_PROJECT_ID` が指すのは通常 project である。**画面 mock の中で生まれた新部品は design system project 側へ昇格させ、通常 project 内に孤立させない**（`seed-docs/first-prompts.md`）。昇格しないと、次の画面が同じ部品を作り直し、部品が画面ごとに分裂する。
 
 DesignSync tool では、最初に `list_files` で project の現状を確認し、`get_file` で対象の現行 byte を読む。
 書き戻し時は変更対象を明示して `finalize_plan` を完了し、その計画に対して `write_files` を実行する。

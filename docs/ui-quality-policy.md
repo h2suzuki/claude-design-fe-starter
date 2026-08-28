@@ -57,6 +57,7 @@ mock-first を運転するときの役割分担・作業場・検分手順を定
 ## mock 整合と pixel-perfect 検証
 
 - 意匠の SSOT（唯一の正）は Claude Design mock。mock と app の意図的差分は、ユーザー裁定を伴う `docs/presentation/ui-mock/DESIGN-POLICY.md`（KEEP_IMPL 台帳）への登録のみ許す。
+- SSOT は 2 段になる。**token（色・タイポ・spacing・radius）と基礎部品の出所は design system**、**各画面の配置と実値の出所は画面 mock** である。token 名と部品 variant を画面 mock から起こさない（design system が母体）。逆に pixel の正は各画面の実値で、design system の見本 page を第 2 の正本にしない（`docs/presentation/ui-mock/README.md`）。
 - pixel-perfect 機械検証で mock と整合を取るときは、mock 描画がデザイン意匠と一致することを参照スクショで先に検証し、整合は CSS 契約（clamp / fluid）の構造一致で取る。
 - 重い資産（`bun run --cwd pp lint:mock` の MOCK104）には**既定の処置がある**: 写真は JPEG 化、表示寸法の 2 倍まで解像度を落とす、先読みする、十分小さいものは data URI で埋め込む。外すのは理由があるときだけで、日付付きの裁定として残す — 「どれが重いか」は測れば分かるので、発注側に聞く項目にしない
 - 実装するとネットワークが多くなる箇所（月送りのカレンダー・無限スクロール・絞り込みのたびに取り直す一覧）は、**mock を読めば取りに行く回数が分かる**。実装前に挙げ、対策（まとめて取る / 先に取る / 遅らせる）を**ユーザーに示して承認を得てから**書き始める。承認は必須 — 対策は実装の形を決めるので、後から変えると作り直しになる
