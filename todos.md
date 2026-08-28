@@ -44,6 +44,8 @@ Exit Criteria:
 
 **`page-parity` は画面まるごとの pixel 一致なので、KEEP_IMPL が 1 件でも立った瞬間に必ず落ちる。** 結線はその前に済ませる必要がある。
 
+2026-08-28: 適用先が画像軽量化で 14 spec を赤にし、台帳 entry を立てた。ただしこれは**画像の中身の差**で、`page-parity` の対象外にする方が筋だったので、img/picture/video の領域を pixel 比較から外した（`fb0a7fd`。置かれ方は比較する）。あわせて DESIGN-POLICY に「既定の処置に従った軽量化は載せない」を規定。**着手条件（意匠の意図的差分が 1 件立つ）はまだ来ていない。**
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
