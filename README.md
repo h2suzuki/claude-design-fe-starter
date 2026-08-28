@@ -1,8 +1,11 @@
 # claude-design-fe-starter
 
-Mock-first frontend development starter — Claude Design mock as the single
-source of truth, converged on by a Playwright parity harness. Docs are in
-Japanese.
+Mock-first frontend starter — the Claude Design mock is the single source of
+truth, and a Playwright parity harness converges the implementation onto it.
+Docs are in Japanese.
+
+意匠と実装がじわじわずれていく問題を、**目視の指摘ではなく機械 gate で閉じる**ための seed。
+ずれは gate が落とすので、人が見るのは「mock 自体が正しいか」に絞れる。
 
 ## これは何
 
@@ -13,131 +16,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 3. 機械 gate（structural parity・幅スイープ・状態スイープ・スクショ自己回帰・出所照合）で mock へ収束
 4. LLM スクショ一次レビュー + 人間受入を機械 gate と別立てで常設
 
-という順序を day-0 から強制するための seed。前プロジェクトで実証済みの検証ハーネスと規約文書から、ドメイン固有部を除去して汎用化した。前提はモバイルファースト。
-
-### 幅の数字は 3 系統ある
-
-役割が違うので混ぜない。**すべての正本は `pp/src/config.ts`** で、doc は値を持たずそこを指す。
-
-| 数字 | 役割 | そこで何を見るか | 正本 |
-|---|---|---|---|
-| **390×844** | mobile の基準 viewport（第一正本） | mock と実装の **pixel 一致**（`sample-parity` / `page-parity`） | `MOBILE_VIEWPORT` |
-| **1280×800** | desktop の基準 viewport（第二正本） | 同上 | `DESKTOP_VIEWPORT` |
-| **360〜1920** | 幅スイープの範囲（既定値） | **崩れないことだけ** — 横スクロール・はみ出し・衝突・欠落。pixel 一致は取らない（`width-sweep`） | `SWEEP_WIDTHS` |
-
-- **基準幅とスイープ範囲は別の検証。** 前者は「同じに見えるか」、後者は「壊れていないか」を見る
-- 390 は基準幅であると同時にスイープにも含まれる（基準幅でも崩れは見る）
-- 既定の下限は 360。320px 級の端末を支える PJ は `SWEEP_WIDTHS` を下げる
-- **発注規約（`seed-docs/design-order-template.md` 項目 1）に書く下限・上限は `SWEEP_WIDTHS` と同じ数値にする。** 発注した範囲と検証する範囲がずれると、守られていない要件を検証し続けることになる
-
-## 構成
-
-```text
-├── CLAUDE.md          mock-first 行動規範（数行・outcome 原則のみ）
-├── docs/              規約 5 docs（ui-quality-policy / pixel-perfect / design-sync / ui-caveats / ast-layer）
-├── .claude/           project skills（/fe-kickoff・/design-order・/mock-freeze・/ast-extract）+ 機械判定 hook 3 本
-├── docs/presentation/ui-mock/  mock 凍結置き場（export + screenshots + sha256 台帳 + KEEP_IMPL 台帳）
-├── docs/presentation/ui-ast/   UI AST 置き場（schema 2 本 + registry.json + screens/）
-├── frontend/          SvelteKit skeleton（$lib/ui/{tokens,components} + src/routes、依存導入は bun）
-├── pp/                parity harness（dump / diff / sweep / self-baseline / provenance）
-├── tools/             design_sync（Claude Design 同期）+ ast_validate / ast-tree / ast-viewer（AST gate と可視化）+ toolchain-dir（browser/bun/cache の置き場解決）+ install.sh（既存 repo への copy-in）
-└── seed-docs/         プロセス文書（adoption / walking-skeleton / screen-loop / design-order-template / first-prompts / pre-implementation-questions）
-```
-
-## 採用スタックとその理由（2026-08 時点）
-
-**上から下へ「何に支えられているか」** を並べたもの。bun と Vite は競合ではなく分担で、どちらか一方へ寄せる形にはならない。
-
-```mermaid
-flowchart TB
-  BROWSER(["Web Browser"])
-
-  subgraph PROD["本番 — Vercel"]
-    EDGE["Edge Network<br/>client bundle・静的資産"]
-    FN["SvelteKit server<br/>Vercel Function（Node runtime）"]
-    EDGE --> FN
-  end
-
-  subgraph BUILD["ビルド — 開発機 / CI"]
-    ADAPTER["adapter-auto → adapter-vercel<br/>Build Output API 形式"]
-    KIT["SvelteKit<br/>routing / SSR / adapter 呼び出し"]
-    VITE["Vite<br/>bundler + dev server"]
-    SVELTE["Svelte 5<br/>component"]
-    BUN["bun<br/>依存導入 + script"]
-    ADAPTER --> KIT
-    KIT --> VITE
-    KIT --> SVELTE
-    VITE --> BUN
-  end
-
-  subgraph VERIFY["検証 — 開発機 / CI"]
-    PP["pp harness<br/>Node + 固定 Playwright"]
-    CHROME["固定 Chromium"]
-    MOCK["凍結 mock<br/>ui-mock/export/"]
-    PP --> CHROME
-    MOCK --> CHROME
-  end
-
-  BROWSER -->|HTTPS| EDGE
-  FN -->|API| BE[("Backend<br/>PJ が用意する")]
-  FN -.->|この成果物を配る| ADAPTER
-  VITE -.->|dev server を描かせる| PP
-
-  classDef outside fill:#eeeeee,stroke:#999999,color:#555555
-  class BE outside
-```
-
-灰色の `Backend` と、Vercel への deploy 配線は seed の範囲外である（`docs/design-sync.md` 2.3 と、下の「全体の流れ」の Phase 4）。
-
-チャートの上から順に、それぞれが何をして、どの file が実体か。
-
-| モジュール | 役割 | 実体 |
-|---|---|---|
-| **Vercel** | client bundle を配り、SvelteKit server を Node runtime の Function で走らせる | deploy 先（配線は seed の範囲外） |
-| **Backend** | PJ の API。seed は持たない | 検証中は `pp/src/fixtures/` が代わりに応答する |
-| **adapter-auto → adapter-vercel** | build 出力を Vercel の Build Output API 形式にする | `frontend/svelte.config.js` |
-| **SvelteKit** | file-based routing・SSR/prerender・`$app/*`・adapter 呼び出し | `sveltekit()` plugin |
-| **Vite** | bundler と dev server。mock と app を同じ条件で描かせる素地 | `frontend/vite.config.ts` |
-| **Svelte 5** | runes ベースの component | `frontend/src/lib/ui/` |
-| **bun** | 依存導入と script 実行。`frontend/` と `pp/` の両方 | `frontend/bun.lock`・`pp/bun.lock` |
-| **Node + 固定 Playwright** | 固定 Chromium で app と mock を描き、pixel を突き合わせる。**version を上げると text metrics/AA が動く** | `pp/package.json`（`^` なしの完全固定） |
-
-### Vite は外せない — SvelteKit の実装本体だから
-
-- `@sveltejs/kit` は **`vite` を optional でない peerDependency** に持つ（`^5.0.3 || ^6.0.0 || ^7.0.0-beta.0 || ^8.0.0`。optional 扱いは `@opentelemetry/api` と `typescript` だけ）
-- kit の exports に `./vite` があり、`vite.config.ts` はそこから `sveltekit()` を読む。**routing manifest 生成・SSR build・adapter 呼び出しが Vite plugin として実装されている**
-- Bun 向けの `svelte-adapter-bun` ですら「`vite build` 後に Bun の standalone server を起動する」形である（確認日 2026-08-21）
-
-つまり「Vite を外して bun だけにする」は SvelteKit ごと降りることを意味し、routing・SSR・`$app/*`・adapter が自作に変わる。
-
-### bun をどこまで使うか
-
-| 使い方 | 実測 | 採否 |
-|---|---|---|
-| `bun install`（`frontend/`・`pp/`） | pp を bun で導入し Node の Playwright で回して 71 passed / 14 skipped — npm tree と同数 | **採用** |
-| `bun run <script>` | `gate` まで通る。script 側は runner 名を持たないので `npm run` でも同じ | **採用** |
-| `bun --bun`（Vite を Bun runtime で走らせる） | build は通るが、minifier の識別子割り当てが変わり entry chunk の hash が変わる。SvelteKit の version を固定しても差は残り、同一 runtime 2 回なら byte 一致 | **不採用** — 成果物の hash が runtime 依存になる |
-| Playwright を Bun runtime で | 71 passed / 14 skipped で動く。ただし pixel 比較路の同一性は app 無しでは測れていない | **保留** — 実地で測るまで Node |
-
-`bun --bun` は **vite の version を選ばない**。`--version` は node 経由で `vite/8.2.2 node-v24.20.0`、`bun --bun` 経由で `vite/8.2.2 bun-v26.3.0` を返す — 変わるのは runtime だけである。version を決めるのは `package.json` と `bun.lock`、決まる時点は `bun install` である。
-
-### Vercel 側の現況（確認日 2026-08-21）
-
-- Vercel の **Bun Runtime は Beta**。公開ベータ告知（2025-10-28）が挙げる対象に SvelteKit は含まれていない
-- 一方 `adapter-vercel` の現行ソースは `bun1.x` を有効な runtime として扱う（experimental）
-- **`bun.lock` があれば、Node runtime を使う場合でも Vercel は `bun install` を実行する**。つまり「bun で導入する」ことは Vercel 側の障害にならない
-
-この 3 点から、**deploy runtime は Node のまま、導入だけ bun** を既定にしている。Bun Runtime が GA になり SvelteKit が対象に入った時点で再検討する。
-
-### 引用するときの注意
-
-この節の結論は「Bun Runtime が Beta」「`adapter-vercel` の bun 対応が experimental」という状況に依存する。状況が変われば結論も変わるので、**日付と出典を外して引用しない**。出典（いずれも確認日 2026-08-21）:
-
-- [Vercel Bun Runtime](https://vercel.com/docs/functions/runtimes/bun) / [Bun Runtime public beta](https://vercel.com/changelog/bun-runtime-now-in-public-beta-for-vercel-functions) / [Vercel Node.js Runtime](https://vercel.com/docs/functions/runtimes/node-js)
-- [adapter-vercel utils.js](https://raw.githubusercontent.com/sveltejs/kit/main/packages/adapter-vercel/utils.js)（`bun1.x` の扱い）
-- [svelte-adapter-bun README](https://raw.githubusercontent.com/gornostay25/svelte-adapter-bun/main/README.md)（`vite build` 前提）
-
-version の上げ方と、適用先がそれをどう受け取るかは `seed-docs/adoption.md` の「依存を上げる」節にある。
+という順序を day-0 から強制する。前提はモバイルファースト。
 
 ## 使い方
 
@@ -241,6 +120,119 @@ flowchart TD
 - **seed → PJ**: `git remote add seed <この repo の URL>` して必要 commit を `git cherry-pick` する（PJ 側で placeholder を差し替えている前提のため、一括上書きの機構は持たない）
 - **PJ → seed**: pp harness 等の汎用部を強化・修正したら seed へ back-port する。運ぶのは **seed が配っている file** の修正だけで、PJ 固有物（SELECTOR_MAP の中身・fixture・screen 定義・差し替え済み placeholder・PJ が自分で `tools/` や `docs/` に足した file）は運ばない。dir 名で判定しない — `docs/` `tools/` `.claude/` は merge 領域で両者が同居する（`git -C <seed> ls-files --error-unmatch -- <path>` が rc 0 なら seed の配布物）。cherry-pick がそのまま当たらない場合は手動で port し、出典 commit を message に記す
 - 共通部の package 化（npm 等）は 3 プロジェクト目まで見送る（rule of three）
+
+## 構成
+
+```text
+├── CLAUDE.md          mock-first 行動規範（数行・outcome 原則のみ）
+├── docs/              規約 5 docs（ui-quality-policy / pixel-perfect / design-sync / ui-caveats / ast-layer）
+├── .claude/           project skills（/fe-kickoff・/design-order・/mock-freeze・/ast-extract）+ 機械判定 hook 3 本
+├── docs/presentation/ui-mock/  mock 凍結置き場（export + screenshots + sha256 台帳 + KEEP_IMPL 台帳）
+├── docs/presentation/ui-ast/   UI AST 置き場（schema 2 本 + registry.json + screens/）
+├── frontend/          SvelteKit skeleton（$lib/ui/{tokens,components} + src/routes、依存導入は bun）
+├── pp/                parity harness（dump / diff / sweep / self-baseline / provenance）
+├── tools/             design_sync（Claude Design 同期）+ ast_validate / ast-tree / ast-viewer（AST gate と可視化）+ toolchain-dir（browser/bun/cache の置き場解決）+ install.sh（既存 repo への copy-in）
+└── seed-docs/         プロセス文書（adoption / walking-skeleton / screen-loop / design-order-template / first-prompts / pre-implementation-questions）
+```
+
+## 採用スタック
+
+意匠を mock に固定するため、**mock と app を同じ条件で描ける**ことを最優先に選んである。
+
+```mermaid
+flowchart TB
+  BROWSER(["Web Browser"])
+
+  subgraph PROD["本番 — Vercel"]
+    EDGE["Edge Network<br/>client bundle・静的資産"]
+    FN["SvelteKit server<br/>Vercel Function（Node runtime）"]
+    EDGE --> FN
+  end
+
+  subgraph BUILD["ビルド — 開発機 / CI"]
+    ADAPTER["adapter-auto → adapter-vercel<br/>Build Output API 形式"]
+    KIT["SvelteKit<br/>routing / SSR / adapter 呼び出し"]
+    VITE["Vite<br/>bundler + dev server"]
+    SVELTE["Svelte 5<br/>component"]
+    BUN["bun<br/>依存導入 + script"]
+    ADAPTER --> KIT
+    KIT --> VITE
+    KIT --> SVELTE
+    VITE --> BUN
+  end
+
+  subgraph VERIFY["検証 — 開発機 / CI"]
+    PP["pp harness<br/>Node + 固定 Playwright"]
+    CHROME["固定 Chromium"]
+    MOCK["凍結 mock<br/>ui-mock/export/"]
+    PP --> CHROME
+    MOCK --> CHROME
+  end
+
+  BROWSER -->|HTTPS| EDGE
+  FN -->|API| BE[("Backend<br/>PJ が用意する")]
+  FN -.->|この成果物を配る| ADAPTER
+  VITE -.->|dev server を描かせる| PP
+
+  classDef outside fill:#eeeeee,stroke:#999999,color:#555555
+  class BE outside
+```
+
+灰色の `Backend` と、Vercel への deploy 配線は seed の範囲外である（`docs/design-sync.md` 2.3 と、下の「全体の流れ」の Phase 4）。
+
+チャートの上から順に、それぞれの役割と実体。
+
+| モジュール | 役割 | 実体 |
+|---|---|---|
+| **Vercel** | client bundle を配り、SvelteKit server を Node runtime の Function で走らせる | deploy 先（配線は seed の範囲外） |
+| **Backend** | PJ の API。seed は持たない | 検証中は `pp/src/fixtures/` が代わりに応答する |
+| **adapter-auto → adapter-vercel** | build 出力を Vercel の Build Output API 形式にする | `frontend/svelte.config.js` |
+| **SvelteKit** | file-based routing・SSR/prerender・`$app/*`・adapter 呼び出し | `sveltekit()` plugin |
+| **Vite** | bundler と dev server。mock と app を同じ条件で描かせる素地 | `frontend/vite.config.ts` |
+| **Svelte 5** | runes ベースの component | `frontend/src/lib/ui/` |
+| **bun** | 依存導入と script 実行。`frontend/` と `pp/` の両方 | `frontend/bun.lock`・`pp/bun.lock` |
+| **Node + 固定 Playwright** | 固定 Chromium で app と mock を描き、pixel を突き合わせる | `pp/package.json`（`^` なしの完全固定） |
+
+### 動かせない制約
+
+構成に手を入れる前に、この 5 つを満たすか確かめる。
+
+| 制約 | 根拠 | 外したときに起きること |
+|---|---|---|
+| Vite を外さない | `@sveltejs/kit` は `vite` を optional でない peerDependency に持ち、`./vite` export の plugin として routing manifest 生成・SSR build・adapter 呼び出しを実装している | SvelteKit ごと外れ、routing・SSR・`$app/*`・adapter が自作になる |
+| build は Node で回す | Bun runtime では minifier の識別子割り当てが変わる | 成果物の hash が build した runtime に依存し、CI と手元で別物になる |
+| deploy runtime は Node に置く | Vercel の Bun Runtime は Beta で、公開ベータ告知が挙げる対象に SvelteKit が無い | 保証の無い runtime に本番を載せる |
+| `@playwright/test` を `^` なしで固定する | 同梱 Chromium が pixel の出所である | text metrics と anti-aliasing が動き、pixel gate が全面的に赤くなる |
+| TypeScript は 6 系までに留める | `@sveltejs/kit` の peer が `^5.3.3 \|\| ^6.0.0` | peer 宣言を満たさない tree になり、次の解決で別の版に化ける |
+
+### bun と Node の分担
+
+**導入は bun、実行は Node。** `frontend/` と `pp/` の依存はどちらも `bun install` で入れ、lockfile は `bun.lock` に統一する。spec を走らせるのは Node 向けに固定した Playwright で、build も Node で回す。script は runner 名を持たないので、`bun run` でも `npm run` でも同じものが走る。
+
+### 有効期限と出典
+
+deploy runtime の制約は「Vercel の Bun Runtime が Beta」「`adapter-vercel` の bun 対応が experimental」という状況に依存する。Bun Runtime が GA になり SvelteKit が対象に入れば見直す。**日付と出典を外して引用しない。** 出典（いずれも確認日 2026-08-21）:
+
+- [Vercel Bun Runtime](https://vercel.com/docs/functions/runtimes/bun) / [Bun Runtime public beta](https://vercel.com/changelog/bun-runtime-now-in-public-beta-for-vercel-functions) / [Vercel Node.js Runtime](https://vercel.com/docs/functions/runtimes/node-js)
+- [adapter-vercel utils.js](https://raw.githubusercontent.com/sveltejs/kit/main/packages/adapter-vercel/utils.js)（`bun1.x` の扱い）
+- [svelte-adapter-bun README](https://raw.githubusercontent.com/gornostay25/svelte-adapter-bun/main/README.md)（`vite build` 前提）
+
+version の上げ方と、適用先がそれをどう受け取るかは `seed-docs/adoption.md` §7 にある。
+
+## 検証の基準幅
+
+幅の数字は 3 系統あり、役割が違う。混ぜない。**すべての正本は `pp/src/config.ts`** で、doc は値を持たずそこを指す。
+
+| 数字 | 役割 | そこで何を見るか | 正本 |
+|---|---|---|---|
+| **390×844** | mobile の基準 viewport（第一正本） | mock と実装の **pixel 一致**（`sample-parity` / `page-parity`） | `MOBILE_VIEWPORT` |
+| **1280×800** | desktop の基準 viewport（第二正本） | 同上 | `DESKTOP_VIEWPORT` |
+| **360〜1920** | 幅スイープの範囲（既定値） | **崩れないことだけ** — 横スクロール・はみ出し・衝突・欠落。pixel 一致は取らない（`width-sweep`） | `SWEEP_WIDTHS` |
+
+- **基準幅とスイープ範囲は別の検証。** 前者は「同じに見えるか」、後者は「壊れていないか」を見る
+- 390 は基準幅であると同時にスイープにも含まれる（基準幅でも崩れは見る）
+- 既定の下限は 360。320px 級の端末を支える PJ は `SWEEP_WIDTHS` を下げる
+- **発注規約（`seed-docs/design-order-template.md` 項目 1）に書く下限・上限は `SWEEP_WIDTHS` と同じ数値にする。** 発注した範囲と検証する範囲がずれると、守られていない要件を検証し続けることになる
 
 ## 設計原則: 強制の階層
 

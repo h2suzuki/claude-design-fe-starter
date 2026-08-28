@@ -173,6 +173,7 @@ frontend と pp の依存は **install.sh では届かない**。`frontend/packa
 
 ### 上げ幅の決め方
 
+- **`bun --bun` は version を変えない。** 実行 runtime を替えるだけで、どの版が入るかは `package.json` と `bun.lock` が決め、決まるのは `bun install` の時点である
 - **peer range を満たさない状態を残さない。** `node_modules/<pkg>/package.json` の `peerDependencies` と実装 version を突き合わせる。宣言違反は動いていても、次の解決で別の版に化ける
 - **framework の peer が許さない major へは行かない。** 例: `@sveltejs/kit` の peer は `typescript: ^5.3.3 || ^6.0.0` なので、TypeScript 7 は kit が対応するまで取れない
 - 採用スタックそのものの根拠は `README.md` の「採用スタックとその理由」にある。層を入れ替える判断は seed 側で行い、適用先では行わない
