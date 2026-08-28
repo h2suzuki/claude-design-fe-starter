@@ -129,4 +129,56 @@ Exit Criteria:
 
 2026-08-28 に閉包収集を入れ、適用先の凍結 mock（7 画面 + design system page）を `PP_REPO_ROOT` で指して実測した。vendor 未登録では取りこぼし 64 件で exit 1、vendor を登録すると取りこぼし 0 件・閉包 26 file で、適用先が凍結した 26 file と一致した。Google Maps の子 frame は取りこぼしでなく外部 embed として分けて挙がる。
 
+### favicon の規約が元画像の要求で止まっていて、生成と配線が無い
+
+起票: opus-5 2026-08-29
+Goal: 元画像 1 枚を渡されたら、必要な形（多重 `.ico`・apple-touch・manifest 用）を seed の道具で生成し、HTML へ配線するところまでを規約が持つ。
+Work file: `seed-docs/design-order-template.md`（項目 14）・`seed-docs/pre-implementation-questions.md`（favicon と app icon）・`frontend/src/app.html`・生成 script の置き場（未定）
+
+Exit Criteria:
+
+- [ ] 元画像 1 枚から 16/32/48 を含む多重 `.ico` と apple-touch 用 PNG 180×180 を生成する script が seed に入る。出力先も決める（`frontend/static/` は seed にまだ無い）
+- [ ] `app.html` に `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` の link が入り、生成物と一致する
+- [ ] manifest を置くかどうかを規約が決める。置かないなら 512×512 の生成もやめ、形の一覧（`seed-docs/pre-implementation-questions.md:29`）から外す
+- [ ] 元が不透過（写真 JPEG など）だったときの救済手順を書く — 円マスクは**縮小前に** alpha へ焼く。apple-touch-icon は不透過のまま残す
+- [ ] 生成から配線までを適用先で 1 回通す
+
+現状は**要求と形の一覧まで**しかない。`seed-docs/design-order-template.md:40` が「正方形・余白込み・単色背景の元画像を渡す（透過 PNG または SVG）」と発注側へ求め、`seed-docs/pre-implementation-questions.md:29` が必要な形（`.ico` 16/32/48 の多重 + PNG 180×180 + 512×512）を挙げるが、元画像からその形を作って HTML へ繋ぐ側が無い。
+
+iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-web session 経由の伝聞、2026-08-29）:「favicon は、普段は元ネタしか渡せないので、適切なサイズのファイルに変換して配備するルールにしてほしい。fe-starter の仕事なら、そうしてもらって」。**承認 scope は規約をその向きへ改めることまで**で、着手時期は同日の H.S. 指示「実作業は今度にします」により未定。
+
+還流できる実装が iac-web 側にある（commit f631cf4 / 427b85f、そのまま持ち込めるとの報告）:
+
+| 何 | 中身 |
+| --- | --- |
+| 生成 | sharp で 16/32/48 の PNG を作り、ICO container を自前で詰める。sharp は `.ico` を書けないが、ICO は PNG をそのまま格納できる（6 byte header + 16 byte/枚 の directory + PNG 本体）ので 20 行程度 |
+| 配線 | `<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">` と `<link rel="apple-touch-icon" href="/apple-touch-icon.png">` |
+| 不透過の救済 | 円形ロゴなら円マスクを縮小前に alpha へ焼くと角の白が落ちる。縮小後にマスクすると縁に白が残る。JPEG のにじみを噛まないよう半径は 2px 内側 |
+| manifest | 512 は `manifest.json` が無いと未参照。iac-web は未参照なので生成をやめた |
+
+置き場は取り込み時に決める。`pp/scripts/` は parity の道具置き場で、`.ts` が 6 件・`.mjs` が 2 件（`mock-lint` / `require-no-skips`）。frontend の資産を作る script をここに置くか `tools/` へ置くかは未決。
+
+### `<picture>` を既定の処置に入れると gap が 1 つ増える
+
+起票: opus-5 2026-08-29
+Goal: 重い資産の既定の処置（`docs/ui-quality-policy.md:62`）を `<picture>` を使う形へ広げるときに踏む layout 欠陥を、規約が先に塞ぐ。
+Work file: `docs/ui-quality-policy.md`・`seed-docs/pre-implementation-questions.md`（重い資産）
+
+Exit Criteria:
+
+- [ ] `picture { display: contents }` を書くなら `picture > source { display: none }` を対で書く、と規約に入れる
+- [ ] `<picture>` を既定の処置に含めるかどうかを決める。含めないなら規約は現状（JPEG 化・表示寸法の 2 倍・先読み・data URI）のままにする
+
+iac-web からの依頼（2026-08-29）。**`picture { display: contents }` だけだと `<source>` が親の flex item として数えられ、gap がもう 1 つ増える。** iac-web ではトップの `hero-logo-badge` が 10px 広がり sample-parity が落ちた。Chromium で `getComputedStyle(source).display` が `block` になることを実測したとの報告。塞ぎ方は `picture > source { display: none }` の併記。
+
+同日に AVIF + srcset を一周した実測も受け取った（**依頼ではなく材料**）:
+
+- mock が参照する 17 枚を棚卸し → 7 ページ × 幅 360〜1920 で最大表示寸法を実測 → 寸法と AVIF を決定
+- AVIF の quality は絵柄ごとに「fallback と同じ PSNR に届く最小値」を二分探索。固定 quality だと絵柄で劣化幅が揺れる
+- `sizes` は layout の折れ点の写しなので CSS を変えると黙って古くなる。iac-web は `pp/tests/image-variants.spec.ts`（幅 12 点 × DPR 3 段で「足りて最小の変種が選ばれるか」を検査）を追加し、`sizes` を固定値に壊すと 3 件中 2 件が赤になることを確認済み
+- 読み込み済みの `img` は viewport を広げても候補を選び直さないので、この種の検査は幅ごとに開き直す必要がある
+- 効果: 稽古案内・料金 1 訪問の画像合計が 2.42 MB → 360px DPR2 で 0.31 MB、1440px DPR2 で 0.97 MB
+
+`sizes` の検査段を seed へ入れるかは、既定の処置を AVIF へ広げると決めてから提案する（**今は未提案**）。
+
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
