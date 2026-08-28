@@ -65,7 +65,7 @@ flowchart TD
   end
 ```
 
-各段の入出力・次へ進む条件は `seed-docs/walking-skeleton.md`。画面ごとの繰り返しは `seed-docs/screen-loop.md`。
+day-0 に整えることと一周の完了条件は `seed-docs/walking-skeleton.md`、画面ごとの繰り返しは `seed-docs/screen-loop.md`。
 
 ## リポジトリ構成
 

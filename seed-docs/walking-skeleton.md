@@ -126,36 +126,3 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 3. **CSS 規約**: page shell = @media (viewport 基準) / 部品 = @container (置かれた幅基準) / 内容 = intrinsic sizing。breakpoint 急変点は境界 ±1px のスイープで検証する
 4. **入力モダリティを fixture の軸に**: touch target 44px・hover 非存在でも操作完結・safe area。hover 依存 UI は部品単体 fixture の段階で検出する
 5. **device emulation を機械 gate に**: DPR・touch を pp/src/config.ts の context options で明示固定して pp を回す (UA 固定が要るなら devices preset に置き換える)。実機確認は受入段 (screen-loop.md ⑧) のみ
-
-## 各段の入出力と次へ進む条件
-
-段の番号は `README.md`「仕組み」の Phase 図に対応する。各段には**次へ進む条件**がある。これが満たされないうちに次の段へ行くと、後段の gate が「何が原因の赤か」を切り分けられなくなる。
-
-| # | 段 | 誰が動かすか | 入力 | 出力 | 次へ進む条件 |
-|---|---|---|---|---|---|
-| 0-1 | repo 生成 | 人 | — | 空の repo | — |
-| 0-2 | `tools/install.sh` | 人 or Claude Code | seed の checkout | seed 一式が repo に入る | 既存 repo なら `seed-docs/adoption.md` を先に読む |
-| 0-3 | `/fe-kickoff` | Claude Code | — | 差し替え点が埋まった状態 | `{{...}}` の残りがゼロ |
-| 1-1 | 1 通目・2 通目を渡す | 人 | `seed-docs/first-prompts.md` + `design-order-template.md` の規約 block | design system | 人が色・トーンを裁定 |
-| 1-2 | publish | 人 | 承認した design system | org の新規 project へ自動適用 | — |
-| 2-1 | 画面 mock を発注 | 人 | 要件 + 規約 block | 画面 mock | 人の完成宣言 |
-| 2-2 | export を受け取る | 人 → Claude Code | zip を `drafts/` へ、または `tools/design_sync fetch` | 取得物 | 取得が切れていないこと（`lint:mock` の MOCK103） |
-| 2-3 | `/mock-freeze` | Claude Code | 取得物 | `docs/presentation/ui-mock/export/` + `mock-baseline.sha256` + 参照スクショ | `test:provenance` が緑 |
-| 2-4 | `/ast-extract` | Claude Code | 凍結 export | `docs/presentation/ui-ast/screens/<slug>.ui-ast.json` | `tools/ast_validate` が緑 |
-| 2-5 | **実装前ヒアリング** | Claude Code → 人 | MOCK104 の一覧 + mock を読んだ所見 | 対策とその**承認** | **承認が取れるまで実装に入らない** |
-| 2-6 | 部品実装 → 合成 | Claude Code | AST + 承認済みの対策 | `frontend/src/lib/ui/` と `routes/` | states fixture が揃う |
-| 2-7 | 機械 gate | Claude Code | 実装 + 凍結 mock | 判定 | **skip ゼロで全緑**（skip は未検証であって合格ではない） |
-| 2-8 | LLM 一次 + 人間受入 | Claude Code → 人 | 実データの画面 | 指摘 | 指摘ゼロ、または全指摘が裁定に載る |
-| 2-9 | 差分の裁定 | 人 | 残った差分 | 実装修正 or KEEP_IMPL entry | 未裁定ゼロ |
-| 3 | 画面量産 | 両方 | — | 画面が増える | 画面ごとに 2-1〜2-9 を回す |
-| 4 | 公開・BE 配線 | 人 | gate 緑の FE | 本番 | **seed の管轄外** |
-
-## 迷いやすいところ
-
-順序を踏み外しやすいのは次の 5 点で、いずれも後段のやり直しに直結する。
-
-- **Claude Code は Phase 0 から要る。** 「mock ができてから起動」ではない — `install.sh` の後すぐ `/fe-kickoff` で day-0 の差し替え点を埋める段がある
-- **design system が先、画面 mock が後。** 画面から作ると部品が画面ごとに増殖する
-- **export の受け取りは 2 経路。** 手渡しの zip は `drafts/` に展開してから `/mock-freeze` が `export/` へ配置する（`export/` へ直接置かない — 凍結前の編集 gate が働く）
-- **mock の破れは実装で直さない。** 画面量産中に見つかっても Claude Design へ差し戻す（`seed-docs/first-prompts.md` の (c)）
-- **Phase 4 は seed が持っていない。** Vercel も BE 配線も、道具・手順ともに未整備（`todos.md` に不足として記録してある）
