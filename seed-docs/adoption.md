@@ -91,7 +91,8 @@ walking skeleton の目的は「harness が動くことの証明」なので、*
 
 一周に入る前に確定しておくと手戻りが出ない。
 
-- `pp/src/config.ts` — 基準 viewport 2 点・locale・timezone・固定時刻
+- `pp/src/config.ts` — 基準 viewport 2 点・locale・timezone・固定時刻・app の mount 点
+- `pp/src/screens.ts` — 画面ごとの登録点（route・描画完了セレクタ・操作・fixture）。画面を足すたびに 1 entry 増える。`PP_MOCK_FILE` の slug で引かれるので、gate へ渡す env は 1 つで済む
 - `pp/vendor/` — mock の描画に要る外部資産（JS ライブラリ・フォント）を落として `VENDOR_ROUTES` に登録する。検証中の CDN 取得は `pp/src/net-block.ts` が abort するので、登録漏れは loud に失敗する。取得コマンドは `pp/vendor/README.md` に追記して再取得可能にしておく
 - `frontend/src/app.html` ほかの `{{...}}` placeholder — grep で列挙し、残る差し替え点を確定させる。`seed-docs/first-prompts.md` の `{{...}}` は `/design-order` が発注ごとに実値で埋める template なので、ここでは差し替えない
 
@@ -106,7 +107,7 @@ mock が実行時に外部から JS を読む形式（`<x-dc>` + runtime CDN 等
 git -C <worktree> merge main              # 作業 branch へ運ぶ
 ```
 
-install.sh は PJ が育てた file（`pp/src/config.ts`・`frontend/src/app.html`・PJ 語彙を埋めた docs）を触らずに残し、末尾に列挙する。差し替え点を埋めた repo でも機構更新は届く。
+install.sh は PJ が育てた file（`pp/src/config.ts`・`pp/src/screens.ts`・`frontend/src/app.html`・PJ 語彙を埋めた docs）を触らずに残し、末尾に列挙する。差し替え点を埋めた repo でも機構更新は届く。
 
 merge で衝突するのは、**seed が配る file を作業 branch でも手で置いた場合**だけである（同じ path を両側が別々に追加した add/add 衝突）。seed 側が正なので、その file は main の版を採る。
 

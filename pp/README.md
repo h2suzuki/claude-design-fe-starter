@@ -11,13 +11,14 @@
 | `mock-provenance` | 凍結 export と sha256 台帳の一致 | （前提: 突合先の出所） | export が 1 ファイル以上 |
 | `ast-provenance` | screen AST の provenance と凍結 export の一致 | （前提: 突合先の出所） | `docs/presentation/ui-ast/screens/` に AST が 1 件以上 |
 | `ast-conformance` | 実装の `data-visual-id` tree が AST tree と構造一致（親子関係と出現） | （前提: 木の形） | screen AST + `PP_MOCK_FILE` + `PP_APP_URL` |
+| `screen-registry` | 登録点を引く規則の陽性対照（未登録 slug を skip に化けさせない） | （前提: 検証する画面の同定） | 常に実行される |
 | `sample-parity` | 全 visual id の style/geometry diff = 0（基準 2 viewport） | 基準幅 | screen AST（または `MANUAL_PAIRS`）+ `PP_MOCK_FILE` + `PP_APP_URL` |
 | `page-parity` | 画面まるごとの pixel diff = 0（基準 2 viewport・fullPage。KEEP_IMPL 台帳が名指しした画像の中身だけ除外） | 基準幅 | `PP_MOCK_FILE` + `PP_APP_URL` |
-| `width-sweep` | `SWEEP_WIDTHS` 全幅の連続スイープ invariant | 中間幅 | `PP_APP_URL` |
-| `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_APP_URL` |
-| `modal-geometry-sweep` | モーダルの viewport 収まりと操作要素の箱内収まり（基準 2 viewport） | 状態 | `MODALS` + `PP_APP_URL` |
-| `list-identity-sweep` | 状態変更操作後の選択・詳細キー・行順序の不変 | 状態 | `EDGES` + `PP_APP_URL` |
-| `self-baseline` | 自分の過去 baseline とのスクショ比較 | （回帰網） | `PP_APP_URL` |
+| `width-sweep` | `SWEEP_WIDTHS` 全幅の連続スイープ invariant | 中間幅 | `PP_MOCK_FILE` + `PP_APP_URL` |
+| `poststate-sweep` | 操作後状態の未解決 literal 検出 | 状態 | `PP_MOCK_FILE` + `PP_APP_URL` |
+| `modal-geometry-sweep` | モーダルの viewport 収まりと操作要素の箱内収まり（基準 2 viewport） | 状態 | 画面の `modals` + `PP_MOCK_FILE` + `PP_APP_URL` |
+| `list-identity-sweep` | 状態変更操作後の選択・詳細キー・行順序の不変 | 状態 | 画面の `list` + `edges` + `PP_MOCK_FILE` + `PP_APP_URL` |
+| `self-baseline` | 自分の過去 baseline とのスクショ比較 | （回帰網） | `PP_MOCK_FILE` + `PP_APP_URL` |
 
 未充足の条件がある spec は理由付きで skip される（端末の list reporter には理由が出ない — 理由は `artifacts/playwright-report.json` の annotations か、spec 冒頭の skip 条件で確認する）。**skip は「未検証」であって「合格」ではない** — walking skeleton（`seed-docs/walking-skeleton.md`）の一周で skip を全て外してから画面量産に入る。ただし「その画面に検査対象の部品が無い」場合だけは下の宣言で通せる。
 
@@ -25,7 +26,7 @@
 
 ## 検査対象の部品が無い gate
 
-条件付き gate（`list-identity-sweep` の `EDGES`、`modal-geometry-sweep` の `MODALS` など）は、その画面に対象の部品が無ければ登録しようがない。そこに無理やり対象を作って通すのは、検査対象が無いところに検査対象を作る行為で、以後「この gate は緑」という誤った安心を残す（轍 #4 と同型）。
+条件付き gate（`list-identity-sweep` の `list` / `edges`、`modal-geometry-sweep` の `modals` など）は、その画面に対象の部品が無ければ登録しようがない。そこに無理やり対象を作って通すのは、検査対象が無いところに検査対象を作る行為で、以後「この gate は緑」という誤った安心を残す（轍 #4 と同型）。
 
 この場合だけ `gate-not-applicable.json` に宣言すると、`require-no-skips` が「未検証」でなく「検査対象なし」として扱う。
 
@@ -104,16 +105,46 @@ npm run lint:mock && npm run gate
 
 ## 差し替え点（PJ 開始時に確定する）
 
-- `src/config.ts` — 基準 viewport 2 点・スイープ幅・locale/timezone・固定時刻・self-baseline 対象 path
-- `PP_APP_PATH` — `PP_MOCK_FILE` の画面に対応する app の route（既定 `/`）。画面ごとに gate を回すときは 2 つを対で渡す
+- `src/config.ts` — 基準 viewport 2 点・スイープ幅・locale/timezone・固定時刻・app の mount 点
+- `src/screens.ts` — 画面ごとの登録点の表（下の節）。app の route・描画完了セレクタ・操作・fixture はここが持ち、`PP_MOCK_FILE` の slug で引かれる
 - `gate-not-applicable.json` — 「この画面には検査対象の部品が無い」宣言（既定は空。上の節）
 - `src/selector-map.ts` — visual id ↔ selector 対応。既定は `PP_MOCK_FILE` に対応する screen AST からの導出（mock 側 = `source.nodeRef`、app 側 = `data-visual-id` 属性）で、AST から導けない対だけ `MANUAL_PAIRS` に手書きする
 - `src/net-block.ts` — vendor 資産の URL 対応表（`vendor/README.md`）
 - `src/fixtures/app-fixtures.ts` の `APP_API_FIXTURES` / `APP_API_PATTERNS` — app が読む API の fixture。`openApp` が既定でこの bridge を張るので、fixture を渡さない spec も実 BE へは届かない（空でも 404 fallback が塞ぐ）
-- 各 spec 冒頭の `READY_SELECTOR`（width-sweep は `APP_MOUNT_SELECTOR` も / page-parity は mock と app で別の 2 つ — 両側の markup は出所が違うので同じセレクタを共有できない） — app の描画完了セレクタ。**本番 markup に test 都合を持ち込まない** — `data-visual-id` を mount 後だけ付けるような実装は parity の突合対象そのものを揺らすので、root に `data-ready` のような専用属性を置いてそれを指す
+- `tests/modal-geometry-sweep.spec.ts` の `DIALOG_SELECTOR` — `role=dialog` を持たない実装のときだけ差し替える
 
 spec を足すときは `test.skip(条件, 理由)` を **`test.describe` の直下**に書く。`test()` の本体に置くと `browser` fixture が先に作られるので、条件を満たしていない gate が skip でなく browser 起動の失敗として落ち、原因と無関係な spec が一斉に赤くなる。
-- `tests/modal-geometry-sweep.spec.ts` の `MODALS` + `DIALOG_SELECTOR` / `tests/list-identity-sweep.spec.ts` の `EDGES` + 行・詳細キーのセレクタ — 状態系 sweep の登録点（空のうちは理由付き skip）
+
+## 画面ごとの登録点（`src/screens.ts`）
+
+spec は機構だけを持ち、画面ごとに変わる値は `SCREENS` から引く。画面を足しても spec は変わらず、`PP_MOCK_FILE` を変えるだけで gate の対象が切り替わる。key は `PP_MOCK_FILE` の最初の dot までの slug（`gate-not-applicable.json` の `screen` と同じ規則）。
+
+```ts
+export const SCREENS: Record<string, ScreenSpec> = {
+  trial: {
+    entryPath: "/trial",
+    appReadySelector: ".root[data-ready]",
+    mockReadySelector: "body",
+    interactions: [{ name: "submit-empty", run: async (page) => { await page.locator('[data-visual-id="form-submit"]').click(); } }],
+    modals: [],
+    edges: [],
+  },
+};
+```
+
+| 欄 | 何を決めるか | 使う spec |
+|---|---|---|
+| `entryPath` | この画面に対応する app の route | app 側の全 spec |
+| `appReadySelector` | app の描画完了セレクタ | app 側の全 spec |
+| `mockReadySelector` | mock の描画完了セレクタ | `page-parity`・`overlay-diff` |
+| `interactions` | 画面状態を変える操作 | `poststate-sweep` |
+| `modals` | モーダルの開き方 | `modal-geometry-sweep` |
+| `list` + `edges` | 一覧の行・詳細キーのセレクタと状態変更操作 | `list-identity-sweep` |
+| `fixtures` / `fixturePatterns` | 画面固有の API fixture（省略時は共通 fixture） | app 側の全 spec |
+
+`appReadySelector` は **本番 markup に test 都合を持ち込まない** — `data-visual-id` を mount 後だけ付けるような実装は parity の突合対象そのものを揺らすので、root に `data-ready` のような専用属性を置いてそれを指す。`mockReadySelector` を別欄にしているのは、両側の markup は出所が違って同じセレクタを共有できないため。
+
+引く側の機構（`resolveScreen`）は `src/screen-registry.ts` にある。**登録が無い slug は skip でなく error** にする — 綴り違いが skip に化けると、回したつもりの画面が 1 度も検証されないまま緑になる。
 
 ## browser process の残存に注意
 

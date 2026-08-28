@@ -2,17 +2,10 @@
 // structural diff が原因を指すのに対し、こちらは「何かが変わった」を面で検出する網。
 // 初回と意図的変更時は --update-snapshots で baseline を更新し、差分は commit review で目視する
 import { expect, test } from "@playwright/test";
-import {
-  APP_CONFIGURED,
-  DESKTOP_CONTEXT_OPTIONS,
-  MOBILE_CONTEXT_OPTIONS,
-  SELF_BASELINE_PATHS,
-} from "../src/config";
+import { APP_CONFIGURED, DESKTOP_CONTEXT_OPTIONS, MOBILE_CONTEXT_OPTIONS, MOCK_CONFIGURED } from "../src/config";
 import { installNetworkGuard } from "../src/net-block";
-import { openApp } from "../src/targets/app-target";
-
-// app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
-const READY_SELECTOR = "body";
+import { openScreen } from "../src/targets/app-target";
+import { CURRENT_SCREEN } from "../src/screen-registry";
 
 const BASES = [
   ["mobile", MOBILE_CONTEXT_OPTIONS],
@@ -21,19 +14,20 @@ const BASES = [
 
 for (const [label, contextOptions] of BASES) {
   test.describe(`app — self-baseline screenshots (${label})`, () => {
+    test.skip(!MOCK_CONFIGURED, "PP_MOCK_FILE 未設定 — 検証する画面の slug が決まらない");
     test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
 
-    for (const appPath of SELF_BASELINE_PATHS) {
-      test(`${appPath}`, async ({ browser }) => {
-        const context = await browser.newContext(contextOptions);
-        try {
-          await installNetworkGuard(context);
-          const page = await openApp(context, { readySelector: READY_SELECTOR, path: appPath });
-          await expect(page).toHaveScreenshot(`${label}-${appPath.replaceAll("/", "_")}.png`, { fullPage: true });
-        } finally {
-          await context.close();
-        }
-      });
-    }
+    // 対象は今の画面 1 枚。画面ごとに gate を回すと、全画面ぶんが 1 回ずつ撮られる
+    test("matches the stored baseline", async ({ browser }) => {
+      const screen = CURRENT_SCREEN!;
+      const context = await browser.newContext(contextOptions);
+      try {
+        await installNetworkGuard(context);
+        const page = await openScreen(context, screen);
+        await expect(page).toHaveScreenshot(`${label}-${screen.entryPath.replaceAll("/", "_")}.png`, { fullPage: true });
+      } finally {
+        await context.close();
+      }
+    });
   });
 }

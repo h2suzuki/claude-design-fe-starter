@@ -5,10 +5,8 @@ import { collectConformanceIssues, expectedTree } from "../src/ast-conformance";
 import { APP_CONFIGURED, MOBILE_CONTEXT_OPTIONS, MOCK_CONFIGURED, MOCK_ENTRY_FILE } from "../src/config";
 import { UI_AST_SCREENS_DIR } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
-import { openApp } from "../src/targets/app-target";
-
-// app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
-const READY_SELECTOR = "body";
+import { openScreen } from "../src/targets/app-target";
+import { CURRENT_SCREEN } from "../src/screen-registry";
 
 const EXPECTED = expectedTree(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE);
 
@@ -23,7 +21,7 @@ test.describe("app — AST conformance", () => {
   test("data-visual-id tree keeps the AST parent-child structure", async ({ browser }) => {
     const context = await browser.newContext(MOBILE_CONTEXT_OPTIONS);
     await installNetworkGuard(context);
-    const page = await openApp(context, { readySelector: READY_SELECTOR });
+    const page = await openScreen(context, CURRENT_SCREEN!);
     const actual = await page.evaluate(() =>
       Array.from(document.querySelectorAll("[data-visual-id]")).map((el) => ({
         id: el.getAttribute("data-visual-id") ?? "",

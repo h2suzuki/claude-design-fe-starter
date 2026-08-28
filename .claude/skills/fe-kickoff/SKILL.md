@@ -14,7 +14,7 @@ seed からの立ち上げを day-0 手順で完走させる。詳細手順の�
 2. 既に動いている実装がある repo なら `seed-docs/adoption.md` を先に読む（worktree で main を凍結したまま作り替える・既存実装は参照資料に留める・段階移行の順序）
 3. `seed-docs/walking-skeleton.md` を読み、Day-0 チェックリストを Task 登録する
 4. 依存を導入する: `frontend/` は bun、`pp/` は npm（pp は Node + Playwright 固定）。**コマンドを素で打たず `seed-docs/walking-skeleton.md` §3 と `pp/README.md` setup 節の形で実行する** — host に bun が無い環境と既定 cache が書けない環境があり、置き場は `tools/toolchain-dir` が決める。Playwright browser の導入も setup 節に含まれる
-5. 検証条件を確定する: `pp/src/config.ts` の基準 viewport 2 点・locale/timezone・固定時刻
+5. 検証条件を確定する: `pp/src/config.ts` の基準 viewport 2 点・locale/timezone・固定時刻・app の mount 点。画面ごとの route・セレクタ・操作は `pp/src/screens.ts` へ、凍結した画面から順に登録する
 6. Claude Design の 2 project 体制を用意する（design-system 型 = 部品ライブラリ、通常 = mock 用）。**これは輸送の話ではなく設計の話**で、mock を最初から部品ライブラリで組ませるための轍 #10 対策なので、export をどう受け取るかに関わらず要る。環境変数 `DESIGN_PROJECT_ID` は、export をユーザーから受け取る運用なら **day-0 の時点では要らない**（取得経路は `docs/presentation/ui-mock/README.md`）。「以後ずっと不要」ではない — 実装を mock へ書き戻す段（`docs/design-sync.md` の push back、`seed-docs/first-prompts.md` の実装済み部品への置換）は `tools/design_sync` を通り、project アクセスを要求する。受け取りで済むのは **intake の片道だけ**である
 7. 発注規約 1 枚を用意する（/design-order が `seed-docs/design-order-template.md` から組み立てる）
 8. `{{...}}` placeholder を grep で列挙し、残る差し替え点を確定させる（`frontend/src/app.html` の `{{PRODUCT_NAME}}` を含む）

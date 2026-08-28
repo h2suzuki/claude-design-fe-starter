@@ -12,6 +12,7 @@ import {
 import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
 import { openApp } from "../src/targets/app-target";
+import { CURRENT_SCREEN } from "../src/screen-registry";
 import { ANCHOR_VISUAL_ID, SELECTOR_MAP } from "../src/selector-map";
 import { STYLE_ALLOWLIST } from "../src/style-allowlist";
 import { dumpVisualIds } from "../src/dump";
@@ -41,7 +42,7 @@ for (const [label, contextOptions] of BASES) {
         await installNetworkGuard(mockCtx);
         await installNetworkGuard(appCtx);
         const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, anchor.mockSel);
-        const appPage = await openApp(appCtx, { readySelector: anchor.appSel });
+        const appPage = await openApp(appCtx, { readySelector: anchor.appSel, path: CURRENT_SCREEN!.entryPath });
 
         const selMock = Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.mockSel]));
         const selApp = Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.appSel]));

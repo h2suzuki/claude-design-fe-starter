@@ -119,13 +119,14 @@ Work file: `pp/src/config.ts`・`pp/tests/*.spec.ts`・`pp/README.md`（差し�
 
 Exit Criteria:
 
-- [ ] `READY_SELECTOR` / `MODALS` / `EDGES` / fixture / self-baseline 対象などの登録点が画面ごとに引ける形になり、各 spec は出所の参照だけを持つ
-- [ ] 画面を 2 枚以上持つ状態で `npm run gate` を画面ごとに回し、どちらも skip 無しで緑になることを実測する
+- [x] `READY_SELECTOR` / `MODALS` / `EDGES` / fixture / self-baseline 対象などの登録点が画面ごとに引ける形になり、各 spec は出所の参照だけを持つ — `pp/src/screens.ts`（表）と `pp/src/screen-registry.ts`（引く機構）に分け、8 spec から定数を外した
+- [x] 画面を 2 枚登録して画面ごとに回し、登録点が画面ごとに解決されることを実測する — 2026-08-28 実測。seed の frontend（`/` と `/states`）へ app 側 3 spec を 2 slug 分。どちらも 4 passed / 0 skipped で、self-baseline が別名・別内容の PNG を 4 枚吐いた（16986B と 46126B）＝ route が実際に切り替わっている。未登録 slug は skip でなく error になることも実測
+- [ ] 凍結 mock を持つ適用先で `npm run gate` を画面ごとに回し、どちらも skip 無しで緑になることを実測する — seed には凍結 mock が無く mock 側 spec を回せないので、実証 2 回目でここを埋める
 - [x] 適用先が先行実装した形の結果報告を受け取ってから設計を確定する — 2026-08-27 受領。7 spec の diff は定数の出所だけで assertion / skip 条件は不変、slug 規則も `screenOf` と一致
 
-先方の設計上の注意 2 点: (a) `config.ts` → registry → fixture → `config.ts` の import が循環するので、`MOCK_ENTRY_FILE` / `PP_PINNED_NOW_ISO` のような素の定数は config に残し registry は別 module にする。(b) `SELF_BASELINE_PATHS` は画面横断の 1 配列なので、画面を足すと全画面分の baseline test が増える（画面別にするなら registry の entryPath から組める）。
+先方の設計上の注意 2 点への処置: (a) 循環は型だけの import にして切った（`screens.ts` が型を `screen-registry.ts` から取り、機構が表を取る）。素の定数は `config.ts` に残してある。(b) `SELF_BASELINE_PATHS` は廃止し、self-baseline は今の画面 1 枚だけを撮る — 画面ごとに回せば全画面が 1 回ずつ撮られる。
 
-現行の spec は登録点を spec 内の定数で持つ設計で、画面が 1 枚の間は成立するが、2 枚目からは同じ定数を画面ごとに切り替える先が無い。適用先が `pp/src/screens.ts` に画面別 registry を置き、`PP_MOCK_FILE` の slug（`screenOf` と同じ規則）で選ぶ形を先に実装して結果を報告する予定。seed へ取り込むかはその報告を見てから決める。一周実証の途中で seed の構造を変えると被検証物の差し替えになるため、着手は一周の完了後。
+`PP_APP_PATH` も廃止した。route が slug から引けるので、gate へ渡す env は `PP_MOCK_FILE` + `PP_APP_URL` の 2 つに戻る。
 
 ### 凍結の手順はあるが道具が無い — 閉包収集と参照スクショ
 

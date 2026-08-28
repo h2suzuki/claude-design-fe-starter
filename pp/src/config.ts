@@ -57,14 +57,12 @@ export const APP_BASE_URL = process.env.PP_APP_URL ?? "";
 export const APP_CONFIGURED = APP_BASE_URL !== "";
 
 // docs/presentation/ui-mock/export/ 内の parity 突合先ファイル。walking skeleton の凍結第 1 号で確定する
+// 画面ごとの route・セレクタ・操作は src/screens.ts がこの slug で引く
 export const MOCK_ENTRY_FILE = process.env.PP_MOCK_FILE ?? "";
-
-// その画面に対応する app の route。画面ごとに gate を回すときは PP_MOCK_FILE と対で渡す
-export const APP_ENTRY_PATH = process.env.PP_APP_PATH ?? "/";
 export const MOCK_CONFIGURED = MOCK_ENTRY_FILE !== "";
+
+// 差し替え点。app の mount 点で、静的 body ではなく JS 描画後の中身を陽性対照に使う
+export const APP_MOUNT_SELECTOR = "#app";
 
 // 両側の時計をこの瞬間に固定する。mock 内の日付表現と一致させて差し替える
 export const PP_PINNED_NOW_ISO = "2026-01-01T12:00:00+09:00";
-
-// self-baseline スクショ回帰の対象 path（app の route を PJ で列挙する）
-export const SELF_BASELINE_PATHS: readonly string[] = ["/"];

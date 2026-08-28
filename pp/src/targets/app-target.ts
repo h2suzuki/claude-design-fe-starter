@@ -4,6 +4,7 @@ import { freezePage } from "../freeze";
 import { APP_BASE_URL, PP_PINNED_NOW_ISO } from "../config";
 import { installApiFixtures } from "../fixtures/route-intercept";
 import { APP_API_FIXTURES, APP_API_PATTERNS } from "../fixtures/app-fixtures";
+import type { ScreenSpec } from "../screen-registry";
 
 export interface OpenAppOptions {
   readySelector: string;
@@ -22,4 +23,17 @@ export async function openApp(context: BrowserContext, options: OpenAppOptions):
   await page.locator(options.readySelector).waitFor({ state: "visible" });
   await freezePage(page);
   return page;
+}
+
+// 画面の登録点から開く。route・fixture・描画待ちの組を spec ごとに書き写さないための 1 箇所
+export async function openScreen(context: BrowserContext, screen: ScreenSpec): Promise<Page> {
+  const { fixtures, fixturePatterns } = screen;
+  return openApp(context, {
+    readySelector: screen.appReadySelector,
+    path: screen.entryPath,
+    installFixtures:
+      fixtures || fixturePatterns
+        ? (page) => installApiFixtures(page, fixtures ?? {}, fixturePatterns ?? [])
+        : undefined,
+  });
 }

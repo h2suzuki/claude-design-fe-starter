@@ -1,20 +1,16 @@
 // モーダル geometry gate（DoD の「状態」）: モーダルは開いて初めて現れるため parity の網に載らない。
 // dialog が viewport を溢れず、操作要素が dialog の箱からこぼれないことを基準 2 viewport で検証する
 import { expect, test } from "@playwright/test";
-import type { Locator, Page } from "@playwright/test";
-import { APP_CONFIGURED, DESKTOP_CONTEXT_OPTIONS, MOBILE_CONTEXT_OPTIONS } from "../src/config";
+import type { Locator } from "@playwright/test";
+import { APP_CONFIGURED, DESKTOP_CONTEXT_OPTIONS, MOBILE_CONTEXT_OPTIONS, MOCK_CONFIGURED } from "../src/config";
 import { installNetworkGuard } from "../src/net-block";
-import { openApp } from "../src/targets/app-target";
-
-// app の描画完了を示すセレクタに差し替える。本番 markup に test 都合を混ぜず root の専用属性（data-ready 等）を指す
-const READY_SELECTOR = "body";
+import { openScreen } from "../src/targets/app-target";
+import { CURRENT_SCREEN } from "../src/screen-registry";
 // モーダル本体のセレクタ。role=dialog を持たない実装ならここを差し替える
 const DIALOG_SELECTOR = "[role=dialog]";
 // はみ出しを検査する操作要素。触れる部品が箱の外に出ることが欠陥
 const CONTROL_SELECTOR = "button,input,select,textarea,a";
 
-// モーダルの開き方を PJ ごとに登録する（open は dialog が可視になるまで進める）
-const MODALS: Array<{ name: string; open: (page: Page) => Promise<void> }> = [];
 
 async function assertGeometry(dialog: Locator, label: string): Promise<void> {
   await expect(dialog, `${label}: dialog not visible`).toBeVisible();
@@ -52,18 +48,19 @@ const BASES = [
 
 for (const [label, contextOptions] of BASES) {
   test.describe(`app — modal geometry sweep (${label})`, () => {
-    test.skip(MODALS.length === 0, "MODALS が空 — モーダル第 1 号を登録すると有効化される");
+    test.skip(!MOCK_CONFIGURED, "PP_MOCK_FILE 未設定 — 検証する画面の slug が決まらない");
     test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
+    test.skip(CURRENT_SCREEN?.modals.length === 0, "この画面の modals が空 — モーダル第 1 号を登録すると有効化される");
 
     test("every registered modal fits the viewport and keeps its controls inside", async ({ browser }) => {
       const context = await browser.newContext(contextOptions);
       try {
         await installNetworkGuard(context);
-        for (const modal of MODALS) {
+        for (const modal of CURRENT_SCREEN!.modals) {
           // モーダルごとに初期状態から開き直す（前の modal の残留状態を持ち込まない）
-          const page = await openApp(context, { readySelector: READY_SELECTOR });
+          const page = await openScreen(context, CURRENT_SCREEN!);
           try {
-            await modal.open(page);
+            await modal.run(page);
             await assertGeometry(page.locator(DIALOG_SELECTOR), `${modal.name} @ ${label}`);
           } finally {
             await page.close();

@@ -18,20 +18,20 @@ import {
 } from "../src/config";
 import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
-import { openApp } from "../src/targets/app-target";
+import { openScreen } from "../src/targets/app-target";
+import { CURRENT_SCREEN } from "../src/screen-registry";
 
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "overlay");
 
 interface Screen {
   name: string;
   mockFile: string;
-  appPath: string;
   /** 対象画面まで運ぶ操作（既定画面なら不要）。mock/app 両側に同じ操作を適用する */
   navigate?: (page: Page) => Promise<void>;
 }
 
-// 画面が増えたらここへ追加する（差し替え点）
-const SCREENS: Screen[] = [{ name: "main", mockFile: MOCK_ENTRY_FILE, appPath: "/" }];
+// route と描画待ちは src/screens.ts の登録点が持つ。ここは PP_MOCK_FILE の 1 画面を見る
+const SCREENS: Screen[] = [{ name: "main", mockFile: MOCK_ENTRY_FILE }];
 
 const BASES = [
   ["mobile", MOBILE_CONTEXT_OPTIONS],
@@ -169,9 +169,9 @@ async function withContexts(
   try {
     await installNetworkGuard(mockCtx);
     await installNetworkGuard(appCtx);
-    const mockPage = await openMock(mockCtx, screen.mockFile, "body");
+    const mockPage = await openMock(mockCtx, screen.mockFile, CURRENT_SCREEN!.mockReadySelector);
     await mockPage.waitForLoadState("networkidle");
-    const appPage = await openApp(appCtx, { readySelector: "body", path: screen.appPath });
+    const appPage = await openScreen(appCtx, CURRENT_SCREEN!);
     await appPage.waitForLoadState("networkidle");
     if (screen.navigate) {
       await screen.navigate(mockPage);
