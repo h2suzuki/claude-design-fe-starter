@@ -22,8 +22,8 @@
 | 5 | 検証 gate の突合先が旧 mock・古いデータへドリフトし、その間の逸脱を検出できなかった | export 凍結 + sha256 provenance pin + mock-provenance spec を画面 1 枚目から (docs/presentation/ui-mock/) |
 | 6 | 既定状態しか見ず、空状態・操作後・長文のバグ群を見逃した | states fixture を部品の完成条件に + width-sweep / poststate-sweep を定常 gate に (pp/) |
 | 7 | mock との意図的差分を口頭運用し、裁定が失われて再発した | KEEP_IMPL 台帳を空で設置し、日付付き裁定のみ記録 (docs/presentation/ui-mock/DESIGN-POLICY.md) |
-| 8 | mock と検証データの二重管理でフィールド欠落・ドリフトが起きた | fixture は API schema 派生の単一データセット。mock と test が同源参照 (seed-docs/screen-loop.md ④) |
-| 9 | 意味論バグ (値の不整合・機能しない操作) が機械検証をすり抜けた | LLM スクショ一次レビュー + 人間受入を機械 gate と別立てで常設 (seed-docs/screen-loop.md ⑦) |
+| 8 | mock と検証データの二重管理でフィールド欠落・ドリフトが起きた | fixture は API schema 派生の単一データセット。mock と test が同源参照 (seed-docs/screen-loop.md ⑤) |
+| 9 | 意味論バグ (値の不整合・機能しない操作) が機械検証をすり抜けた | LLM スクショ一次レビュー + 人間受入を機械 gate と別立てで常設 (seed-docs/screen-loop.md ⑧) |
 | 10 | 完成後の部品化・ライブラリ分離は高コストだった | design-system project を PJ 開始時に新設し、mock を最初から部品ライブラリで組む (下記「Claude Design 2 project 体制」) |
 
 ## Day-0 チェックリスト
@@ -123,4 +123,4 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 2. **mock は単一レスポンシブ HTML**: 幅別に別 mock を作らせない。幅別 2 mock 体制は二重管理ドリフト (轍 #8 と同型) の再発源。「320〜1920 で成立させる」を発注要件に含める (seed-docs/design-order-template.md 項目 1)
 3. **CSS 規約**: page shell = @media (viewport 基準) / 部品 = @container (置かれた幅基準) / 内容 = intrinsic sizing。breakpoint 急変点は境界 ±1px のスイープで検証する
 4. **入力モダリティを fixture の軸に**: touch target 44px・hover 非存在でも操作完結・safe area。hover 依存 UI は部品単体 fixture の段階で検出する
-5. **device emulation を機械 gate に**: DPR・touch を pp/src/config.ts の context options で明示固定して pp を回す (UA 固定が要るなら devices preset に置き換える)。実機確認は受入段 (screen-loop.md ⑦) のみ
+5. **device emulation を機械 gate に**: DPR・touch を pp/src/config.ts の context options で明示固定して pp を回す (UA 固定が要るなら devices preset に置き換える)。実機確認は受入段 (screen-loop.md ⑧) のみ

@@ -1,11 +1,11 @@
 # 画面追加の定常ループ
 
-walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 1 枚追加するたびに回す手順。①〜⑧を順に踏む。
+walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 1 枚追加するたびに回す手順。①〜⑨を順に踏む。
 
 ```text
 ① mock (部品→状態→画面) → ② export 凍結 + provenance pin → ③ AST 抽出 + 部品候補 3 分類
-→ ④ 新部品の単体実装 (states 込み) → ⑤ page composition
-→ ⑥ 機械 gate → ⑦ LLM 一次レビュー + 人間受入 → ⑧ 差分の裁定
+→ ④ 実装前ヒアリング → ⑤ 新部品の単体実装 (states 込み) → ⑥ page composition
+→ ⑦ 機械 gate → ⑧ LLM 一次レビュー + 人間受入 → ⑨ 差分の裁定
 ```
 
 ## DoD 3 分類
@@ -28,6 +28,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 ### ② export 凍結 + provenance pin
 
 - /mock-freeze で export 一式を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する (手順詳細: docs/presentation/ui-mock/README.md)
+- 凍結の前に、mock 自身が発注どおり成立しているかを確かめる (下限幅での横スクロールとはみ出し、モーダルの収まり、操作要素の重なり、画面間の文言と token の割れ)。破れは (c) 修正依頼として Claude Design へ差し戻す — **FE 実装の途中で mock を直すより桁違いに安い**
 - 完了条件: mock-provenance spec が緑 (検証 gate が今回凍結した正本を向いている証明)。凍結せずに実装へ入らない — 突合先ドリフトの再発源になる
 
 ### ③ AST 抽出 + 部品候補 3 分類
@@ -38,33 +39,39 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - 完了条件: tools/ast_validate が緑で、分類と uncertainNodes の裁定が発注書 (または PR 説明) に列挙されていること
 - 抽出できたら tools/ast-viewer の HTML を Artifact として公開し、link を裁定の場に示す。裁定は文字列でなく画と対応付けて行う
 
-### ④ 新部品の単体実装 (states 込み)
+### ④ 実装前ヒアリング
+
+- mock に写らないこと (実データの量・読み込みの重さ・状態の頻度・外部依存・権限・保持) を発注側に聞く。質問票: seed-docs/pre-implementation-questions.md
+- **機械で分かることは聞かない**。mock 自身の破れは②の凍結時に検査で出す
+- 完了条件: 質問票の各項目に答えか「未定」が入り、発注書か PR 説明に記録されていること。空欄のまま実装へ入らない — 実装が既定値を決めて、それが既成事実になる
+
+### ⑤ 新部品の単体実装 (states 込み)
 
 - frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する。直書きの色・寸法を持ち込まない
 - states fixture を部品の完成条件にする: default / empty / loading / error / 長文、加えて touch (hover 非存在で操作完結・target 44px)
 - fixture データは API schema 派生の単一データセットとし、mock と test が同源を参照する (二重管理はドリフト源)
 - 完了条件: 基準幅 = SELECTOR_MAP 登録 + sample-parity 緑 / 状態 = 全 fixture 状態で挙動一致
 
-### ⑤ page composition
+### ⑥ page composition
 
 - frontend/src/routes/ は部品の薄い合成に留める。ページにロジックや見た目の実装を書き始めたら、③に戻って部品化する
 - 完了条件: page が部品参照のみで組めていること
 
-### ⑥ 機械 gate
+### ⑦ 機械 gate
 
 - sample-parity (structural parity) + width-sweep + poststate-sweep + self-baseline スクショ回帰 + mock-provenance を全て実行する
 - 画面が増えると self-baseline の baseline PNG も増える。`pp/tests/*-snapshots/` は追跡対象なので同じ commit に載せる (追跡しないと比較対象が消えて回帰網が空回りする)
 - 完了条件: DoD 3 分類の機械側が全て「実行されて緑」。skip 混じりを緑と報告しない
 
-### ⑦ LLM スクショ一次レビュー + 人間受入
+### ⑧ LLM スクショ一次レビュー + 人間受入
 
 - 機械 gate とは別立ての段であり、省略しない
 - LLM 一次: 全状態のスクショを「発注どおりか」ではなく「値は整合しているか・表示は意味が通るか・ユーザーがこの画面で迷わないか」で判定させる
 - 人間受入: 実データで動線を歩く。実機確認を行うのはこの段のみ (機械 gate は device emulation で回す)
-- 動線歩き・スクショ採取には環境で利用可能な browser 自動化 tool (agent-browser 等) を使ってよい。決定性が要る機械 gate (⑥) は Playwright 固定で、ここは置き換えない
-- 完了条件: 指摘ゼロ、または全指摘が⑧の裁定に載っていること
+- 動線歩き・スクショ採取には環境で利用可能な browser 自動化 tool (agent-browser 等) を使ってよい。決定性が要る機械 gate (⑦) は Playwright 固定で、ここは置き換えない
+- 完了条件: 指摘ゼロ、または全指摘が⑨の裁定に載っていること
 
-### ⑧ 差分の裁定
+### ⑨ 差分の裁定
 
 - mock と実装の差分の扱いは 2 択のみ: (a) 実装を直す / (b) KEEP_IMPL 裁定として残す。口頭運用は禁止
 - KEEP_IMPL は日付付き裁定として docs/presentation/ui-mock/DESIGN-POLICY.md に記録する
@@ -73,4 +80,4 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 
 ## 機械 gate 緑 = 完成ではない
 
-⑥が全緑でも⑦は省略できない。意味論バグ — 値の不整合、意味の通らない表示、押しても機能しない操作 — は structural diff もスクショ回帰もすり抜ける。だから⑦は臨時の追加検査ではなく、ループに常設された段である。
+⑦が全緑でも⑧は省略できない。意味論バグ — 値の不整合、意味の通らない表示、押しても機能しない操作 — は structural diff もスクショ回帰もすり抜ける。だから⑧は臨時の追加検査ではなく、ループに常設された段である。

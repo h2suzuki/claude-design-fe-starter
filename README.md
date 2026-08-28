@@ -26,7 +26,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 ├── frontend/          SvelteKit skeleton（$lib/ui/{tokens,components} + src/routes、依存導入は bun）
 ├── pp/                parity harness（dump / diff / sweep / self-baseline / provenance）
 ├── tools/             design_sync（Claude Design 同期）+ ast_validate / ast-tree / ast-viewer（AST gate と可視化）+ toolchain-dir（browser/bun/cache の置き場解決）+ install.sh（既存 repo への copy-in）
-└── seed-docs/         プロセス文書（adoption / walking-skeleton / screen-loop / design-order-template / first-prompts）
+└── seed-docs/         プロセス文書（adoption / walking-skeleton / screen-loop / design-order-template / first-prompts / pre-implementation-questions）
 ```
 
 ## 使い方
