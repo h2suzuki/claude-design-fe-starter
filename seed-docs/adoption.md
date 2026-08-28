@@ -70,6 +70,20 @@ hooks 登録を含む settings の変更は hot-reload されないので、inst
 
 既存実装が Claude Design の export そのもの（`<x-dc>` 形式）で本番稼働している場合、突合先は最初から確定しているぶん有利だが、**旧 export をそのまま凍結 mock にはしない**。凍結するのは今回作り直した新しい export である。
 
+### 旧実装との突合（land の直前に 1 回）
+
+`pp` が見るのは mock との一致だけで、**旧実装が持っていて新実装が落とした機能は誰も見ていない**。screen-loop ⑧ の判定基準も mock と意味論なので、既存 repo ではこの突合を land の直前に 1 回入れる。見るのは見た目ではなく、覆えているかどうかである。
+
+| 突き合わせるもの | 落ちていたら |
+| --- | --- |
+| 画面と route の網羅 | 旧実装にあって新実装に無い route を洗い出し、作るか「作らない」を裁定として残す |
+| API 配線 | 旧実装が呼んでいた endpoint と request/response 形。fixture ではなく**実 BE**で確かめる |
+| 実データの内容 | 件数・並び・日付など、旧実装と同じ値が出るか。fixture では気づけない |
+| 異常系 | 不正な method・空入力・権限外の応答。旧実装の挙動を基準に、変えるなら裁定を残す |
+| 資産 | favicon・app icon・OGP など、画面に出ないが欠けると分かる file |
+
+**旧実装の既知バグは写さない。** 突合は「同じ振る舞いにする」ためではなく「落としていないか」を見るためのもので、旧実装のバグは再現対象ではない。落ちている機能が見つかったら実装で埋める。旧実装と**意匠**が違うのは当然なので、それは差分として数えない — 意匠の差の扱いは上の 2 択（実装を直すか台帳へ裁定を登録するか）で、比較対象は旧実装ではなく mock である。
+
 ## 3. 新しい mock を持ち込む時点
 
 mock の持ち込みは **install.sh の後**である。凍結の置き場（`docs/presentation/ui-mock/export/`）・sha256 台帳・`/mock-freeze`・凍結後の編集を止める hook は、いずれも seed が配るものだからである。先に export を置いても、管理外の場所に置いた file にしかならない。
@@ -156,3 +170,15 @@ git -C <seed> ls-files --error-unmatch -- <path>   # rc 0 = seed が配ってい
 一周の完了条件は `seed-docs/walking-skeleton.md` と同じで、**全 gate が skip でなく実行されて緑**である。skip は「未検証」であって「合格」ではない。1 spec でも skip のまま「一周した」と宣言しない。
 
 既存実装との比較で「見た目が同じだから完了」としない。同じ pixel でも構造契約（token / clamp / %）が違えば中間幅で崩れる。判定は `pp` が行う。
+
+## 9. main へ land し、旧実装を退役させる
+
+§8 の完了判定と §2 の突合が済み、**旧実装を捨てるというユーザーの日付付き裁定**が出てから始める。順序は「本番で確かめてから branch を入れ替える」であり、逆にしない — branch を先に入れ替えると、確認で問題が出たときに戻す先が動いている。
+
+1. **deploy 先を切り替える**。本番アドレスを新実装の deploy へ promote する。preview URL で確認して終わりにしない
+2. **本番アドレスで確かめる**。全 route が 200 を返すか、実データが旧実装と同じ値で出るか（件数・日付まで見る）、API の異常系が期待どおりか、favicon など画面に出ない資産が 200 か。ここは fixture が効かない唯一の場所なので、§2 の突合表をそのまま実行する
+3. **旧 URL の扱いを裁定する**。転送するか、しないか。決めずに転送を入れない — 入れた転送は後から消しにくい
+4. **branch を入れ替える**。旧 main を退役名（`old-main` 等）の branch か tag で残し、作業 branch を main へ fast-forward する。**旧 main は消さない**
+5. **worktree を片付ける**。作業 worktree を消す前に、gitignore 下の作業物（`drafts/` 等）を main 側へ退避する。materialize されない資産（`node_modules`・toolchain）は残る checkout 側で取り直しになる
+6. **Claude Design 同期を張り直す**。新しい main で `DESIGN_PROJECT_ID` と `tools/design_sync verify` が通ること、凍結 mock と `mock-baseline.sha256` が新 main に載っていることを確認する。以後の書き戻しは `docs/design-sync.md` 2.3
+7. **push は別途ユーザーの承認を取る**。branch の入れ替えは remote から見ると履歴の付け替えになる
