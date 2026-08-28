@@ -52,7 +52,7 @@ mock 追随の変更を書く前に、git 履歴とユーザー裁定の記録�
 
 基準 viewport は 2 点とする: mobile 390×844（第一正本・DPR 2–3・touch emulation）と
 desktop 1280×800（第二正本）。数値は例であり、PJ の実値は `pp/src/config.ts` で差し替える。
-基準 2 点では structural pixel 一致を検証し、間と外（下限 320〜上限 1920）は
+基準 2 点では structural pixel 一致を検証し、間と外（`SWEEP_WIDTHS` の下限〜上限）は
 連続幅スイープで invariant（崩れ・衝突・欠落・横スクロール無し）を検証する。
 §1 の失敗が示すとおり単一 viewport 固定は圧縮描画への合わせ込みを見逃すため、
 多視点検証は連続スイープが担う。構造一致は任意の幅で保たれなければならない。

@@ -53,4 +53,4 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 
 - `export/` 配下は凍結資産。直接編集は禁止（hook が Edit/Write を block する）。変更は Claude Design 側で行い、再 export → 再凍結する
 - 台帳と実体の不一致は「突合先のドリフト」であり、検証全体を無効化する。commit 前 hook が sha256 照合とファイル集合の突合（台帳未登録の追加・実体の欠落を含む）で検出する
-- mock は 320〜1920 で成立する単一レスポンシブ HTML を要件とする（幅別の別 mock を置かない）
+- mock は `SWEEP_WIDTHS` の下限〜上限で成立する単一レスポンシブ HTML を要件とする（幅別の別 mock を置かない）

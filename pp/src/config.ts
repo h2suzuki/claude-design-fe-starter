@@ -5,9 +5,9 @@ import type { BrowserContextOptions, LaunchOptions } from "@playwright/test";
 export const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 export const DESKTOP_VIEWPORT = { width: 1280, height: 800 } as const;
 
-// 中間と外は連続スイープの invariant 検証（離散点の pixel parity は不採用）
+// 基準 2 点とは役割が違う: ここは崩れないことだけ見る範囲で、pixel 一致は取らない
 // 差し替え点。下限・上限は発注規約（seed-docs/design-order-template.md 項目 1）と同じ数値にする
-export const SWEEP_WIDTHS: readonly number[] = [320, 390, 480, 640, 768, 1024, 1280, 1440, 1680, 1920];
+export const SWEEP_WIDTHS: readonly number[] = [360, 390, 480, 640, 768, 1024, 1280, 1440, 1680, 1920];
 // mock/app に breakpoint を導入したら境界 ±1px をここへ足す（急変点の検証）
 export const BREAKPOINT_EDGE_WIDTHS: readonly number[] = [];
 

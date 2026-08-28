@@ -33,7 +33,7 @@
 ### 1. 検証条件の固定
 
 - 基準 viewport 2 点: mobile 390×844 (第一正本・DPR 2–3・touch) / desktop 1280×800 (第二正本)。数値は例 — 各 PJ が pp/src/config.ts で確定する
-- 基準 2 点の間と外側 (320〜1920) は連続幅スイープで invariant 検証する
+- 基準 2 点の間と外側 (`SWEEP_WIDTHS` の下限〜上限) は連続幅スイープで invariant 検証する — 基準幅と違い、崩れないことだけを見る
 - フォントは同梱する (検証中の CDN 取得は pp/src/net-block.ts が abort する)。ただし day-0 で決めるのは「同梱する」という条件だけ — 書体の選定は design system の出力なので、実体の取得と tokens.css の --font-sans 差し替えは mock 確定後 (下の一周「vendor 化」) に行う
 - 時計・locale・DPR・touch は pp/src/config.ts の context options で明示固定する (UA まで固定したい場合は devices preset に置き換える)
 
@@ -120,7 +120,7 @@ bun の version は固定しない — 機械 gate は bun を呼ばず (pp は 
 ## モバイルファースト調整 5 点
 
 1. **基準 viewport は 2 点**: mobile を第一正本、desktop を第二正本として pixel 級検証。間と外は連続幅スイープの invariant 検証とし、離散多点の pixel parity は採らない (検出力が低い)
-2. **mock は単一レスポンシブ HTML**: 幅別に別 mock を作らせない。幅別 2 mock 体制は二重管理ドリフト (轍 #8 と同型) の再発源。「320〜1920 で成立させる」を発注要件に含める (seed-docs/design-order-template.md 項目 1)
+2. **mock は単一レスポンシブ HTML**: 幅別に別 mock を作らせない。幅別 2 mock 体制は二重管理ドリフト (轍 #8 と同型) の再発源。「`SWEEP_WIDTHS` の下限〜上限で成立させる」を発注要件に含める (seed-docs/design-order-template.md 項目 1)
 3. **CSS 規約**: page shell = @media (viewport 基準) / 部品 = @container (置かれた幅基準) / 内容 = intrinsic sizing。breakpoint 急変点は境界 ±1px のスイープで検証する
 4. **入力モダリティを fixture の軸に**: touch target 44px・hover 非存在でも操作完結・safe area。hover 依存 UI は部品単体 fixture の段階で検出する
 5. **device emulation を機械 gate に**: DPR・touch を pp/src/config.ts の context options で明示固定して pp を回す (UA 固定が要るなら devices preset に置き換える)。実機確認は受入段 (screen-loop.md ⑧) のみ

@@ -15,7 +15,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 | 分類 | 検証内容 | gate |
 |---|---|---|
 | 基準幅 | structural pixel 一致 (token / clamp / % の構造契約で mock と一致) | sample-parity |
-| 中間幅 | invariant (320〜1920 で崩れ・衝突・欠落・横スクロールが無い) | width-sweep |
+| 中間幅 | invariant (`SWEEP_WIDTHS` の全幅で崩れ・衝突・欠落・横スクロールが無い) | width-sweep |
 | 状態 | 挙動一致 (全状態の表示と、状態遷移後のレイアウト安定) | states fixture + poststate-sweep |
 
 ## 各段の手順と完了条件
