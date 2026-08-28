@@ -12,15 +12,17 @@ Work file: `docs/presentation/ui-mock/DESIGN-POLICY.md`・`pp/src/diff.ts`・`pp
 
 Exit Criteria:
 
-- [ ] 台帳の entry が `sample-parity` と `page-parity` の判定に効き、登録済みの差分では落ちない
-- [ ] 台帳に無い差分は従来どおり落ちることを、陽性・陰性の両方で実測する
+- [ ] 台帳の entry が `sample-parity` と `page-parity` の判定に効き、登録済みの差分では落ちない — 画像の slice だけ `1164dae` で達成（`page-parity` のみ。`sample-parity` と画像以外は未着手）
+- [ ] 台帳に無い差分は従来どおり落ちることを、陽性・陰性の両方で実測する — 画像の slice は実測済み（`page-diff.spec.ts` の「マスク内は比較しない / マスク外は数える」・`keep-impl.spec.ts` の「`img:` 行だけが対象 / 空の対象は拒否」）
 - [ ] 台帳の書式（対象 visual id・画面・日付・裁定理由）が schema か spec で機械検査される
 
 着手条件は最初の entry が立つこと。適用先は第 1 版で候補 2 件（calendar modal の 12px はみ出し / index の固定 box）を持っていたが、第 2 版 mock で両方とも mock 側が直り消えた（2026-08-27 報告）。
 
 **`page-parity` は画面まるごとの pixel 一致なので、KEEP_IMPL が 1 件でも立った瞬間に必ず落ちる。** 結線はその前に済ませる必要がある。
 
-2026-08-28: 適用先が画像軽量化で 14 spec を赤にし、台帳 entry を立てた。ただしこれは**画像の中身の差**で、`page-parity` の対象外にする方が筋だったので、img/picture/video の領域を pixel 比較から外した（`fb0a7fd`。置かれ方は比較する）。あわせて DESIGN-POLICY に「既定の処置に従った軽量化は載せない」を規定。**着手条件（意匠の意図的差分が 1 件立つ）はまだ来ていない。**
+2026-08-28: 適用先が画像軽量化で 14 spec を赤にし、台帳 entry を立てた。img/picture/video を一律で pixel 比較から外す形（`fb0a7fd`）は承認していない差し替えまで通すので `1164dae` で撤回し、**台帳が `img: <src の一部>` で名指しした画像だけ**を外す形にした（置かれ方＝枚数と箱は常に比較する）。DESIGN-POLICY も同 commit で「既定の処置に従った軽量化**も**載せる」へ改めてある。
+
+残るのは**画像以外**の差分で、こちらは吸収する機構がまだ無い（DESIGN-POLICY に明記）。**着手条件（意匠の意図的差分が 1 件立つ）はまだ来ていない。**
 
 ### 実証 2 回目 — mock を更新して反映する流れ
 
@@ -37,6 +39,10 @@ Exit Criteria:
 ユーザー裁定 2026-08-28: 「iac-web を使った実証実験１回目は、完了とします。もう一回、mock のアップデートと反映の流れをやりますので、そのときに再確認しましょう。」
 
 1 回目で通したのは「mock を作る → 実装する」の向きで、**更新の向きは通していない**。再凍結・AST 追従・KEEP_IMPL の還流は、いずれも今日この session で整えたばかりで実地を経ていない（`/mock-freeze` の棚卸し段・`ast:refresh`・台帳結線）。着手時期はユーザーの判断。
+
+2026-08-28 の実測（seed から適用先の `pp/` を分類）: install.sh が「PJ のもの」と判定して触らない file が 14 件あり、うち 7 件が spec（`ast-conformance` / `list-identity-sweep` / `modal-geometry-sweep` / `page-parity` / `poststate-sweep` / `self-baseline` / `width-sweep`）。**この 7 件へ seed が入れた変更は install.sh では届かない** — `1164dae` の KEEP_IMPL 結線もこの中。spec を機構だけにする「pp の登録点が 1 画面前提」の解消が、二巡目へ seed 更新を届ける前提になる。
+
+台帳の書式も要調整。適用先の entry #1 の対象列は「全画面の画像 13 枚 (ロゴ 3・写真 10)」という散文で、gate が読む `img: <src の一部>` の形になっていない。現行 seed を入れると、この 13 枚は台帳に無い画像として `page-parity` で赤になる。`img:` 行へ書き直すか、mock 側へ軽量版を取り込んで entry を閉じる（entry 自身が後者を予定と書いている）。
 
 ## Medium
 
