@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // 凍結 mock の静的 lint: 外部資産参照（CDN 依存 = 検証の非決定性）と size cap を検査する
 // MOCK101 = vendor 化されていない外部資産参照 / MOCK102 = size cap 超過 / MOCK103 = 途中で切れた document
+// MOCK104 = 資産が重い（人に「どれが重いか」を聞かずに済ませるための検知）
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const EXPORT_DIR = path.resolve(SCRIPT_DIR, '../../docs/presentation/ui-mock/export');
 const CAP_BYTES = 1_048_576; // export 1 file の上限目安。PJ で調整可
+// 画像・フォント等 1 資産の上限目安。超えると回線次第で初回表示が体感に出る。PJ で調整可
+const ASSET_CAP_BYTES = 1_048_576;
 // vendor 済み URL は net-block と同じ台帳を見る（許可の二重管理を作らない）
 const VENDOR_ROUTES_FILE = path.resolve(SCRIPT_DIR, '../vendor/routes.json');
 
@@ -57,7 +60,20 @@ function vendorPrefixes() {
 }
 
 // callback として渡されると第 2 引数に index が来る。配列でなければ台帳から引く
+// 資産は中身でなく重さだけを見る。「どれが重いか」は測れば分かるので、発注側に聞く項目にしない
+function lintAsset(file) {
+  const bytes = fs.statSync(file).size;
+  if (bytes <= ASSET_CAP_BYTES) return [];
+  return [{
+    file,
+    line: 1,
+    id: 'MOCK104',
+    message: `asset is ${bytes} bytes; cap is ${ASSET_CAP_BYTES} — 先読みを既定にしたうえで、解像度を下げてよいかを発注側に確認する`,
+  }];
+}
+
 function lintFile(file, allowed) {
+  if (!SCANNED_RE.test(file)) return lintAsset(file);
   const prefixes = Array.isArray(allowed) ? allowed : vendorPrefixes();
   let bytes;
   try {
@@ -106,7 +122,7 @@ function defaultTargets() {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const p = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(p);
-      else if (SCANNED_RE.test(entry.name)) out.push(p);
+      else if (entry.name !== '.gitkeep') out.push(p);
     }
   };
   walk(EXPORT_DIR);
@@ -143,6 +159,8 @@ function runSelfTest() {
     assert(truncatedViolations.length === 1 && truncatedViolations[0].id === 'MOCK103', 'truncated fixture did not fire MOCK103 exactly once');
 
     // MOCK103 は HTML document の終端検査なので、他 kind へ適用すると必ず誤発火する
+    fs.writeFileSync(path.join(tempDir, 'icon.png'), Buffer.alloc(1024));
+
     const cssFile = path.join(tempDir, 'sheet.css');
     fs.writeFileSync(cssFile, '.a { color: #000 }\n');
     assert(lintFile(cssFile).length === 0, 'css fixture must produce no violations');
@@ -163,6 +181,13 @@ function runSelfTest() {
     assert(inlineViolations.length === 1 && inlineViolations[0].id === 'MOCK101', 'inline script fixture did not fire MOCK101 exactly once');
     assert(inlineViolations[0].line === 3, `inline script violation must point at the injected line, got ${inlineViolations[0].line}`);
 
+    // 資産は中身を読まない。重さだけで判断する
+    const heavyFile = path.join(tempDir, 'photo.png');
+    fs.writeFileSync(heavyFile, Buffer.alloc(ASSET_CAP_BYTES + 1));
+    const heavyViolations = lintFile(heavyFile);
+    assert(heavyViolations.length === 1 && heavyViolations[0].id === 'MOCK104', 'heavy asset fixture did not fire MOCK104 exactly once');
+    assert(lintFile(path.join(tempDir, 'icon.png')).length === 0, 'a light asset must produce no violations');
+
     // main は flatMap で呼ぶ。callback の第 2 引数 (index) を allowed と取り違えない
     assert([cleanFile, cdnFile].flatMap(lintFile).length === 1, 'flatMap 経由でも判定が変わってはいけない');
 
@@ -180,7 +205,7 @@ function runSelfTest() {
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
-  console.log('mock-lint self-test: clean passes; MOCK101/MOCK102/MOCK103 each fire once; kind scoping holds');
+  console.log('mock-lint self-test: clean passes; MOCK101..MOCK104 each fire once; kind scoping holds');
 }
 
 function main(args) {
@@ -195,6 +220,9 @@ function main(args) {
   }
   const violations = files.flatMap(lintFile);
   for (const item of violations) console.log(`${item.file}:${item.line} ${item.id} ${item.message}`);
+  // 個別が上限内でも枚数で重くなる。判断材料として合計を必ず出す
+  const assetBytes = files.filter((file) => !SCANNED_RE.test(file)).reduce((sum, file) => sum + fs.statSync(file).size, 0);
+  if (assetBytes > 0) console.log(`mock-lint: assets total ${(assetBytes / 1_048_576).toFixed(2)} MB`);
   if (violations.length) process.exitCode = 1;
   else console.log(`mock-lint: ${files.length} file(s) OK`);
 }
