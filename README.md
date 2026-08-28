@@ -27,7 +27,7 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 
 - **基準幅とスイープ範囲は別の検証。** 前者は「同じに見えるか」、後者は「壊れていないか」を見る
 - 390 は基準幅であると同時にスイープにも含まれる（基準幅でも崩れは見る）
-- 下限は 2026-08-27 に **320 → 360** へ変更した（ユーザー裁定「320 は小さいから、最小は 360 にしようか」）。320px 級の端末を支える PJ は `SWEEP_WIDTHS` を戻す
+- 既定の下限は 360。320px 級の端末を支える PJ は `SWEEP_WIDTHS` を下げる
 - **発注規約（`seed-docs/design-order-template.md` 項目 1）に書く下限・上限は `SWEEP_WIDTHS` と同じ数値にする。** 発注した範囲と検証する範囲がずれると、守られていない要件を検証し続けることになる
 
 ## 構成
@@ -84,7 +84,7 @@ flowchart TB
 
 つまり「Vite を外して bun だけにする」は SvelteKit ごと降りることを意味し、routing・SSR・`$app/*`・adapter が自作に変わる。
 
-### bun をどこまで使うか（実測 2026-08-28）
+### bun をどこまで使うか
 
 | 使い方 | 実測 | 採否 |
 |---|---|---|
@@ -93,7 +93,7 @@ flowchart TB
 | `bun --bun`（Vite を Bun runtime で走らせる） | build は通るが、minifier の識別子割り当てが変わり entry chunk の hash が変わる。SvelteKit の version を固定しても差は残り、同一 runtime 2 回なら byte 一致 | **不採用** — 成果物の hash が runtime 依存になる |
 | Playwright を Bun runtime で | 71 passed / 14 skipped で動く。ただし pixel 比較路の同一性は app 無しでは測れていない | **保留** — 実地で測るまで Node |
 
-`bun --bun` は **vite の version を選ばない**。実測すると `node で実行 = vite/8.2.2 node-v24.20.0` / `bun --bun で実行 = vite/8.2.2 bun-v26.3.0` で、変わるのは runtime だけである。version を決めるのは `package.json` と `bun.lock`、決まる時点は `bun install` である。
+`bun --bun` は **vite の version を選ばない**。`--version` は node 経由で `vite/8.2.2 node-v24.20.0`、`bun --bun` 経由で `vite/8.2.2 bun-v26.3.0` を返す — 変わるのは runtime だけである。version を決めるのは `package.json` と `bun.lock`、決まる時点は `bun install` である。
 
 ### Vercel 側の現況（確認日 2026-08-21）
 
@@ -103,9 +103,9 @@ flowchart TB
 
 この 3 点から、**deploy runtime は Node のまま、導入だけ bun** を既定にしている。Bun Runtime が GA になり SvelteKit が対象に入った時点で再検討する。
 
-### この節は時点付きである
+### 引用するときの注意
 
-判断は「Bun Runtime が Beta」「`adapter-vercel` の bun 対応が experimental」という 2026-08 の状況に依存している。状況が変われば結論も変わるので、**日付と出典を外して引用しない**。一次調査は 2026-08-21 に実施し、出典 URL は次のとおり。
+この節の結論は「Bun Runtime が Beta」「`adapter-vercel` の bun 対応が experimental」という状況に依存する。状況が変われば結論も変わるので、**日付と出典を外して引用しない**。出典（いずれも確認日 2026-08-21）:
 
 - [Vercel Bun Runtime](https://vercel.com/docs/functions/runtimes/bun) / [Bun Runtime public beta](https://vercel.com/changelog/bun-runtime-now-in-public-beta-for-vercel-functions) / [Vercel Node.js Runtime](https://vercel.com/docs/functions/runtimes/node-js)
 - [adapter-vercel utils.js](https://raw.githubusercontent.com/sveltejs/kit/main/packages/adapter-vercel/utils.js)（`bun1.x` の扱い）
