@@ -11,7 +11,7 @@
 - 当該領域の computed style
 - 相対 boundingBox（0..1 正規化済み）
 - 状態別スクリーンショット（overlay 展開・tab 切替など、採取済みの状態）
-- project wrapper registry があればそれ（`docs/presentation/ui-ast/ui-registry.schema.json` 準拠）
+- project wrapper registry があればそれ（`docs/presentation/ui-ast/ui-registry.schema.json` 準拠。語彙の母体は design system の見本 page）
 
 ## Important
 

@@ -39,9 +39,10 @@ when_to_use: TRIGGER when a frozen mock needs its UI AST built or rebuilt, when 
 
 ## Rules
 
-- **実測 px を layout 契約に書かない（AST104）** — `layout.gap` / `layout.maxWidth` に `16px` のような実測値を書くと gate が落ちる。mock の CSS custom property を逆引きして `var(--space-3)` のような token 名を書き、逆引き不能なら当該 key を省いて実測値は `evidence` に残す。実測 px の突合は pp/ のテストの担当であり、AST の担当ではない
+- **実測 px を layout 契約に書かない（AST104）** — `layout.gap` / `layout.maxWidth` に `16px` のような実測値を書くと gate が落ちる。mock の CSS custom property を逆引きして `var(--space-3)` のような token 名を書き、逆引き不能なら当該 key を省いて実測値は `evidence` に残す。**逆引きの辞書は design system の見本 page**（凍結 export に混ざって届く）— token 名・値・用途がそこに並ぶので、同値の token を取り違えずに引ける。実測 px の突合は pp/ のテストの担当であり、AST の担当ではない
 - **`uncertainNodes` は裁定論点として報告する** — 低信頼 node を黙って確定させない。`reason` と `alternatives` を書いて `uncertainNodes` に載せ、ターン末尾でユーザーに提示する。意匠差分の裁定が要る場合の台帳は `docs/presentation/ui-mock/DESIGN-POLICY.md`
 - **採取していない状態を書かない** — 状態・responsive 差分・hidden 判定は、採取した証拠がある範囲だけ書く。1 viewport だけの採取から breakpoint 差分を推測しない
+- **design system の見本 page から screen AST を起こさない** — 凍結 export には画面でない見本 page が混ざる（`docs/presentation/ui-mock/README.md`）。これは route にならないので screen AST の対象外で、使うのは部品語彙と token 辞書としてである
 - **class 名を component 名として採用しない** — mock の class は意匠都合の名前であり、canonical な部品名ではない。意味は tag / role / aria / text / 構造から起こす
 - **CSS selector は `source.nodeRef` に書く** — schema の `source` は `kind` / `region` / `file` / `nodeRef` のみを許す。selector 用の独自 key を足すと schema error になる
 - **slug を一致させる（AST106）** — `screen.name` = `<slug>`、`screen.provenance.mockFile` = 凍結した export の相対 path（file 名の最初の dot までが `<slug>` と一致すればよい）。`sha256` は `mock-baseline.sha256` に記録された当該 export の値をそのまま使う

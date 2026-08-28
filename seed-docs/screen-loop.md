@@ -34,7 +34,9 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 ### ③ AST 抽出 + 部品候補 3 分類
 
 - /ast-extract で凍結 export から docs/presentation/ui-ast/screens/<slug>.ui-ast.json を起こす (層の位置付けと運用: docs/ast-layer.md)
+- **1 画面目の前に registry.json を design system の見本 page から起こす。** 空のまま分類に入ると突合先が無く、全部品が「新規」に落ちる (docs/ast-layer.md)
 - mock 内の構成要素を「既存部品の再利用 / 新規部品 / ページ固有」に分類する。AST の kind census と registry.json の突合が分類の機械化入力 (tools/ast-viewer の部品一覧が同じ census を描く)
+- 分類で確定した新規部品は registry へ追記し、あわせて design system 側へも昇格させる (docs/design-sync.md 1.3)。registry だけ増やすと、次の mock が同じ部品を持たないまま届く
 - 判定規準: 同じ見た目 = 同じ部品。既存と似て非なる部品を新設しない
 - AST を起こす過程で、**表示が重くなりそうな箇所に目星をつける** (取りに行く回数が多い・資産が重い)。木を一度読み切る段なので、ここで見えたものを④の対策の入力にする
 - 完了条件: tools/ast_validate が緑で、分類と uncertainNodes の裁定が発注書 (または PR 説明) に列挙されていること

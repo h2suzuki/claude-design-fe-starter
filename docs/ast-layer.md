@@ -91,6 +91,8 @@ node には `notes` を置けない（schema が拒否する）。node 単位の
 
 registry は seed が**空台帳**（`{"version": "0.2.0", "items": []}`）で配る。`/ast-extract` は screens/ しか書かない — 抽出 pass は registry を「あればそれ」と読む側で、語彙を増やすのは部品を確定した人の仕事である。追記したら `python3 tools/ast_validate --registry docs/presentation/ui-ast/registry.json` を通す。
 
+**語彙の母体は design system の見本 page である。** 凍結 export に混ざって届くこの page が、部品名・variant・states・用途規則を持つ（`docs/presentation/ui-mock/README.md`）。registry の初回充填はここから行う — 空のまま 1 画面目の分類に入ると、突合先が無いので全部品が「新規」に落ちる。schema の `variants` / `states` / `notes` は、それぞれ見本 page の variant 列・状態違い preview・用途規則を受ける器である。
+
 slug は `docs/presentation/ui-mock/export/{{SLUG}}.html` と共通鍵である。
 dir 名を `ui-mock` / `ui-ast` の対にし、slug で対応を引けるようにする。
 `screen.name` と `screen.provenance.mockFile` の slug 一致は AST106 が機械強制する。
