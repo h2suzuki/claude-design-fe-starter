@@ -129,7 +129,7 @@ seed を入れた main から作業 branch を切っていれば、更新の mer
 
 | 衝突した file | 採る側 | コマンド |
 | --- | --- | --- |
-| 機構（spec・script・hook など、§7 の表で「seed が配っている file」に当たり PJ が値を埋めていないもの） | main（seed 側） | `git checkout main -- <path>` |
+| 機構（spec・script・hook など、§8 の表で「seed が配っている file」に当たり PJ が値を埋めていないもの） | main（seed 側） | `git checkout main -- <path>` |
 | 差し替え点（`pp/src/config.ts`・`pp/src/screens.ts`・`frontend/src/app.html` など、install.sh が「PJ のもの」として末尾に列挙する path） | 作業 branch 側 | `git checkout --ours -- <path>` して `git add <path>` |
 
 ```bash
@@ -146,7 +146,38 @@ hook 登録を含む `.claude/settings.json` が更新されるので、merge �
 
 `git cherry-pick` は個別修正を拾う時の手段であって、更新の常道ではない。seed の commit は `README.md`・`SEED-CONTRACT.md` のような PJ 所有 path を含むことがあり、そのまま当たらない。
 
-## 7. seed への戻し方
+## 7. 依存を上げる
+
+frontend と pp の依存は **install.sh では届かない**。`frontend/package.json`・`frontend/bun.lock`・`pp/package.json`・`pp/bun.lock` はいずれも PJ が育てる file なので、seed 側で上げても「PJ のもの」として触られずに残る（§6 の分類）。**適用先が自分で同じ bump を当てる**。
+
+### 順序
+
+1. seed 側で上げ、seed で通ることを確かめる（build・dev server・`bun run --cwd pp gate`）
+2. 適用先で **依存を上げるだけの commit を 1 本**作る。他の変更と混ぜない
+3. その commit の前後で gate を回し、差が出たかを見る
+4. 差が出たなら原因は upgrade である。他に変更が無いので、実装の drift と切り分ける手間が要らない
+
+**mock 更新と同じ round で上げるときは、依存を先に単独で land する。** 混ぜると、赤が upgrade のせいか mock 変更のせいか切り分けられない。
+
+### 何が赤くなりうるか
+
+| gate | 上げると動く理由 | 出たときの扱い |
+| --- | --- | --- |
+| `self-baseline` | 描画が 1px でも変われば PNG が変わる | 画を見て、意図した変化と確認できたときだけ `--update-snapshots`。更新した PNG は commit review で目視する |
+| `page-parity` / `sample-parity` | app 側だけが動くので mock との差になる | mock は動いていないのだから **app 側の回帰**である。baseline 更新で消してはいけない |
+| `width-sweep` | layout 計算が変われば横スクロールが出る | 実装の欠陥として直す |
+
+### Playwright だけは別枠
+
+`@playwright/test` は `^` なしの完全固定である。上げると同梱 Chromium が変わり、text metrics と anti-aliasing が動いて **pixel gate が全面的に赤くなる**。上げるときは vendor 資産と selector map の再検証、self-baseline の作り直しをセットで行う（`pp/README.md`）。他の依存と同じ commit に混ぜない。
+
+### 上げ幅の決め方
+
+- **peer range を満たさない状態を残さない。** `node_modules/<pkg>/package.json` の `peerDependencies` と実装 version を突き合わせる。宣言違反は動いていても、次の解決で別の版に化ける
+- **framework の peer が許さない major へは行かない。** 例: `@sveltejs/kit` の peer は `typescript: ^5.3.3 || ^6.0.0` なので、TypeScript 7 は kit が対応するまで取れない
+- 採用スタックそのものの根拠は `README.md` の「採用スタックとその理由」にある。層を入れ替える判断は seed 側で行い、適用先では行わない
+
+## 8. seed への戻し方
 
 この作業中に見つかるのは 2 種類で、扱いが違う。分類の鍵は dir でなく **seed がその file を配っているか**である。
 
@@ -165,15 +196,15 @@ git -C <seed> ls-files --error-unmatch -- <path>   # rc 0 = seed が配ってい
 
 判断に迷ったら「新規プロジェクトでも同じものが要るか」で分ける。要るなら機構、要らないなら固有物である。
 
-## 8. 完了の判定
+## 9. 完了の判定
 
 一周の完了条件は `seed-docs/walking-skeleton.md` と同じで、**全 gate が skip でなく実行されて緑**である。skip は「未検証」であって「合格」ではない。1 spec でも skip のまま「一周した」と宣言しない。
 
 既存実装との比較で「見た目が同じだから完了」としない。同じ pixel でも構造契約（token / clamp / %）が違えば中間幅で崩れる。判定は `pp` が行う。
 
-## 9. main へ land し、旧実装を退役させる
+## 10. main へ land し、旧実装を退役させる
 
-§8 の完了判定と §2 の突合が済み、**旧実装を捨てるというユーザーの日付付き裁定**が出てから始める。順序は「本番で確かめてから branch を入れ替える」であり、逆にしない — branch を先に入れ替えると、確認で問題が出たときに戻す先が動いている。
+§9 の完了判定と §2 の突合が済み、**旧実装を捨てるというユーザーの日付付き裁定**が出てから始める。順序は「本番で確かめてから branch を入れ替える」であり、逆にしない — branch を先に入れ替えると、確認で問題が出たときに戻す先が動いている。
 
 1. **deploy 先を切り替える**。本番アドレスを新実装の deploy へ promote する。preview URL で確認して終わりにしない
 2. **本番アドレスで確かめる**。全 route が 200 を返すか、実データが旧実装と同じ値で出るか（件数・日付まで見る）、API の異常系が期待どおりか、favicon など画面に出ない資産が 200 か。ここは fixture が効かない唯一の場所なので、§2 の突合表をそのまま実行する

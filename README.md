@@ -44,6 +44,75 @@ Claude Design の mock を意匠の唯一の正本（SSOT）とし、
 └── seed-docs/         プロセス文書（adoption / walking-skeleton / screen-loop / design-order-template / first-prompts / pre-implementation-questions）
 ```
 
+## 採用スタックとその理由（2026-08 時点）
+
+役割が違う 4 つを重ねている。**bun と Vite は競合ではなく分担**で、どちらか一方に寄せる形にはならない。
+
+```mermaid
+flowchart TB
+  subgraph DEV["開発機 / CI"]
+    BUN["bun<br/>package manager + script runner"]
+    BUN --> FE["frontend/<br/>bun.lock"]
+    BUN --> PP["pp/<br/>bun.lock"]
+    FE --> VITE["Vite<br/>bundler + dev server"]
+    VITE --> KIT["SvelteKit<br/>routing / SSR / adapter"]
+    KIT --> SVELTE["Svelte 5<br/>component"]
+    PP --> NODE["Node<br/>Playwright を走らせる"]
+    NODE --> CHROME["固定 Chromium<br/>pixel の出所"]
+  end
+  subgraph SHIP["本番"]
+    ADAPTER["adapter-auto<br/>→ adapter-vercel"] --> VERCEL{{"Vercel"}}
+  end
+  KIT --> ADAPTER
+  CHROME -. "app を描画して突合" .-> VITE
+```
+
+| 層 | 採ったもの | 何を担うか | 実体 |
+|---|---|---|---|
+| 依存導入 / script | **bun** | `frontend/` と `pp/` の両方。lockfile は `bun.lock` に統一 | `frontend/bun.lock`・`pp/bun.lock` |
+| bundler / dev server | **Vite** | mock と app を同じ条件で描かせるための素地 | `frontend/vite.config.ts` |
+| framework | **SvelteKit** | file-based routing・SSR/prerender・`$app/*`・adapter | `sveltekit()` plugin |
+| UI | **Svelte 5** | runes ベースの component | `frontend/src/lib/ui/` |
+| deploy | **adapter-auto → adapter-vercel** | Vercel の Build Output API 形式を生成 | `frontend/svelte.config.js` |
+| 検証 | **Node + 固定 Playwright** | 固定 Chromium で pixel を出す。**version を上げると text metrics/AA が動く** | `pp/package.json`（`^` なしの完全固定） |
+
+### Vite は外せない — SvelteKit の実装本体だから
+
+- `@sveltejs/kit` は **`vite` を optional でない peerDependency** に持つ（`^5.0.3 || ^6.0.0 || ^7.0.0-beta.0 || ^8.0.0`。optional 扱いは `@opentelemetry/api` と `typescript` だけ）
+- kit の exports に `./vite` があり、`vite.config.ts` はそこから `sveltekit()` を読む。**routing manifest 生成・SSR build・adapter 呼び出しが Vite plugin として実装されている**
+- Bun 向けの `svelte-adapter-bun` ですら「`vite build` 後に Bun の standalone server を起動する」形である（確認日 2026-08-21）
+
+つまり「Vite を外して bun だけにする」は SvelteKit ごと降りることを意味し、routing・SSR・`$app/*`・adapter が自作に変わる。
+
+### bun をどこまで使うか（実測 2026-08-28）
+
+| 使い方 | 実測 | 採否 |
+|---|---|---|
+| `bun install`（`frontend/`・`pp/`） | pp を bun で導入し Node の Playwright で回して 71 passed / 14 skipped — npm tree と同数 | **採用** |
+| `bun run <script>` | `gate` まで通る。script 側は runner 名を持たないので `npm run` でも同じ | **採用** |
+| `bun --bun`（Vite を Bun runtime で走らせる） | build は通るが、minifier の識別子割り当てが変わり entry chunk の hash が変わる。SvelteKit の version を固定しても差は残り、同一 runtime 2 回なら byte 一致 | **不採用** — 成果物の hash が runtime 依存になる |
+| Playwright を Bun runtime で | 71 passed / 14 skipped で動く。ただし pixel 比較路の同一性は app 無しでは測れていない | **保留** — 実地で測るまで Node |
+
+`bun --bun` は **vite の version を選ばない**。実測すると `node で実行 = vite/8.2.2 node-v24.20.0` / `bun --bun で実行 = vite/8.2.2 bun-v26.3.0` で、変わるのは runtime だけである。version を決めるのは `package.json` と `bun.lock`、決まる時点は `bun install` である。
+
+### Vercel 側の現況（確認日 2026-08-21）
+
+- Vercel の **Bun Runtime は Beta**。公開ベータ告知（2025-10-28）が挙げる対象に SvelteKit は含まれていない
+- 一方 `adapter-vercel` の現行ソースは `bun1.x` を有効な runtime として扱う（experimental）
+- **`bun.lock` があれば、Node runtime を使う場合でも Vercel は `bun install` を実行する**。つまり「bun で導入する」ことは Vercel 側の障害にならない
+
+この 3 点から、**deploy runtime は Node のまま、導入だけ bun** を既定にしている。Bun Runtime が GA になり SvelteKit が対象に入った時点で再検討する。
+
+### この節は時点付きである
+
+判断は「Bun Runtime が Beta」「`adapter-vercel` の bun 対応が experimental」という 2026-08 の状況に依存している。状況が変われば結論も変わるので、**日付と出典を外して引用しない**。一次調査は 2026-08-21 に実施し、出典 URL は次のとおり。
+
+- [Vercel Bun Runtime](https://vercel.com/docs/functions/runtimes/bun) / [Bun Runtime public beta](https://vercel.com/changelog/bun-runtime-now-in-public-beta-for-vercel-functions) / [Vercel Node.js Runtime](https://vercel.com/docs/functions/runtimes/node-js)
+- [adapter-vercel utils.js](https://raw.githubusercontent.com/sveltejs/kit/main/packages/adapter-vercel/utils.js)（`bun1.x` の扱い）
+- [svelte-adapter-bun README](https://raw.githubusercontent.com/gornostay25/svelte-adapter-bun/main/README.md)（`vite build` 前提）
+
+version の上げ方と、適用先がそれをどう受け取るかは `seed-docs/adoption.md` の「依存を上げる」節にある。
+
 ## 使い方
 
 新規プロジェクト（基本形）:
