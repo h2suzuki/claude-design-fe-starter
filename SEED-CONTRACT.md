@@ -21,7 +21,7 @@ installer は既存 file を 3 分類する。**seed の現行版と一致**す�
 
 どちらも `--overwrite` で置き換えられる。判定は「配布 file のどれかが seed 由来と認識できるか」または「marker 区間が既にあるか」で行う。
 
-書き込みの後、target が git repo なら **まだ commit されていない seed の path** の commit まで進む（端末では 1 キー確認で `y` / `Y` だけが進み他は即 cancel・`--commit` で無条件・`--no-commit` で抑止）。cancel しても file は残るので、再実行すると同じ確認に戻る。元から未 commit の編集を持っていた `CLAUDE.md` / `.gitignore` は、marker 追記が既存編集と混ざるため commit 対象から外す。
+書き込みの後、target が git repo なら **まだ commit されていない seed の path** の commit まで進む（端末では 1 キー確認で `y` / `Y` だけが進み他は即 cancel・`--commit` で無条件・`--no-commit` で抑止）。cancel しても file は残るので、再実行すると同じ確認に戻る。元から未 commit の編集を持っていた `CLAUDE.md` / `.gitignore` / `.worktreeinclude` は、marker 追記が既存編集と混ざるため commit 対象から外す。
 
 | 領域 | 寄与 | 冪等化の方法 |
 |---|---|---|
@@ -32,6 +32,7 @@ installer は既存 file を 3 分類する。**seed の現行版と一致**す�
 | `.claude/settings.json` | hooks 登録 | 無ければ作成。既存なら衝突として停止し、hooks は seed の同 file から手動 merge する |
 | `CLAUDE.md` | 行動規範ブロック | `<!-- fe-starter:begin/end -->` マーカー区間の追記（既存なら skip — 強制力を持たない層なので PJ の版に任せる） |
 | `.gitignore` | build/一時生成物の除外 | `# fe-starter:begin/end` マーカー区間の追記（既存区間は seed の現行版へ入れ替える — 機械的に効くので追随させる。区間外と区間の位置は動かさない） |
+| `.worktreeinclude` | 取得が重い gitignore 済み file を worktree へ持ち込む指定 | `.gitignore` と同じマーカー区間の追記。持ち込むのは `node_modules/` / `pp/vendor/` / `.claude/settings.local.json` の 3 つで、生成物は入れない（作り直せるうえ古い成果物が残る）。toolchain も入れない — `tools/toolchain-dir` が main repo の `drafts/` を worktree 間で共有するので、複製すると無駄になる |
 
 `README.md`・`LICENSE` は installer の対象外（PJ 所有）。
 

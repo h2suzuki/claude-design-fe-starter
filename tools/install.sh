@@ -351,7 +351,7 @@ main() {
     printf '\n' >&2
   fi
 
-  local -a marker_files=(CLAUDE.md .gitignore)
+  local -a marker_files=(CLAUDE.md .gitignore .worktreeinclude)
   local -A dirty_marker=()
   if is_git_repo "$target"; then
     if marker_has_foreign_edit "$target" CLAUDE.md "$CLAUDE_BEGIN" "$CLAUDE_END"; then
@@ -359,6 +359,9 @@ main() {
     fi
     if marker_has_foreign_edit "$target" .gitignore "$GITIGNORE_BEGIN" "$GITIGNORE_END"; then
       dirty_marker[.gitignore]=1
+    fi
+    if marker_has_foreign_edit "$target" .worktreeinclude "$GITIGNORE_BEGIN" "$GITIGNORE_END"; then
+      dirty_marker[.worktreeinclude]=1
     fi
   fi
 
@@ -393,6 +396,8 @@ main() {
   # .gitignore は機械的に効くので追随させ、強制力を持たない CLAUDE.md は PJ のものに任せる
   sync_marker_block "$SEED_ROOT/CLAUDE.md" "$target/CLAUDE.md" "$CLAUDE_BEGIN" "$CLAUDE_END" keep
   sync_marker_block "$SEED_ROOT/.gitignore" "$target/.gitignore" "$GITIGNORE_BEGIN" "$GITIGNORE_END" refresh
+  # 同じ marker 書式。worktree へ何を持ち込むかは、何を gitignore するかを決めた側が決める
+  sync_marker_block "$SEED_ROOT/.worktreeinclude" "$target/.worktreeinclude" "$GITIGNORE_BEGIN" "$GITIGNORE_END" refresh
 
   printf '\n%s: %d copied, %d refreshed from an older seed version, %d overwritten, %d already current, %d left to the project\n' \
     "$PROG" "$created" "$refreshed" "$replaced" "${#identical[@]}" "$((keep_foreign ? ${#collisions[@]} : 0))"

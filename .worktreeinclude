@@ -1,0 +1,6 @@
+# fe-starter:begin
+# 取得が重い gitignore 済み file だけを worktree へ持ち込む（生成物と toolchain は入れない）
+node_modules/
+pp/vendor/
+.claude/settings.local.json
+# fe-starter:end
