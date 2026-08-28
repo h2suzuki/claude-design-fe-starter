@@ -156,7 +156,7 @@ iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-
 | 不透過の救済 | 円形ロゴなら円マスクを縮小前に alpha へ焼くと角の白が落ちる。縮小後にマスクすると縁に白が残る。JPEG のにじみを噛まないよう半径は 2px 内側 |
 | manifest | 512 は `manifest.json` が無いと未参照。iac-web は未参照なので生成をやめた |
 
-置き場は取り込み時に決める。`pp/scripts/` は parity の道具置き場で、`.ts` が 6 件・`.mjs` が 2 件（`mock-lint` / `require-no-skips`）。frontend の資産を作る script をここに置くか `tools/` へ置くかは未決。
+置き場は `tools/` が第 1 候補。iac-web が `pp/scripts/build-images.mjs` へ置いたのは **sharp を pp の devDependency に入れた都合**であって、pp が道具置き場だからではない（2026-08-29 の申し送り）。seed の `tools/` は既に node script を持つ（`ast-tree` / `ast-viewer` が `#!/usr/bin/env node`）ので言語は合う。ただし **`tools/` に package.json が無く**、npm の家は `frontend/` と `pp/` の 2 つだけなので、sharp をどちらの devDependency へ入れるかは取り込み時に決める（出力は frontend の配信資産）。
 
 ### `<picture>` を既定の処置に入れると gap が 1 つ増える
 
