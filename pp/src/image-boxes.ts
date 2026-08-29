@@ -32,3 +32,18 @@ export const boxesAgree = (mock: readonly Box[], app: readonly Box[]): boolean =
     const other = app[index]!;
     return (["x", "y", "width", "height"] as const).every((key) => Math.abs(box[key] - other[key]) < 1);
   });
+
+const excludedBoxes = (boxes: readonly ImageBox[], targets: readonly string[]): ImageBox[] =>
+  boxes.filter((box) => targets.some((target) => box.src.includes(target)));
+
+// 台帳が全部を外していても gate は緑になる。何箇所を見たのかを毎回出さないと、空の緑と見分けられない
+export const describeCoverage = (boxes: readonly ImageBox[], targets: readonly string[]): string => {
+  const excluded = excludedBoxes(boxes, targets).length;
+  return `画像 ${boxes.length} 箇所 / 台帳が外した ${excluded} 箇所 → 中身を比較した ${boxes.length - excluded} 箇所`;
+};
+
+// どの entry が何枚を外したかまで出す。1 行で全画像が外れていても、合計だけでは気づけない
+export const describeExcluded = (targets: readonly string[], boxes: readonly ImageBox[]): string =>
+  targets.length === 0
+    ? "なし"
+    : targets.map((target) => `${target} ${boxes.filter((box) => box.src.includes(target)).length} 枚`).join(" / ");

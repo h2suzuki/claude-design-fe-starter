@@ -20,7 +20,7 @@ import { openMock } from "../src/targets/mock-target";
 import { openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
 import { diffPagePngs } from "../src/page-diff";
-import { boxesAgree, collectImageBoxes } from "../src/image-boxes";
+import { boxesAgree, collectImageBoxes, describeCoverage, describeExcluded } from "../src/image-boxes";
 import type { PageDiffResult } from "../src/page-diff";
 
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "page-parity");
@@ -33,12 +33,6 @@ const BASES = [
 
 const shoot = async (page: Page): Promise<PNG> =>
   PNG.sync.read(await page.screenshot({ type: "png", fullPage: true }));
-
-// どの entry が何枚を外したかまで出す。1 行で全画像が外れていても、枚数だけでは気づけない
-const describeExcluded = (targets: readonly string[], boxes: readonly { src: string }[]): string =>
-  targets.length === 0
-    ? "なし"
-    : targets.map((t) => `${t} ${boxes.filter((b) => b.src.includes(t)).length} 枚`).join(" / ");
 
 // 落ちた画は必ず残す。pixel 差は数値だけ見ても原因に辿り着けない
 function writeArtifacts(tag: string, mock: PNG, app: PNG, result: PageDiffResult): string {
@@ -79,6 +73,8 @@ for (const [label, contextOptions] of BASES) {
         // 台帳が名指しした画像だけ中身の比較を外す。載っていない画像の差は落ちる
         const targets = imageTargets(keepImplEntries());
         const excluded = mockBoxes.filter((box) => targets.some((target) => box.src.includes(target)));
+        // 緑でも何箇所を見たのかは残す。台帳が全部を外していると、緑は「見ていない」の意味になる
+        console.log(`page-parity-${label}: ${describeCoverage(mockBoxes, targets)}`);
         const [mockPng, appPng] = await Promise.all([shoot(mockPage), shoot(appPage)]);
         const result = diffPagePngs(mockPng, appPng, excluded);
         const detail = result.matched

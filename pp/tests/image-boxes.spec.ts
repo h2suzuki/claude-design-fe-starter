@@ -2,7 +2,7 @@
 // 同じ絵が mock と実装で違う markup になっても 1 枚 1 箱に揃うことをここで固定する
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { boxesAgree, collectImageBoxes } from "../src/image-boxes";
+import { boxesAgree, collectImageBoxes, describeCoverage, describeExcluded } from "../src/image-boxes";
 
 const PIX = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
@@ -57,5 +57,34 @@ test.describe("image-boxes — how placement is counted", () => {
     const mock = await boxesOf(page, bare(2));
     const app = await boxesOf(page, bare(3));
     expect(boxesAgree(mock, app)).toBe(false);
+  });
+});
+
+test.describe("describeCoverage", () => {
+  const boxes = [{ x: 0, y: 0, width: 1, height: 1, src: "assets/a.png" }, { x: 0, y: 0, width: 1, height: 1, src: "uploads/b.png" }];
+
+  test("台帳が全部外していれば、比較した枚数が 0 と読める", () => {
+    // 緑でも中身は 1 枚も見ていない。log に出ないと、適用先はそれを見分けられない
+    expect(describeCoverage(boxes, ["assets/a.png", "uploads/b.png"])).toBe("画像 2 箇所 / 台帳が外した 2 箇所 → 中身を比較した 0 箇所");
+  });
+
+  test("台帳が空なら全部が比較対象と読める", () => {
+    expect(describeCoverage(boxes, [])).toBe("画像 2 箇所 / 台帳が外した 0 箇所 → 中身を比較した 2 箇所");
+  });
+
+  test("画像が 1 枚も無い画面も、そう読める", () => {
+    expect(describeCoverage([], [])).toBe("画像 0 箇所 / 台帳が外した 0 箇所 → 中身を比較した 0 箇所");
+  });
+});
+
+test.describe("describeExcluded", () => {
+  const boxes = [{ x: 0, y: 0, width: 1, height: 1, src: "assets/a.png" }, { x: 0, y: 0, width: 1, height: 1, src: "assets/b.png" }];
+
+  test("entry ごとの枚数を出す", () => {
+    expect(describeExcluded(["assets/"], boxes)).toBe("assets/ 2 枚");
+  });
+
+  test("台帳が空なら「なし」", () => {
+    expect(describeExcluded([], boxes)).toBe("なし");
   });
 });
