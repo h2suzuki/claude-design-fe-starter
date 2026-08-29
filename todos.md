@@ -43,28 +43,6 @@ iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 �
 
 根の原因は、README:25-34 が見本 page に 5 つの別扱いを定めているのに、**pp 側にその区別を表す仕組みが 1 つも無い**こと。`pp/` を検索して当たるのは `pp/tests/mock-screens.spec.ts:20-21` の fixture 名 `design-system.dc.html` だけで、そこは逆に「見本 page も他の画面と同じく列挙される」ことを assert している。参照スクショと閉包収集は全 page を要るので、この assert は正しい。区別が要るのは `vocabularyFindings` の linkTexts だけ。MOCK204 はそれが最初に露呈した箇所。
 
-### KEEP_IMPL 台帳が pp と結線されていない
-
-起票: opus-5 2026-08-27
-Goal: `docs/presentation/ui-mock/DESIGN-POLICY.md` に登録した意図的差分を、gate が「差分」として扱わない形で機械に伝える。
-Work file: `docs/presentation/ui-mock/DESIGN-POLICY.md`・`pp/src/diff.ts`・`pp/tests/page-parity.spec.ts`
-
-Exit Criteria:
-
-- [x] 台帳の entry が `sample-parity` と `page-parity` の判定に効き、登録済みの差分では落ちない — `style: <id>/<prop>` と `geometry: <id>/<axis>` を足し、`sample-parity` が `withoutDeclaredStyles` / `withoutDeclaredGeometry` で台帳を読む
-- [x] 台帳に無い差分は従来どおり落ちることを、陽性・陰性の両方で実測する — 画像の slice に加え、style と geometry も `keep-impl.spec.ts` で対照つき（名指しした差分だけ落ちない / 前方一致では効かない / 台帳が空なら 1 件も落ちない）。書式検査は seed の空台帳で 0 件、iac-web の実台帳で 3 件を名指しして落ちることを実測
-- [x] 台帳の書式が spec で機械検査される — `ledgerProblems` が対象の接頭辞と日付を見て、`keep-impl.spec.ts` の「この PJ の台帳」が実台帳へ当てる。**画面の列は作らなかった**: `SELECTOR_MAP` は画面ごとに解決されるので、名指しは画面内で一意になる
-
-着手条件は最初の entry が立つこと。適用先は第 1 版で候補 2 件（calendar modal の 12px はみ出し / index の固定 box）を持っていたが、第 2 版 mock で両方とも mock 側が直り消えた（2026-08-27 報告）。
-
-**`page-parity` は画面まるごとの pixel 一致なので、KEEP_IMPL が 1 件でも立った瞬間に必ず落ちる。** 結線はその前に済ませる必要がある。
-
-2026-08-28: 適用先が画像軽量化で 14 spec を赤にし、台帳 entry を立てた。img/picture/video を一律で pixel 比較から外す形（`fb0a7fd`）は承認していない差し替えまで通すので `1164dae` で撤回し、**台帳が `img: <src の一部>` で名指しした画像だけ**を外す形にした（置かれ方＝枚数と箱は常に比較する）。DESIGN-POLICY も同 commit で「既定の処置に従った軽量化**も**載せる」へ改めてある。
-
-残るのは**画像以外**の差分で、こちらは吸収する機構がまだ無い（DESIGN-POLICY に明記）。
-
-2026-08-29 に適用先の台帳を読み直した: entry は 3 件で、#3（`docs/presentation/ui-mock/DESIGN-POLICY.md:14`）が `<picture>` + `srcset` の markup 構造差。描画 pixel を変えない差分なので厳密な意匠差ではないが、**`img:` 行では表現できない entry が既に立っている**。着手条件を「意匠の意図的差分」で待つ書き方は現況に合わない。実際に先に効くのは `page-parity.spec.ts:102-105` の件数比較で、KEEP_IMPL の適用（106 行）より前にあるため、#3 のある画面では台帳が 1 件も読まれずに落ちる。
-
 ### 実証 2 回目 — mock を更新して反映する流れ
 
 起票: opus-5 2026-08-28
@@ -87,7 +65,7 @@ Exit Criteria:
 
 2026-08-29 の実測（seed HEAD `ca0ed76` と適用先を install.sh と同じ規則で照合。`pp/` 配下）: install.sh が「PJ のもの」と判定して触らない file が 15 件あり、うち 7 件が spec（`ast-conformance` / `list-identity-sweep` / `modal-geometry-sweep` / `page-parity` / `poststate-sweep` / `self-baseline` / `width-sweep`）。**この 7 件へ seed が入れた変更は install.sh では届かない** — `1164dae` の KEEP_IMPL 結線もこの中。spec を機構だけにする「pp の登録点が 1 画面前提」の解消が、二巡目へ seed 更新を届ける前提になる。COPY_DIRS 全体では据え置き 26 件・更新 21 件・新規 11 件。件数は seed HEAD と適用先の状態で動くので、取り込み時に install.sh の出力で取り直す。
 
-台帳の書式も要調整。適用先の台帳は 2026-08-29 時点で 3 entry あり、いずれも対象列が散文で、gate が読む `img: <src の一部>` の形になっていない。#1（画像 13 枚）と #2（会場写真 7 枚）は `img: assets/` と `img: uploads/` のような prefix 2 行で書ける見込み（`imageTargets` は src の部分一致）。**#3（`<picture>` + `srcset`、写真 15 枚の markup）は構造差なので `img:` では表現できない** — 上の「KEEP_IMPL 台帳」block の裁定待ち。
+台帳の書式も要調整。適用先の台帳は 2026-08-29 時点で 3 entry あり、いずれも対象列が散文で、gate が 1 行も読まない。**新設した `keep-impl` の書式検査を当てると 3 件とも名指しで落ちる**（当 session で実測済み）。#1（画像 13 枚）と #2（会場写真 7 枚）は `img: assets/` と `img: uploads/` のような prefix 2 行で書ける見込み（`imageTargets` は src の部分一致）。#3（`<picture>` + `srcset`）は箱の件数が揃うようになったので gate を止める力を失っており、entry ごと閉じられる見込み。
 
 seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使うもの:
 
