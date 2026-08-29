@@ -89,6 +89,22 @@ seed 側の依存は 2026-08-28 に vite 8.2.2 へ、`pp/` の導入を bun へ�
 
 ## Medium
 
+### 新しい道具を配っても呼び口が届かない
+
+起票: opus-5 2026-08-29
+Goal: seed が新設した道具が、適用先で呼び口ごと届くか、届かないことが install の時点で分かるようにする。
+Work file: `tools/install.sh`・`pp/package.json`
+
+Exit Criteria:
+
+- [ ] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する（または呼び口を据え置き対象外の場所へ移す）
+- [ ] 適用先で道具を 1 つ入れ、呼び口まで届くことを実測する
+
+iac-web からの報告（2026-08-29、実装依頼ではない）。`pp/scripts/mock-integrity.ts` と `pp/src/mock-integrity.ts` は新規 file として install で入るが、**`pp/package.json` は PJ 所有なので `mock:integrity` の script 定義が入らず、`bun run --cwd pp mock:integrity` が動かない**。適用先は手で足せば済むが、`package.json` は育つ file なので他の適用先でも同じことが起きる。
+
+同型の割れも報告されている: `mock:closure` の指す先が seed は `scripts/mock-closure.ts`、iac-web は `scripts/collect-mock-closure.ts` で、新旧 2 本が並ぶ。
+
+
 ### BE 結合済み実装と Claude Design の往復手順が無い
 
 起票: opus-5 2026-08-24
