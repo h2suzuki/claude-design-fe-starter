@@ -207,11 +207,19 @@ export function dialogFindings(screen: string, viewport: string, unfit: readonly
 }
 
 // 同じ意味の値が画面ごとに違うのは mock 側の割れ。実装で吸収させず凍結前に直す
-export function vocabularyFindings(vocabularies: Record<string, ScreenVocabulary>): Finding[] {
+export function vocabularyFindings(
+  vocabularies: Record<string, ScreenVocabulary>,
+  referencePages: readonly string[] = [],
+): Finding[] {
   const findings: Finding[] = [];
-  const collect = (pick: (vocabulary: ScreenVocabulary) => Record<string, string>, what: string): void => {
+  const collect = (
+    pick: (vocabulary: ScreenVocabulary) => Record<string, string>,
+    what: string,
+    skip: readonly string[],
+  ): void => {
     const byKey = new Map<string, Map<string, string[]>>();
     for (const [screen, vocabulary] of Object.entries(vocabularies)) {
+      if (skip.includes(screen)) continue;
       for (const [key, value] of Object.entries(pick(vocabulary))) {
         const byValue = byKey.get(key) ?? new Map<string, string[]>();
         byValue.set(value, [...(byValue.get(value) ?? []), screen]);
@@ -226,7 +234,9 @@ export function vocabularyFindings(vocabularies: Record<string, ScreenVocabulary
       findings.push({ id: "MOCK204", screen: "（画面間）", detail: `${what} ${key} が割れている: ${split}` });
     }
   };
-  collect((vocabulary) => vocabulary.linkTexts, "リンク文言");
-  collect((vocabulary) => vocabulary.tokens, "token");
+  // 見本帳は site の導線を持たないので、導線の文言としては比べない
+  collect((vocabulary) => vocabulary.linkTexts, "リンク文言", referencePages);
+  // token 名の母体は見本帳。値が画面と割れたら見本側の生成ぶれなので、こちらは比べる
+  collect((vocabulary) => vocabulary.tokens, "token", []);
   return findings;
 }

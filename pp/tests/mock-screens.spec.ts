@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { listMockScreens } from "../src/mock-screens";
+import { listMockScreens, readReferencePages } from "../src/mock-screens";
 
 function fixtureExport(files: readonly string[]): string {
   const dir = mkdtempSync(path.join(os.tmpdir(), "pp-mock-screens-"));
@@ -43,5 +43,41 @@ test.describe("mock-screens — target enumeration", () => {
 
   test("an empty export yields no targets", () => {
     expect(listMockScreens(fixtureExport([]), [])).toEqual([]);
+  });
+});
+
+test.describe("mock-screens — 見本帳の宣言", () => {
+  const declare = (dir: string, body: unknown): string => {
+    const file = path.join(dir, "reference-pages.json");
+    writeFileSync(file, JSON.stringify(body));
+    return file;
+  };
+
+  test("宣言 file が無ければ見本帳は無い", () => {
+    const dir = fixtureExport(["index.dc.html"]);
+    expect(readReferencePages(path.join(dir, "reference-pages.json"), ["index.dc.html"])).toEqual([]);
+  });
+
+  test("空の宣言も見本帳は無い", () => {
+    const dir = fixtureExport(["index.dc.html"]);
+    expect(readReferencePages(declare(dir, { version: "1", pages: [] }), ["index.dc.html"])).toEqual([]);
+  });
+
+  test("宣言した file 名を返す", () => {
+    const dir = fixtureExport(["index.dc.html", "design-system.dc.html"]);
+    const file = declare(dir, { version: "1", pages: ["design-system.dc.html"] });
+    expect(readReferencePages(file, ["design-system.dc.html", "index.dc.html"])).toEqual(["design-system.dc.html"]);
+  });
+
+  test("export に無い名前は打ち間違いなので落とす", () => {
+    const dir = fixtureExport(["index.dc.html"]);
+    const file = declare(dir, { version: "1", pages: ["design-sistem.dc.html"] });
+    expect(() => readReferencePages(file, ["index.dc.html"])).toThrow(/design-sistem\.dc\.html/);
+  });
+
+  test("file 名の配列でなければ落とす", () => {
+    const dir = fixtureExport(["index.dc.html"]);
+    const file = declare(dir, { version: "1", pages: "design-system.dc.html" });
+    expect(() => readReferencePages(file, ["index.dc.html"])).toThrow();
   });
 });

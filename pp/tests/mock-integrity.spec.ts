@@ -162,6 +162,28 @@ test.describe("mock-integrity — 画面間の割れ", () => {
     expect(vocabularyFindings({ a, b })).toEqual([]);
   });
 
+  test("見本帳として宣言した画面は、リンク文言の突合から外れる", async ({ browser }) => {
+    // 見本帳は site の導線を持たない。仕様書から本体へ戻るリンクを画面の導線として比べない
+    const a = await vocabularyOf(browser, CLEAN);
+    const sample = await vocabularyOf(browser, CLEAN.replace(">ホーム<", ">サイトを見る →<"));
+    expect(vocabularyFindings({ a, sample }, ["sample"])).toEqual([]);
+  });
+
+  test("見本帳でも token の割れは落とす", async ({ browser }) => {
+    // 見本は token 名の母体だが値の正本ではない。割れたら見本側の生成ぶれを疑う
+    const a = await vocabularyOf(browser, CLEAN);
+    const sample = await vocabularyOf(browser, CLEAN.replace("#123456", "#123457"));
+    const findings = vocabularyFindings({ a, sample }, ["sample"]);
+    expect(findings.map((finding) => finding.id)).toEqual(["MOCK204"]);
+    expect(findings[0]!.detail).toContain("--brand");
+  });
+
+  test("宣言が無ければ見本帳も画面として突き合わせる", async ({ browser }) => {
+    const a = await vocabularyOf(browser, CLEAN);
+    const sample = await vocabularyOf(browser, CLEAN.replace(">ホーム<", ">サイトを見る →<"));
+    expect(vocabularyFindings({ a, sample }).map((finding) => finding.id)).toEqual(["MOCK204"]);
+  });
+
   test("同じ token の値が違えば MOCK204", async ({ browser }) => {
     const a = await vocabularyOf(browser, CLEAN);
     const b = await vocabularyOf(browser, CLEAN.replace("#123456", "#123457"));

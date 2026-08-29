@@ -13,9 +13,9 @@ import {
   SWEEP_WIDTHS,
   sweepContextOptions,
 } from "../src/config";
-import { EXPORT_DIR } from "../src/mock-server";
+import { EXPORT_DIR, MOCK_ROOT } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
-import { listMockScreens, screenSlug } from "../src/mock-screens";
+import { listMockScreens, readReferencePages, screenSlug } from "../src/mock-screens";
 import { openMock } from "../src/targets/mock-target";
 import {
   coveredFindings,
@@ -82,7 +82,8 @@ async function main(): Promise<void> {
   } finally {
     await browser.close();
   }
-  findings.push(...vocabularyFindings(vocabularies));
+  const referencePages = readReferencePages(path.join(MOCK_ROOT, "reference-pages.json"), listMockScreens(EXPORT_DIR, []));
+  findings.push(...vocabularyFindings(vocabularies, referencePages));
 
   mkdirSync(path.dirname(OUT), { recursive: true });
   writeFileSync(OUT, `${JSON.stringify({ screens, widths: WIDTHS, findings }, null, 2)}\n`);
