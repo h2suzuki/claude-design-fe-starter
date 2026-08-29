@@ -93,7 +93,7 @@ Work file: `tools/install.sh`・`pp/package.json`
 Exit Criteria:
 
 - [x] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する — `warn_unreachable_tools`。走査元は**配布集合**（file system を見ると未追跡 file まで数える）。文面は事実を述べて判断は残す形。陽性 2 件・陰性 0 件・未追跡 script を置いても名指ししないことを実測
-- [ ] 適用先で道具を 1 つ入れ、呼び口まで届くことを実測する
+- [ ] 適用先で警告が出て、手当てすれば道具が動くところまでを実測する — iac-web が `mock:integrity` の呼び口を手で足して実行し、直すもの 35 件 / 気づき 1 件を得た（2026-08-30）。**残るのは警告そのものが適用先で出ることの確認**で、今の警告（走査元を配布集合へ直した版）はまだ適用先へ届いていない
 
 iac-web からの報告（2026-08-29、実装依頼ではない）。`pp/scripts/mock-integrity.ts` と `pp/src/mock-integrity.ts` は新規 file として install で入るが、**`pp/package.json` は PJ 所有なので `mock:integrity` の script 定義が入らず、`bun run --cwd pp mock:integrity` が動かない**。適用先は手で足せば済むが、`package.json` は育つ file なので他の適用先でも同じことが起きる。
 
@@ -140,7 +140,7 @@ Exit Criteria:
 
 - [x] `READY_SELECTOR` / `MODALS` / `EDGES` / fixture / self-baseline 対象などの登録点が画面ごとに引ける形になり、各 spec は出所の参照だけを持つ — `pp/src/screens.ts`（表）と `pp/src/screen-registry.ts`（引く機構）に分け、8 spec から定数を外した
 - [x] 画面を 2 枚登録して画面ごとに回し、登録点が画面ごとに解決されることを実測する — 2026-08-28 実測。seed の frontend（`/` と `/states`）へ app 側 3 spec を 2 slug 分。どちらも 4 passed / 0 skipped で、self-baseline が別名・別内容の PNG を 4 枚吐いた（16986B と 46126B）＝ route が実際に切り替わっている。未登録 slug は skip でなく error になることも実測
-- [ ] 凍結 mock を持つ適用先で `bun run --cwd pp gate` を画面ごとに回し、どちらも skip 無しで緑になることを実測する — seed には凍結 mock が無く mock 側 spec を回せないので、実証 2 回目でここを埋める
+- [x] 凍結 mock を持つ適用先で `bun run --cwd pp gate` を画面ごとに回し、skip 無しで緑になることを実測する — iac-web が 2026-08-30 に 7 画面を 1 画面ずつ実行。全画面 failed 0 件、skip は `gate-not-applicable.json` の宣言分だけで未検証の skip なし（126〜128 passed / 1〜3 skipped）
 - [x] 適用先が先行実装した形の結果報告を受け取ってから設計を確定する — 2026-08-27 受領。7 spec の diff は定数の出所だけで assertion / skip 条件は不変、slug 規則も `screenOf` と一致
 
 先方の設計上の注意 2 点への処置: (a) 循環は型だけの import にして切った（`screens.ts` が型を `screen-registry.ts` から取り、機構が表を取る）。素の定数は `config.ts` に残してある。(b) `SELF_BASELINE_PATHS` は廃止し、self-baseline は今の画面 1 枚だけを撮る — 画面ごとに回せば全画面が 1 回ずつ撮られる。
@@ -178,7 +178,7 @@ Exit Criteria:
 - [x] `app.html` に `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` の link が入り、生成物と一致する — `sizes="16x16 32x32 48x48"` は script の `ICO_SIZES` と一致
 - [x] manifest を置くかどうかを規約が決める — **置かない**。512×512 の生成もやめ、形の一覧から外した。PWA を名乗る要件が出た時点で足す
 - [x] 元が不透過（写真 JPEG など）だったときの救済手順を書く — `--round` として実装し規約にも書いた。実測で 16px の角 alpha が 255 → 0、中央は 255 のまま
-- [ ] 生成から配線までを適用先で 1 回通す
+- [ ] 生成から配線までを適用先で 1 回通す — **受け皿は次の適用先**。iac-web は自前実装（`pp/scripts/build-images.mjs`）を H.S. の確認済みで持っており、seed 版へ寄せない判断（2026-08-30）
 
 現状は**要求と形の一覧まで**しかない。`seed-docs/design-order-template.md:40` が「正方形・余白込み・単色背景の元画像を渡す（透過 PNG または SVG）」と発注側へ求め、`seed-docs/pre-implementation-questions.md:29` が必要な形（`.ico` 16/32/48 の多重 + PNG 180×180 + 512×512）を挙げるが、元画像からその形を作って HTML へ繋ぐ側が無い。
 
