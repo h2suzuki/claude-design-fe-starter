@@ -4,6 +4,26 @@
 
 ## High
 
+### 見本 page を画面として突き合わせてしまう
+
+起票: opus-5 2026-08-29
+Goal: 凍結手順が「route として実装しない」と定めた見本 page を機械が区別し、画面間の語彙突合が見本の chrome を「割れ」と誤判定しないようにする。
+Work file: `pp/src/mock-integrity.ts`（`readVocabulary` と `vocabularyFindings`）・`docs/presentation/ui-mock/README.md`
+
+Exit Criteria:
+
+- [ ] 見本 page の宣言点を決めて seed に入れる（第 1 候補は `docs/presentation/ui-mock/` 側の宣言 file）
+- [ ] linkTexts の突合から見本 page が外れ、token の突合には残ることを実測する
+- [ ] 適用先の見本 page で MOCK204 が 0 件になることを確認する
+
+iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 が 1 件出る: `index.dc.html` へのリンク文言が、7 画面 = 「ホーム」／DS ページ = 「サイトを見る →」で割れる。**MOCK201 を直しても、この 1 件で再凍結が 6 段目で止まる。**
+
+当方の確認: `readVocabulary`（`pp/src/mock-integrity.ts:145-153`）は `nav a[href],header a[href],footer a[href],[role=navigation] a[href]` から文言を採り、コメントに「突き合わせるのは画面をまたいで同じものを指す導線だけ」と書いてある。DS ページの `<header>` は site の navigation ではなく**見本自身の題字バー**（題字・版数・テーマ切替を持ち、page 内に header/nav/footer はこの 1 つだけ）。同じものを指す導線ではないので、突合対象に入れているのが誤り。
+
+**token の突合からは外さない。** README:32 が「画面と見本で値が割れたら、まず見本側の生成ぶれを疑って mock へ差し戻す」と定めており、token の割れは検出したい。外すのは linkTexts だけ。
+
+根の原因は、README:25-34 が見本 page に 5 つの別扱いを定めているのに、**pp 側にその区別を表す仕組みが 1 つも無い**こと（`grep` で該当なし）。MOCK204 はそれが最初に露呈した箇所。
+
 ### page-parity が `<picture>` の箱を二重に数える
 
 起票: opus-5 2026-08-29
