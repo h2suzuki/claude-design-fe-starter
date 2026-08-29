@@ -1,7 +1,11 @@
 // 検査器自身の陽性・陰性対照。凍結前の mock 検査は「破れを持つ mock で落ちる」ことが証明されて初めて
 // 意味を持つので、5 種の破れをそれぞれ合成 mock で踏ませ、健全な mock では 0 件であることを固定する
 import { expect, test } from "@playwright/test";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { MOBILE_CONTEXT_OPTIONS } from "../src/config";
+import { readReferencePages, screenSlug } from "../src/mock-screens";
 import {
   blockingFindings,
   coveredFindings,
@@ -191,6 +195,23 @@ test.describe("mock-integrity — 画面間の割れ", () => {
     const findings = vocabularyFindings({ a, b });
     expect(findings.map((finding) => finding.id)).toEqual(["MOCK204"]);
     expect(findings[0]!.detail).toContain("--brand");
+  });
+
+  // 両側に同じ値を置く test は、この継ぎ目のずれを原理的に捕まえられない。
+  // script と同じ経路（file 名で宣言 → slug を key にした vocabularies）を通して初めて出る
+  test("file 名で宣言した見本帳が、slug を key にした突合から外れる", async ({ browser }) => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "pp-seam-"));
+    const screens = ["index.dc.html", "design-system.dc.html"];
+    for (const file of screens) writeFileSync(path.join(dir, file), "");
+    const declaration = path.join(dir, "reference-pages.json");
+    writeFileSync(declaration, JSON.stringify({ version: "1", pages: ["design-system.dc.html"] }));
+
+    const site = await vocabularyOf(browser, CLEAN);
+    const sample = await vocabularyOf(browser, CLEAN.replace(">ホーム<", ">サイトを見る →<"));
+    const vocabularies = Object.fromEntries(
+      screens.map((file, index) => [screenSlug(file), index === 0 ? site : sample]),
+    );
+    expect(vocabularyFindings(vocabularies, readReferencePages(declaration, screens))).toEqual([]);
   });
 });
 

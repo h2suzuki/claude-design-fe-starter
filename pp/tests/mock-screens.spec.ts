@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { listMockScreens, readReferencePages } from "../src/mock-screens";
+import { listMockScreens, readReferencePages, screenSlug } from "../src/mock-screens";
 
 function fixtureExport(files: readonly string[]): string {
   const dir = mkdtempSync(path.join(os.tmpdir(), "pp-mock-screens-"));
@@ -63,10 +63,13 @@ test.describe("mock-screens — 見本帳の宣言", () => {
     expect(readReferencePages(declare(dir, { version: "1", pages: [] }), ["index.dc.html"])).toEqual([]);
   });
 
-  test("宣言した file 名を返す", () => {
+  test("宣言は file 名で書き、返るのは画面 slug", () => {
+    // 突合先の key は screenSlug 済み。file 名のまま返すと、どんな値を書いても当たらない
     const dir = fixtureExport(["index.dc.html", "design-system.dc.html"]);
     const file = declare(dir, { version: "1", pages: ["design-system.dc.html"] });
-    expect(readReferencePages(file, ["design-system.dc.html", "index.dc.html"])).toEqual(["design-system.dc.html"]);
+    expect(readReferencePages(file, ["design-system.dc.html", "index.dc.html"])).toEqual([
+      screenSlug("design-system.dc.html"),
+    ]);
   });
 
   test("export に無い名前は打ち間違いなので落とす", () => {
