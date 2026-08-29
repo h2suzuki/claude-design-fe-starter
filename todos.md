@@ -12,11 +12,13 @@ Work file: `pp/tests/page-parity.spec.ts`
 
 Exit Criteria:
 
-- [ ] 採取 selector を `img, video` に変え、`<picture>` に包んだ実装と素の `<img>` の mock で件数が揃うことを実測する
-- [ ] `display: contents` の `<picture>` が 0×0 の箱を作らないこと（＝箱として採られないこと）を回帰として固定する
-- [ ] 変更を iac-web へ一報し、install.sh 束へ足してもらう
+- [x] 採取 selector を `img, video` に変え、`<picture>` に包んだ実装と素の `<img>` の mock で件数が揃うことを実測する — `pp/src/image-boxes.ts` へ採取と突合を出し、`img, video` に変更。旧 selector では新 spec 5 件中 2 件が赤、変更後 5 件緑
+- [x] `display: contents` の `<picture>` が 0×0 の箱を作らないこと（＝箱として採られないこと）を回帰として固定する — `pp/tests/image-boxes.spec.ts` 5 件。`picture > source { display: none }` を欠く形が gap 増として落ちることも含む
+- [ ] 変更を iac-web へ一報し、install.sh 束へ足してもらう — 一報は 2026-08-29 に送信済み。先方の取り込み確認待ち
 
-iac-web からの依頼（2026-08-29）。**着手には H.S. の承認が要る**（当 session で承認待ち。iac-web session では 16:29 に「その案は妥当に思えます」との verbatim を受領との報告）。
+iac-web からの依頼（2026-08-29）。H.S. 承認済み（2026-08-29 17:14「では、作業を再開してください。」）。
+
+`bun run --cwd pp typecheck` 通過、`bun run --cwd pp test` は 76 passed / 14 skipped（従来 71 passed に新規 5 件）。**`page-parity` 自体は seed では skip のまま**（凍結 mock が無いため）なので、page-parity 本体で件数が揃うことの実測は「実証 2 回目」block の gate 緑が受け皿になる。
 
 当方の実測（Chromium / playwright 1.61.1）: `<picture><source><img>` は現行 selector で 2 箱になり、`picture` の rect は中の `img` と同一。`picture { display: contents }` を掛けると `picture` の rect は 0,0 の 0×0 になる。`img, video` にすると 3 通りの markup すべてで 1 箱。iac-web 側も自 repo の実構成で同じ結論（`getClientRects()` が 0 本）。
 
