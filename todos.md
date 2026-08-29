@@ -20,6 +20,8 @@ iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 �
 
 当方の確認: `readVocabulary`（`pp/src/mock-integrity.ts:145-153`）は `nav a[href],header a[href],footer a[href],[role=navigation] a[href]` から文言を採り、コメントに「突き合わせるのは画面をまたいで同じものを指す導線だけ」と書いてある。DS ページの `<header>` は site の navigation ではなく**見本自身の題字バー**（題字・版数・テーマ切替を持ち、page 内に header/nav/footer はこの 1 つだけ）。同じものを指す導線ではないので、突合対象に入れているのが誤り。
 
+宣言 file が無い / 空のときは **見本 page 無しとして扱い、現行どおり全 page を突き合わせる**（落とさない）。`pp/gate-not-applicable.json` と同じ形で、宣言は例外であり既定は厳しいまま。seed が空の宣言 file を同梱するので、install 直後に file が無い状態にはならない。
+
 **token の突合からは外さない。** README:32 が「画面と見本で値が割れたら、まず見本側の生成ぶれを疑って mock へ差し戻す」と定めており、token の割れは検出したい。外すのは linkTexts だけ。
 
 根の原因は、README:25-34 が見本 page に 5 つの別扱いを定めているのに、**pp 側にその区別を表す仕組みが 1 つも無い**こと。`pp/` を検索して当たるのは `pp/tests/mock-screens.spec.ts:20-21` の fixture 名 `design-system.dc.html` だけで、そこは逆に「見本 page も他の画面と同じく列挙される」ことを assert している。参照スクショと閉包収集は全 page を要るので、この assert は正しい。区別が要るのは `vocabularyFindings` の linkTexts だけ。MOCK204 はそれが最初に露呈した箇所。
