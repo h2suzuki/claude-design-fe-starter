@@ -128,25 +128,26 @@ sync_marker_block() {
   printf 'append: %s\n' "$(basename "$target_file")"
 }
 
-# 道具を配っても、呼び口を持つ file が据え置かれると起動できない。名指しで出さないと気づけない
+# 配った道具の呼び口が据え置き file の中にあると起動できない。黙っていると気づけないので知らせる。
+# 走査するのは配った集合だけ — file system を見ると、配っていない未追跡 file まで数えてしまう
 warn_unreachable_tools() {
-  local target=$1 manifest=$2
-  shift 2
+  local target=$1 manifest=$2 shipped=$3
+  shift 3
   local -a kept=("$@") unreachable=()
-  local pkg dir tool
+  local pkg dir rel
   for pkg in "${kept[@]}"; do
     [[ $pkg == "$manifest" || $pkg == */$manifest ]] || continue
     dir=${pkg%"$manifest"}
-    for tool in "$SEED_ROOT/$dir"scripts/*; do
-      [[ -f $tool ]] || continue
-      grep -qF -- "${tool##*/}" "$target/$pkg" || unreachable+=("${dir}scripts/${tool##*/}")
-    done
+    while IFS= read -r rel; do
+      [[ $rel == "$dir"scripts/* ]] || continue
+      grep -qF -- "${rel##*/}" "$target/$pkg" || unreachable+=("$rel")
+    done <<< "$shipped"
   done
   ((${#unreachable[@]} > 0)) || return 0
-  printf '\n%s: %d tool(s) landed with no way to run them — %s is this project'"'"'s:\n' \
+  printf '\n%s: %d tool(s) have no entry in %s, which this project owns:\n' \
     "$PROG" "${#unreachable[@]}" "$manifest" >&2
   print_paths "${unreachable[@]}"
-  printf 'Add the missing entries to that file by hand, or the tools stay unreachable.\n' >&2
+  printf 'Add an entry to run them, or leave it as is if this project uses its own.\n' >&2
 }
 
 print_paths() {
@@ -438,7 +439,7 @@ If a seed change to one of them matters, merge it by hand, or re-run with
 EOF
   fi
   if ((keep_foreign)); then
-    warn_unreachable_tools "$target" package.json "${collisions[@]}"
+    warn_unreachable_tools "$target" package.json "$(printf '%s\n' "${rels[@]}")" "${collisions[@]}"
   fi
   if ((replaced > 0)); then
     printf 'overwritten:\n' >&2
