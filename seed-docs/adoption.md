@@ -146,6 +146,24 @@ hook 登録を含む `.claude/settings.json` が更新されるので、merge �
 
 `git cherry-pick` は個別修正を拾う時の手段であって、更新の常道ではない。seed の commit は `README.md`・`SEED-CONTRACT.md` のような PJ 所有 path を含むことがあり、そのまま当たらない。
 
+### 差し替え点の形が変わったとき
+
+seed が差し替え点の型や引数を変えると、install.sh は据え置いた file を触らないので **PJ 側だけが旧い形のまま残る**。その状態は `tsc --noEmit` で出る。適用先が実際に当てた移行を、要領として残す（2026-08-29、`screen-registry` 導入時）。
+
+| 触る file | 何をするか |
+| --- | --- |
+| `pp/src/screens.ts` | 型を `screen-registry` から import し、新しい field 名へ改める。新しい型に無い field は excess property になるので落とす |
+| `pp/src/config.ts` | `screens` からの import を落とす。**`screen-registry` が `config` を読むので、`config` が `screens` を読むと循環する** |
+| `pp/src/targets/app-target.ts` | seed 側で増えた関数を写す |
+| spec | `CURRENT_SCREEN` の import 元を `screen-registry` へ移し、optional になった field を補う |
+
+**型が 0 件になっても移行は終わっていない。** 適用先は `tsc` が通った時点を完了と見て gate で 2 件を踏んだ:
+
+- **既定値を兼ねている export を落とすと、頼っていた側が黙って別の対象を見る。** `APP_ENTRY_PATH` は「config の不要な export」に見えて `openApp` の既定 path でもあり、落とした結果 6 spec がトップを開いた。構造差 107 件と 10 分 timeout として出た。**落とすなら、既定に頼っている呼び出しへ値を明示するのが対で要る**
+- **名前の追従だけで移植を終えない。** 据え置き spec を手で移すとき、変数名を合わせただけで中身（画像の箱の照合と台帳による除外）が入っておらず、pixel 差 9.3% で落ちた
+
+型では出ない種類なので、**移行の完了判定は `tsc` ではなく gate に置く**。
+
 ## 7. 依存を上げる
 
 frontend と pp の依存は **install.sh では届かない**。`frontend/package.json`・`frontend/bun.lock`・`pp/package.json`・`pp/bun.lock` はいずれも PJ が育てる file なので、seed 側で上げても「PJ のもの」として触られずに残る（§6 の分類）。**適用先が自分で同じ bump を当てる**。
