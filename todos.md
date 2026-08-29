@@ -195,29 +195,4 @@ iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-
 
 置き場は `tools/` が第 1 候補。iac-web が `pp/scripts/build-images.mjs` へ置いたのは **sharp を pp の devDependency に入れた都合**であって、pp が道具置き場だからではない（2026-08-29 の申し送り）。seed の `tools/` は既に node script を持つ（`ast-tree` / `ast-viewer` が `#!/usr/bin/env node`）ので言語は合う。ただし **`tools/` に package.json が無く**、npm の家は `frontend/` と `pp/` の 2 つだけなので、sharp をどちらの devDependency へ入れるかは取り込み時に決める（出力は frontend の配信資産）。
 
-### `<picture>` を既定の処置に入れると gap が 1 つ増える
-
-起票: opus-5 2026-08-29
-Goal: 重い資産の既定の処置（`docs/ui-quality-policy.md:62`）を `<picture>` を使う形へ広げるときに踏む layout 欠陥を、規約が先に塞ぐ。
-Work file: `docs/ui-quality-policy.md`・`seed-docs/pre-implementation-questions.md`（重い資産）
-
-Exit Criteria:
-
-- [x] `picture { display: contents }` を書くなら `picture > source { display: none }` を対で書く、と規約に入れる — `docs/ui-quality-policy.md` に理由つきで追加
-- [x] `<picture>` を既定の処置に含めるかどうかを決める — **AVIF は含める / 幅変種（`srcset`・`sizes`）は含めない**。AVIF は形式ネゴだけで layout に依らず、実測で元形式の 0.52 倍。`sizes` は layout の折れ点の写しで陳腐化し、それを見る検査が seed に無い
-
-iac-web からの依頼（2026-08-29）。**`picture { display: contents }` だけだと `<source>` が親の flex item として数えられ、gap がもう 1 つ増える。** iac-web ではトップの `hero-logo-badge` が 10px 広がり sample-parity が落ちた。Chromium で `getComputedStyle(source).display` が `block` になることを実測したとの報告。塞ぎ方は `picture > source { display: none }` の併記。
-
-着手時期は未定 — favicon の block と同じく H.S.（2026-08-29）「また後で考えます」。
-
-同日に AVIF + srcset を一周した実測も受け取った（**依頼ではなく材料**）:
-
-- mock が参照する 17 枚を棚卸し → 7 ページ × 幅 360〜1920 で最大表示寸法を実測 → 寸法と AVIF を決定
-- AVIF の quality は絵柄ごとに「fallback と同じ PSNR に届く最小値」を二分探索。固定 quality だと絵柄で劣化幅が揺れる
-- `sizes` は layout の折れ点の写しなので CSS を変えると黙って古くなる。iac-web は `pp/tests/image-variants.spec.ts`（幅 12 点 × DPR 3 段で「足りて最小の変種が選ばれるか」を検査）を追加し、`sizes` を固定値に壊すと 3 件中 2 件が赤になることを確認済み
-- 読み込み済みの `img` は viewport を広げても候補を選び直さないので、この種の検査は幅ごとに開き直す必要がある
-- 効果: 稽古案内・料金 1 訪問の画像合計が 2.42 MB → 360px DPR2 で 0.31 MB、1440px DPR2 で 0.97 MB
-
-`sizes` の検査段を seed へ入れるかは、既定の処置を AVIF へ広げると決めてから提案する（**今は未提案**）。
-
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
