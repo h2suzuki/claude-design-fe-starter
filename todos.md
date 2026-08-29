@@ -13,8 +13,9 @@ Work file: `pp/src/mock-integrity.ts`・`pp/tests/*.spec.ts`・`docs/presentatio
 Exit Criteria:
 
 - [x] `mock:integrity` の文言・token の突合を blocker から外し、気づきとして出す — `201/202/203/205` だけが exit 1 を作る。README 凍結手順 6 も 2 段に書き分けた
-- [ ] `sample-parity` / `page-parity` / `width-sweep` / `list-identity-sweep` / `modal-geometry-sweep` / `poststate-sweep` / `ast-conformance` を同じ目で洗い、意匠の判断を強制している箇所が他に無いか確かめる
-- [ ] 厳密さを要求してよい範囲を規約に書く
+- [x] `sample-parity` / `page-parity` / `width-sweep` / `list-identity-sweep` / `modal-geometry-sweep` / `poststate-sweep` / `ast-conformance` を同じ目で洗い、意匠の判断を強制している箇所が他に無いか確かめる — 画面どうしを比べているのは `vocabularyFindings` の 1 か所だけで、他は mock と実装の突合か壊れの検出だった
+- [ ] `poststate-sweep.spec.ts:11` の `FORBIDDEN_LITERAL`（`undefined` / `null` / `NaN` / `[object Object]`）に宣言による除外が無い件を、実際に踏んだときに手当てする
+- [x] 厳密さを要求してよい範囲を規約に書く — `docs/ui-quality-policy.md` の「デザイン決定権」に 2 項、`docs/presentation/ui-mock/README.md` の凍結手順 6 に 2 段
 
 H.S. 2026-08-29:「文字列の統一は、アドバイス・気づきであり、不具合とは限らない。統一することで、見た目や可読性が壊れることがある。それにも関わらず、無条件に強制しようとしていることがバグ」
 
