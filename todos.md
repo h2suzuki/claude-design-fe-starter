@@ -51,9 +51,9 @@ Work file: `docs/presentation/ui-mock/DESIGN-POLICY.md`・`pp/src/diff.ts`・`pp
 
 Exit Criteria:
 
-- [ ] 台帳の entry が `sample-parity` と `page-parity` の判定に効き、登録済みの差分では落ちない — 画像の slice だけ `1164dae` で達成（`page-parity` のみ。`sample-parity` と画像以外は未着手）
-- [ ] 台帳に無い差分は従来どおり落ちることを、陽性・陰性の両方で実測する — 画像の slice は実測済み（`page-diff.spec.ts` の「マスク内は比較しない / マスク外は数える」・`keep-impl.spec.ts` の「`img:` 行だけが対象 / 空の対象は拒否」）
-- [ ] 台帳の書式（対象 visual id・画面・日付・裁定理由）が schema か spec で機械検査される
+- [x] 台帳の entry が `sample-parity` と `page-parity` の判定に効き、登録済みの差分では落ちない — `style: <id>/<prop>` と `geometry: <id>/<axis>` を足し、`sample-parity` が `withoutDeclaredStyles` / `withoutDeclaredGeometry` で台帳を読む
+- [x] 台帳に無い差分は従来どおり落ちることを、陽性・陰性の両方で実測する — 画像の slice に加え、style と geometry も `keep-impl.spec.ts` で対照つき（名指しした差分だけ落ちない / 前方一致では効かない / 台帳が空なら 1 件も落ちない）。書式検査は seed の空台帳で 0 件、iac-web の実台帳で 3 件を名指しして落ちることを実測
+- [x] 台帳の書式が spec で機械検査される — `ledgerProblems` が対象の接頭辞と日付を見て、`keep-impl.spec.ts` の「この PJ の台帳」が実台帳へ当てる。**画面の列は作らなかった**: `SELECTOR_MAP` は画面ごとに解決されるので、名指しは画面内で一意になる
 
 着手条件は最初の entry が立つこと。適用先は第 1 版で候補 2 件（calendar modal の 12px はみ出し / index の固定 box）を持っていたが、第 2 版 mock で両方とも mock 側が直り消えた（2026-08-27 報告）。
 
