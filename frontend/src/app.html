@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{PRODUCT_NAME}}</title>
+    <!-- 生成物は `bun run --cwd frontend favicons <元画像>` が static/ へ置く -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">
