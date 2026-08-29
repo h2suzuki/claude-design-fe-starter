@@ -141,6 +141,7 @@ Exit Criteria:
 - [x] `READY_SELECTOR` / `MODALS` / `EDGES` / fixture / self-baseline 対象などの登録点が画面ごとに引ける形になり、各 spec は出所の参照だけを持つ — `pp/src/screens.ts`（表）と `pp/src/screen-registry.ts`（引く機構）に分け、8 spec から定数を外した
 - [x] 画面を 2 枚登録して画面ごとに回し、登録点が画面ごとに解決されることを実測する — 2026-08-28 実測。seed の frontend（`/` と `/states`）へ app 側 3 spec を 2 slug 分。どちらも 4 passed / 0 skipped で、self-baseline が別名・別内容の PNG を 4 枚吐いた（16986B と 46126B）＝ route が実際に切り替わっている。未登録 slug は skip でなく error になることも実測
 - [x] 凍結 mock を持つ適用先で `bun run --cwd pp gate` を画面ごとに回し、skip 無しで緑になることを実測する — iac-web が 2026-08-30 に 7 画面を 1 画面ずつ実行。全画面 failed 0 件、skip は `gate-not-applicable.json` の宣言分だけで未検証の skip なし（126〜128 passed / 1〜3 skipped）
+- [ ] その緑が空虚でないことの確認を受け取る — iac-web が自分の主張を疑う検証を別担当で実行中（log の `✘` / exit code の握り潰し / マスクが広すぎないか / 7 画面の log が本当に別画面か）。結果が出るまでこの block は閉じない
 - [x] 適用先が先行実装した形の結果報告を受け取ってから設計を確定する — 2026-08-27 受領。7 spec の diff は定数の出所だけで assertion / skip 条件は不変、slug 規則も `screenOf` と一致
 
 先方の設計上の注意 2 点への処置: (a) 循環は型だけの import にして切った（`screens.ts` が型を `screen-registry.ts` から取り、機構が表を取る）。素の定数は `config.ts` に残してある。(b) `SELF_BASELINE_PATHS` は廃止し、self-baseline は今の画面 1 枚だけを撮る — 画面ごとに回せば全画面が 1 回ずつ撮られる。
