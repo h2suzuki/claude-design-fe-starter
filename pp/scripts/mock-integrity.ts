@@ -24,6 +24,8 @@ import {
   findUnfitDialogs,
   measureWidth,
   readVocabulary,
+  blockingFindings,
+  isAdvisory,
   vocabularyFindings,
   widthFindings,
 } from "../src/mock-integrity";
@@ -85,15 +87,21 @@ async function main(): Promise<void> {
   const referencePages = readReferencePages(path.join(MOCK_ROOT, "reference-pages.json"), listMockScreens(EXPORT_DIR, []));
   findings.push(...vocabularyFindings(vocabularies, referencePages));
 
+  const defects = blockingFindings(findings);
+  const advice = findings.filter(isAdvisory);
   mkdirSync(path.dirname(OUT), { recursive: true });
-  writeFileSync(OUT, `${JSON.stringify({ screens, widths: WIDTHS, findings }, null, 2)}\n`);
-  for (const finding of findings) console.log(`${finding.id} ${finding.screen}: ${finding.detail}`);
-  const counts = [...new Set(findings.map((finding) => finding.id))]
-    .sort()
-    .map((id) => `${id} ${findings.filter((finding) => finding.id === id).length}`)
-    .join(" / ");
-  console.log(`\n${screens.length} 画面 × ${WIDTHS.length} 幅: ${findings.length} 件${counts ? `（${counts}）` : ""} -> ${path.relative(process.cwd(), OUT)}`);
-  if (findings.length > 0) process.exitCode = 1;
+  writeFileSync(OUT, `${JSON.stringify({ screens, widths: WIDTHS, defects, advice }, null, 2)}\n`);
+  const show = (label: string, list: readonly Finding[]): void => {
+    if (list.length === 0) return;
+    console.log(`\n[${label}]`);
+    for (const finding of list) console.log(`${finding.id} ${finding.screen}: ${finding.detail}`);
+  };
+  show("直してから凍結する", defects);
+  show("気づき（凍結は止めない。直すかは読んだ人が決める）", advice);
+  console.log(
+    `\n${screens.length} 画面 × ${WIDTHS.length} 幅: 直すもの ${defects.length} 件 / 気づき ${advice.length} 件 -> ${path.relative(process.cwd(), OUT)}`,
+  );
+  if (defects.length > 0) process.exitCode = 1;
 }
 
 await main();

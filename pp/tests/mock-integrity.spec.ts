@@ -3,6 +3,7 @@
 import { expect, test } from "@playwright/test";
 import { MOBILE_CONTEXT_OPTIONS } from "../src/config";
 import {
+  blockingFindings,
   coveredFindings,
   dialogFindings,
   findCoveredControls,
@@ -190,5 +191,25 @@ test.describe("mock-integrity — 画面間の割れ", () => {
     const findings = vocabularyFindings({ a, b });
     expect(findings.map((finding) => finding.id)).toEqual(["MOCK204"]);
     expect(findings[0]!.detail).toContain("--brand");
+  });
+});
+
+test.describe("mock-integrity — 凍結を止めるのはどれか", () => {
+  const finding = (id: string) => ({ id, screen: "s", detail: "d" });
+
+  test("機械が壊れと断定できるものだけが凍結を止める", () => {
+    // 横スクロール・はみ出し・覆われた操作要素・収まらない dialog は、見れば壊れている
+    const defects = ["MOCK201", "MOCK202", "MOCK203", "MOCK205"].map(finding);
+    expect(blockingFindings(defects)).toEqual(defects);
+  });
+
+  test("文言や token の割れは凍結を止めない", () => {
+    // 統一すると見た目や読みやすさが壊れることがある。直すかは読んだ人が決める
+    expect(blockingFindings([finding("MOCK204")])).toEqual([]);
+  });
+
+  test("割れだけの mock は通り、壊れが 1 つでも混じれば止まる", () => {
+    expect(blockingFindings([finding("MOCK204"), finding("MOCK204")])).toEqual([]);
+    expect(blockingFindings([finding("MOCK204"), finding("MOCK201")])).toEqual([finding("MOCK201")]);
   });
 });

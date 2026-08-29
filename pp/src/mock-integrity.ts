@@ -1,6 +1,7 @@
 // 凍結前の mock 自身の破れを機械で出す。app ではなく mock を見るので、実装より前に落とせる
 // MOCK201 = 横スクロール / MOCK202 = はみ出した要素 / MOCK203 = 操作要素が覆われている
-// MOCK204 = 画面間で値が割れている / MOCK205 = dialog が viewport に収まらない
+// MOCK204 = 画面間で同じものが違う言い方をされている / MOCK205 = dialog が viewport に収まらない
+// 凍結を止めるのは 201/202/203/205。実装が mock を写す厳密さを、mock の画面どうしへ当てない
 import type { Page } from "@playwright/test";
 
 export interface Finding {
@@ -8,6 +9,15 @@ export interface Finding {
   screen: string;
   detail: string;
 }
+
+// 画面ごとの言い方の違いは意匠の判断。揃えると見た目や読みやすさが壊れることがあるので、機械は知らせるだけ
+const ADVISORY_IDS: ReadonlySet<string> = new Set(["MOCK204"]);
+
+export const isAdvisory = (finding: Finding): boolean => ADVISORY_IDS.has(finding.id);
+
+/** 凍結を止めてよいのは、機械が壊れと断定できるものだけ */
+export const blockingFindings = (findings: readonly Finding[]): Finding[] =>
+  findings.filter((finding) => !isAdvisory(finding));
 
 // 要素の言い表し方は Node 側に 1 つだけ置く（page.evaluate では素の値だけ受け渡す）
 export interface ElementRef {
@@ -206,7 +216,7 @@ export function dialogFindings(screen: string, viewport: string, unfit: readonly
   }));
 }
 
-// 同じ意味の値が画面ごとに違うのは mock 側の割れ。実装で吸収させず凍結前に直す
+// 同じものが画面ごとに違う言い方をされていることを知らせる。揃えるかは読んだ人が決める
 export function vocabularyFindings(
   vocabularies: Record<string, ScreenVocabulary>,
   referencePages: readonly string[] = [],
@@ -231,7 +241,7 @@ export function vocabularyFindings(
       const split = [...byValue.entries()]
         .map(([value, screens]) => `${screens.sort().join("・")} = ${JSON.stringify(value)}`)
         .join(" / ");
-      findings.push({ id: "MOCK204", screen: "（画面間）", detail: `${what} ${key} が割れている: ${split}` });
+      findings.push({ id: "MOCK204", screen: "（画面間）", detail: `${what} ${key} が画面ごとに違う: ${split}` });
     }
   };
   // 見本帳は site の導線を持たないので、導線の文言としては比べない
