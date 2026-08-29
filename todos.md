@@ -174,10 +174,10 @@ Work file: `seed-docs/design-order-template.md`（項目 14）・`seed-docs/pre-
 
 Exit Criteria:
 
-- [ ] 元画像 1 枚から 16/32/48 を含む多重 `.ico` と apple-touch 用 PNG 180×180 を生成する script が seed に入る。出力先も決める（`frontend/static/` は seed にまだ無い）
-- [ ] `app.html` に `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` の link が入り、生成物と一致する
-- [ ] manifest を置くかどうかを規約が決める。置かないなら 512×512 の生成もやめ、形の一覧（`seed-docs/pre-implementation-questions.md:29`）から外す
-- [ ] 元が不透過（写真 JPEG など）だったときの救済手順を書く — 円マスクは**縮小前に** alpha へ焼く。apple-touch-icon は不透過のまま残す
+- [x] 元画像 1 枚から 16/32/48 を含む多重 `.ico` と apple-touch 用 PNG 180×180 を生成する script が seed に入る。出力先も決める — `frontend/scripts/make-favicons.mjs`、出力は `frontend/static/`、呼び口は `bun run --cwd frontend favicons`。sharp は frontend の devDependency（出力が frontend の配信資産のため）
+- [x] `app.html` に `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` の link が入り、生成物と一致する — `sizes="16x16 32x32 48x48"` は script の `ICO_SIZES` と一致
+- [x] manifest を置くかどうかを規約が決める — **置かない**。512×512 の生成もやめ、形の一覧から外した。PWA を名乗る要件が出た時点で足す
+- [x] 元が不透過（写真 JPEG など）だったときの救済手順を書く — `--round` として実装し規約にも書いた。実測で 16px の角 alpha が 255 → 0、中央は 255 のまま
 - [ ] 生成から配線までを適用先で 1 回通す
 
 現状は**要求と形の一覧まで**しかない。`seed-docs/design-order-template.md:40` が「正方形・余白込み・単色背景の元画像を渡す（透過 PNG または SVG）」と発注側へ求め、`seed-docs/pre-implementation-questions.md:29` が必要な形（`.ico` 16/32/48 の多重 + PNG 180×180 + 512×512）を挙げるが、元画像からその形を作って HTML へ繋ぐ側が無い。
@@ -203,8 +203,8 @@ Work file: `docs/ui-quality-policy.md`・`seed-docs/pre-implementation-questions
 
 Exit Criteria:
 
-- [ ] `picture { display: contents }` を書くなら `picture > source { display: none }` を対で書く、と規約に入れる
-- [ ] `<picture>` を既定の処置に含めるかどうかを決める。含めないなら規約は現状（JPEG 化・表示寸法の 2 倍・先読み・data URI）のままにする
+- [x] `picture { display: contents }` を書くなら `picture > source { display: none }` を対で書く、と規約に入れる — `docs/ui-quality-policy.md` に理由つきで追加
+- [x] `<picture>` を既定の処置に含めるかどうかを決める — **AVIF は含める / 幅変種（`srcset`・`sizes`）は含めない**。AVIF は形式ネゴだけで layout に依らず、実測で元形式の 0.52 倍。`sizes` は layout の折れ点の写しで陳腐化し、それを見る検査が seed に無い
 
 iac-web からの依頼（2026-08-29）。**`picture { display: contents }` だけだと `<source>` が親の flex item として数えられ、gap がもう 1 つ増える。** iac-web ではトップの `hero-logo-badge` が 10px 広がり sample-parity が落ちた。Chromium で `getComputedStyle(source).display` が `block` になることを実測したとの報告。塞ぎ方は `picture > source { display: none }` の併記。
 
