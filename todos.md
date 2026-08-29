@@ -31,7 +31,7 @@ Exit Criteria:
 
 - [x] 見本 page の宣言点を決めて seed に入れる — `docs/presentation/ui-mock/reference-pages.json`（seed は空で同梱）。読み取りは `pp/src/mock-screens.ts` の `readReferencePages`（export に無い名前は落とす）
 - [x] linkTexts の突合から見本 page が外れ、token の突合には残ることを実測する — `pp/tests/mock-integrity.spec.ts` に 3 件（外れる / token は落とす / 宣言が無ければ従来どおり落ちる）、`pp/tests/mock-screens.spec.ts` に 5 件。typecheck 通過、84 passed / 14 skipped
-- [ ] 適用先の見本 page で MOCK204 が 0 件になることを確認する — 宣言が slug で突合されない欠陥（適用先が発見）を `readReferencePages` の slug 化で直した。適用先の `reference-pages.json` は書き換え不要なので、次に seed を取り込んだ時点で実測できる
+- [x] 適用先の見本 page で MOCK204 が 0 件になることを確認する — iac-web が `8bbfb95` を取り込んで実測（2026-08-30）。気づき 1 件 → **0 件**。宣言 file は書き換えずに効いた。直すもの 35 件は据え置き
 
 iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 が 1 件出る: `index.dc.html` へのリンク文言が、7 画面 = 「ホーム」／DS ページ = 「サイトを見る →」で割れる。**MOCK201 を直しても、この 1 件で再凍結が 6 段目で止まる。**
 
@@ -93,7 +93,7 @@ Work file: `tools/install.sh`・`pp/package.json`
 Exit Criteria:
 
 - [x] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する — `warn_unreachable_tools`。走査元は**配布集合**（file system を見ると未追跡 file まで数える）。文面は事実を述べて判断は残す形。陽性 2 件・陰性 0 件・未追跡 script を置いても名指ししないことを実測
-- [ ] 適用先で警告が出て、手当てすれば道具が動くところまでを実測する — iac-web が `mock:integrity` の呼び口を手で足して実行し、直すもの 35 件 / 気づき 1 件を得た（2026-08-30）。**残るのは警告そのものが適用先で出ることの確認**で、今の警告（走査元を配布集合へ直した版）はまだ適用先へ届いていない
+- [x] 適用先で警告が出て、手当てすれば道具が動くところまでを実測する — iac-web が `8bbfb95` で実測（2026-08-30）。呼び口を足した `mock-integrity.ts` は警告から消え、意図的に足していない `frontend/scripts/make-favicons.mjs` の 1 件だけが残った。未追跡 file の誤検出も無い
 
 iac-web からの報告（2026-08-29、実装依頼ではない）。`pp/scripts/mock-integrity.ts` と `pp/src/mock-integrity.ts` は新規 file として install で入るが、**`pp/package.json` は PJ 所有なので `mock:integrity` の script 定義が入らず、`bun run --cwd pp mock:integrity` が動かない**。適用先は手で足せば済むが、`package.json` は育つ file なので他の適用先でも同じことが起きる。
 
@@ -141,7 +141,7 @@ Exit Criteria:
 - [x] `READY_SELECTOR` / `MODALS` / `EDGES` / fixture / self-baseline 対象などの登録点が画面ごとに引ける形になり、各 spec は出所の参照だけを持つ — `pp/src/screens.ts`（表）と `pp/src/screen-registry.ts`（引く機構）に分け、8 spec から定数を外した
 - [x] 画面を 2 枚登録して画面ごとに回し、登録点が画面ごとに解決されることを実測する — 2026-08-28 実測。seed の frontend（`/` と `/states`）へ app 側 3 spec を 2 slug 分。どちらも 4 passed / 0 skipped で、self-baseline が別名・別内容の PNG を 4 枚吐いた（16986B と 46126B）＝ route が実際に切り替わっている。未登録 slug は skip でなく error になることも実測
 - [x] 凍結 mock を持つ適用先で `bun run --cwd pp gate` を画面ごとに回し、skip 無しで緑になることを実測する — iac-web が 2026-08-30 に 7 画面を 1 画面ずつ実行。全画面 failed 0 件、skip は `gate-not-applicable.json` の宣言分だけで未検証の skip なし（126〜128 passed / 1〜3 skipped）
-- [ ] その緑が空虚でないことの確認を受け取る — iac-web が自分の主張を疑う検証を別担当で実行中（log の `✘` / exit code の握り潰し / マスクが広すぎないか / 7 画面の log が本当に別画面か）。結果が出るまでこの block は閉じない
+- [x] その緑が空虚でないことの確認を受け取る — 検証で runner が `require-no-skips` の rc を握り潰していたことが判明し、是正後に再実行。全画面で `npm test rc=0` と `require-no-skips rc=0` の**両方**を記録（132〜134 passed / 1〜3 skipped / 0 failed、未検証の skip なし）
 - [x] 適用先が先行実装した形の結果報告を受け取ってから設計を確定する — 2026-08-27 受領。7 spec の diff は定数の出所だけで assertion / skip 条件は不変、slug 規則も `screenOf` と一致
 
 先方の設計上の注意 2 点への処置: (a) 循環は型だけの import にして切った（`screens.ts` が型を `screen-registry.ts` から取り、機構が表を取る）。素の定数は `config.ts` に残してある。(b) `SELF_BASELINE_PATHS` は廃止し、self-baseline は今の画面 1 枚だけを撮る — 画面ごとに回せば全画面が 1 回ずつ撮られる。
