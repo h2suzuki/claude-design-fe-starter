@@ -53,7 +53,7 @@ Exit Criteria:
 
 - [x] 採取 selector を `img, video` に変え、`<picture>` に包んだ実装と素の `<img>` の mock で件数が揃うことを実測する — `pp/src/image-boxes.ts` へ採取と突合を出し、`img, video` に変更。旧 selector では新 spec 5 件中 2 件が赤、変更後 5 件緑
 - [x] `display: contents` の `<picture>` が 0×0 の箱を作らないこと（＝箱として採られないこと）を回帰として固定する — `pp/tests/image-boxes.spec.ts` 5 件。`picture > source { display: none }` を欠く形が gap 増として落ちることも含む
-- [ ] 変更を iac-web へ一報し、install.sh 束へ足してもらう — 一報は 2026-08-29 に送信済み。先方の取り込み確認待ち
+- [x] 変更を iac-web へ一報し、install.sh 束へ足してもらう — 2026-08-29 に一報し、先方が `e7b874f` を install.sh 束へ追加したと報告（束 15 件）。後続の `e4af908` も同日に追加され束 16 件
 
 iac-web からの依頼（2026-08-29）。H.S. 承認済み（2026-08-29 17:14「では、作業を再開してください。」）。
 
