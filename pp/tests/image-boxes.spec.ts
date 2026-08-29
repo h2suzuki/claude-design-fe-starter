@@ -24,7 +24,7 @@ const wrapped = (count: number, extraCss: string): string =>
     extraCss,
   );
 
-// 実装側が重い資産の既定の処置で採る形。display: contents と source の非表示は対で書く
+// 適用先が採っている形。display: contents だけ書くと source が flex item に数えられる
 const RECOMMENDED = "picture { display: contents } picture > source { display: none }";
 
 const boxesOf = async (page: Page, html: string) => {
