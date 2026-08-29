@@ -21,28 +21,6 @@ H.S. 2026-08-29:「文字列の統一は、アドバイス・気づきであり�
 
 H.S. 2026-08-29:「デザインとコードを一緒にするな。コードは１文字違えば動作しない。デザインは人間が分かりやすいことが１番重要。そうじゃなかったら、1px 光学補正なんて存在しなかったろう？」
 
-### 見本 page を画面として突き合わせてしまう
-
-起票: opus-5 2026-08-29
-Goal: 凍結手順が「route として実装しない」と定めた見本 page を機械が区別し、画面間の語彙突合が見本の chrome を「割れ」と誤判定しないようにする。
-Work file: `pp/src/mock-integrity.ts`（`readVocabulary` と `vocabularyFindings`）・`docs/presentation/ui-mock/README.md`
-
-Exit Criteria:
-
-- [x] 見本 page の宣言点を決めて seed に入れる — `docs/presentation/ui-mock/reference-pages.json`（seed は空で同梱）。読み取りは `pp/src/mock-screens.ts` の `readReferencePages`（export に無い名前は落とす）
-- [x] linkTexts の突合から見本 page が外れ、token の突合には残ることを実測する — `pp/tests/mock-integrity.spec.ts` に 3 件（外れる / token は落とす / 宣言が無ければ従来どおり落ちる）、`pp/tests/mock-screens.spec.ts` に 5 件。typecheck 通過、84 passed / 14 skipped
-- [x] 適用先の見本 page で MOCK204 が 0 件になることを確認する — iac-web が `8bbfb95` を取り込んで実測（2026-08-30）。気づき 1 件 → **0 件**。宣言 file は書き換えずに効いた。直すもの 35 件は据え置き
-
-iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 が 1 件出る: `index.dc.html` へのリンク文言が、7 画面 = 「ホーム」／DS ページ = 「サイトを見る →」で割れる。**MOCK201 を直しても、この 1 件で再凍結が 6 段目で止まる。**
-
-当方の確認: `readVocabulary`（`pp/src/mock-integrity.ts:145-153`）は `nav a[href],header a[href],footer a[href],[role=navigation] a[href]` から文言を採り、コメントに「突き合わせるのは画面をまたいで同じものを指す導線だけ」と書いてある。DS ページの `<header>` は site の navigation ではなく**見本自身の題字バー**（題字・版数・テーマ切替を持ち、page 内に header/nav/footer はこの 1 つだけ）。同じものを指す導線ではないので、突合対象に入れているのが誤り。
-
-宣言 file が無い / 空のときは **見本 page 無しとして扱い、現行どおり全 page を突き合わせる**（落とさない）。`pp/gate-not-applicable.json` と同じ形で、宣言は例外であり既定は厳しいまま。seed が空の宣言 file を同梱するので、install 直後に file が無い状態にはならない。
-
-**token の突合からは外さない。** README:32 が「画面と見本で値が割れたら、まず見本側の生成ぶれを疑って mock へ差し戻す」と定めており、token の割れは検出したい。外すのは linkTexts だけ。
-
-根の原因は、README:25-34 が見本 page に 5 つの別扱いを定めているのに、**pp 側にその区別を表す仕組みが 1 つも無い**こと。`pp/` を検索して当たるのは `pp/tests/mock-screens.spec.ts:20-21` の fixture 名 `design-system.dc.html` だけで、そこは逆に「見本 page も他の画面と同じく列挙される」ことを assert している。参照スクショと閉包収集は全 page を要るので、この assert は正しい。区別が要るのは `vocabularyFindings` の linkTexts だけ。MOCK204 はそれが最初に露呈した箇所。
-
 ### 実証 2 回目 — mock を更新して反映する流れ
 
 起票: opus-5 2026-08-28
@@ -84,22 +62,6 @@ seed 側の依存は 2026-08-28 に vite 8.2.2 へ、`pp/` の導入を bun へ�
 
 ## Medium
 
-### 新しい道具を配っても呼び口が届かない
-
-起票: opus-5 2026-08-29
-Goal: seed が新設した道具が、適用先で呼び口ごと届くか、届かないことが install の時点で分かるようにする。
-Work file: `tools/install.sh`・`pp/package.json`
-
-Exit Criteria:
-
-- [x] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する — `warn_unreachable_tools`。走査元は**配布集合**（file system を見ると未追跡 file まで数える）。文面は事実を述べて判断は残す形。陽性 2 件・陰性 0 件・未追跡 script を置いても名指ししないことを実測
-- [x] 適用先で警告が出て、手当てすれば道具が動くところまでを実測する — iac-web が `8bbfb95` で実測（2026-08-30）。呼び口を足した `mock-integrity.ts` は警告から消え、意図的に足していない `frontend/scripts/make-favicons.mjs` の 1 件だけが残った。未追跡 file の誤検出も無い
-
-iac-web からの報告（2026-08-29、実装依頼ではない）。`pp/scripts/mock-integrity.ts` と `pp/src/mock-integrity.ts` は新規 file として install で入るが、**`pp/package.json` は PJ 所有なので `mock:integrity` の script 定義が入らず、`bun run --cwd pp mock:integrity` が動かない**。適用先は手で足せば済むが、`package.json` は育つ file なので他の適用先でも同じことが起きる。
-
-同型の割れも報告されている: `mock:closure` の指す先が seed は `scripts/mock-closure.ts`、iac-web は `scripts/collect-mock-closure.ts` で、新旧 2 本が並ぶ。
-
-
 ### BE 結合済み実装と Claude Design の往復手順が無い
 
 起票: opus-5 2026-08-24
@@ -129,24 +91,6 @@ Exit Criteria:
 適用先からの報告（2026-08-24）で 2 件とも確認済み。screen-loop ⑧ の判定基準は mock と意味論で、旧実装と比べる段が無い。adoption.md §1 は main を凍結すると書くが、凍結を解いて作り替えた側を main にする手順が無く、§9「完了の判定」も gate が緑になるところで止まっている。いずれも新規 repo では出ない、既存 repo 適用固有の不足。
 
 2026-08-28 に §2 の突合表と §10 の land 手順を書いた。出典は適用先が実際に通した land（本番アドレスへ promote → 7 route 200・稽古予定 4 回とカレンダー 11 件と祝日 1067 件が旧サイトと同じ実データ・申込み API が不正 method に 405・favicon 200 を本番で確認 → 旧 URL の転送は不要と裁定して転送 commit を revert → 旧 main を `old-main` として残し作業 branch を main へ fast-forward → worktree 削除）。
-
-### pp の登録点が 1 画面前提で、画面が増えると破綻する
-
-起票: opus-5 2026-08-27
-Goal: 画面が複数ある PJ でも、pp の差し替え点を画面ごとに解決できる形にする。
-Work file: `pp/src/config.ts`・`pp/tests/*.spec.ts`・`pp/README.md`（差し替え点一覧）
-
-Exit Criteria:
-
-- [x] `READY_SELECTOR` / `MODALS` / `EDGES` / fixture / self-baseline 対象などの登録点が画面ごとに引ける形になり、各 spec は出所の参照だけを持つ — `pp/src/screens.ts`（表）と `pp/src/screen-registry.ts`（引く機構）に分け、8 spec から定数を外した
-- [x] 画面を 2 枚登録して画面ごとに回し、登録点が画面ごとに解決されることを実測する — 2026-08-28 実測。seed の frontend（`/` と `/states`）へ app 側 3 spec を 2 slug 分。どちらも 4 passed / 0 skipped で、self-baseline が別名・別内容の PNG を 4 枚吐いた（16986B と 46126B）＝ route が実際に切り替わっている。未登録 slug は skip でなく error になることも実測
-- [x] 凍結 mock を持つ適用先で `bun run --cwd pp gate` を画面ごとに回し、skip 無しで緑になることを実測する — iac-web が 2026-08-30 に 7 画面を 1 画面ずつ実行。全画面 failed 0 件、skip は `gate-not-applicable.json` の宣言分だけで未検証の skip なし（126〜128 passed / 1〜3 skipped）
-- [x] その緑が空虚でないことの確認を受け取る — 検証で runner が `require-no-skips` の rc を握り潰していたことが判明し、是正後に再実行。全画面で `npm test rc=0` と `require-no-skips rc=0` の**両方**を記録（132〜134 passed / 1〜3 skipped / 0 failed、未検証の skip なし）
-- [x] 適用先が先行実装した形の結果報告を受け取ってから設計を確定する — 2026-08-27 受領。7 spec の diff は定数の出所だけで assertion / skip 条件は不変、slug 規則も `screenOf` と一致
-
-先方の設計上の注意 2 点への処置: (a) 循環は型だけの import にして切った（`screens.ts` が型を `screen-registry.ts` から取り、機構が表を取る）。素の定数は `config.ts` に残してある。(b) `SELF_BASELINE_PATHS` は廃止し、self-baseline は今の画面 1 枚だけを撮る — 画面ごとに回せば全画面が 1 回ずつ撮られる。
-
-`PP_APP_PATH` も廃止した。route が slug から引けるので、gate へ渡す env は `PP_MOCK_FILE` + `PP_APP_URL` の 2 つに戻る。
 
 ### 凍結の手順はあるが道具が無い — 閉包収集と参照スクショ
 
