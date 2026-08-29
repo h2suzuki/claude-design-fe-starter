@@ -12,9 +12,9 @@ Work file: `pp/src/mock-integrity.ts`（`readVocabulary` と `vocabularyFindings
 
 Exit Criteria:
 
-- [ ] 見本 page の宣言点を決めて seed に入れる（第 1 候補は `docs/presentation/ui-mock/` 側の宣言 file）
-- [ ] linkTexts の突合から見本 page が外れ、token の突合には残ることを実測する
-- [ ] 適用先の見本 page で MOCK204 が 0 件になることを確認する
+- [x] 見本 page の宣言点を決めて seed に入れる — `docs/presentation/ui-mock/reference-pages.json`（seed は空で同梱）。読み取りは `pp/src/mock-screens.ts` の `readReferencePages`（export に無い名前は落とす）
+- [x] linkTexts の突合から見本 page が外れ、token の突合には残ることを実測する — `pp/tests/mock-integrity.spec.ts` に 3 件（外れる / token は落とす / 宣言が無ければ従来どおり落ちる）、`pp/tests/mock-screens.spec.ts` に 5 件。typecheck 通過、84 passed / 14 skipped
+- [ ] 適用先の見本 page で MOCK204 が 0 件になることを確認する — iac-web が install 後に `reference-pages.json` へ 1 行足して実測する
 
 iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 が 1 件出る: `index.dc.html` へのリンク文言が、7 画面 = 「ホーム」／DS ページ = 「サイトを見る →」で割れる。**MOCK201 を直しても、この 1 件で再凍結が 6 段目で止まる。**
 
