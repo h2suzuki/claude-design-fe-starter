@@ -114,7 +114,7 @@ Work file: `tools/install.sh`・`pp/package.json`
 
 Exit Criteria:
 
-- [ ] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する（または呼び口を据え置き対象外の場所へ移す）
+- [x] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する（または呼び口を据え置き対象外の場所へ移す） — `warn_unreachable_tools`。据え置いた package.json ごとに同じ dir の `scripts/` の file 名を照合し、現れないものを名指しする。陽性で 2 件名指し・陰性で 0 件を実測（据え置き 2 件は維持されるので対照は空虚でない）。shellcheck 指摘なし
 - [ ] 適用先で道具を 1 つ入れ、呼び口まで届くことを実測する
 
 iac-web からの報告（2026-08-29、実装依頼ではない）。`pp/scripts/mock-integrity.ts` と `pp/src/mock-integrity.ts` は新規 file として install で入るが、**`pp/package.json` は PJ 所有なので `mock:integrity` の script 定義が入らず、`bun run --cwd pp mock:integrity` が動かない**。適用先は手で足せば済むが、`package.json` は育つ file なので他の適用先でも同じことが起きる。
