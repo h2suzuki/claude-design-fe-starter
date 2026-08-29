@@ -34,6 +34,12 @@ const BASES = [
 const shoot = async (page: Page): Promise<PNG> =>
   PNG.sync.read(await page.screenshot({ type: "png", fullPage: true }));
 
+// どの entry が何枚を外したかまで出す。1 行で全画像が外れていても、枚数だけでは気づけない
+const describeExcluded = (targets: readonly string[], boxes: readonly { src: string }[]): string =>
+  targets.length === 0
+    ? "なし"
+    : targets.map((t) => `${t} ${boxes.filter((b) => b.src.includes(t)).length} 枚`).join(" / ");
+
 // 落ちた画は必ず残す。pixel 差は数値だけ見ても原因に辿り着けない
 function writeArtifacts(tag: string, mock: PNG, app: PNG, result: PageDiffResult): string {
   mkdirSync(OUT_DIR, { recursive: true });
@@ -77,7 +83,7 @@ for (const [label, contextOptions] of BASES) {
         const result = diffPagePngs(mockPng, appPng, excluded);
         const detail = result.matched
           ? ""
-          : `${describeFailure(result)}（KEEP_IMPL で除外した画像 ${excluded.length} 枚）— 画は ${writeArtifacts(`${label}`, mockPng, appPng, result)}`;
+          : `${describeFailure(result)}（KEEP_IMPL で除外: ${describeExcluded(targets, mockBoxes)}）— 画は ${writeArtifacts(`${label}`, mockPng, appPng, result)}`;
         expect(result.matched, `page-parity-${label}: ${detail}`).toBe(true);
       } finally {
         await mockCtx.close();

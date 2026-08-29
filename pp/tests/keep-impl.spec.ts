@@ -119,3 +119,20 @@ test.describe("この PJ の台帳", () => {
     expect(ledgerProblems(entries), `entry ${entries.length} 件`).toEqual([]);
   });
 });
+
+test.describe("dir を名指しした img 行", () => {
+  test("末尾が / の対象は file を名指ししていないので問題として出す", () => {
+    // 部分一致なので `assets/` はその配下すべてに当たる。台帳が効かない状態と同じになる
+    expect(ledgerProblems([entry("img: assets/")])).toHaveLength(1);
+    expect(ledgerProblems([entry("img: assets/")])[0]).toContain("assets/");
+  });
+
+  test("file を名指しした対象は通る", () => {
+    expect(ledgerProblems([entry("img: assets/logo.png")])).toEqual([]);
+  });
+
+  test("拡張子の無い部分一致は通る", () => {
+    // src に hash が混ざる形があるので、file 名の一部で名指しできる余地は残す
+    expect(ledgerProblems([entry("img: venue-kojimachi")])).toEqual([]);
+  });
+});

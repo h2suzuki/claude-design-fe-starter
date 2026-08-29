@@ -57,6 +57,11 @@ export function ledgerProblems(entries: readonly KeepImplEntry[]): string[] {
     if (!prefix || !entry.target.slice(prefix.length).trim()) {
       return [`#${entry.index} 対象「${entry.target}」が名指しになっていない（${prefixes.join(" / ")} のいずれかで書く）`];
     }
+    const target = entry.target.slice(prefix.length).trim();
+    // `img:` は src の部分一致なので、dir だけ書くとその配下すべてが外れ、台帳が効かないのと同じになる
+    if (prefix === IMAGE_PREFIX && target.endsWith("/")) {
+      return [`#${entry.index} 対象「${target}」は dir なので file を名指ししていない（配下の画像がすべて外れる）`];
+    }
     if (!ISO_DATE.test(entry.date)) {
       return [`#${entry.index} 日付「${entry.date}」が YYYY-MM-DD でない`];
     }
