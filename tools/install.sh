@@ -128,6 +128,27 @@ sync_marker_block() {
   printf 'append: %s\n' "$(basename "$target_file")"
 }
 
+# 道具を配っても、呼び口を持つ file が据え置かれると起動できない。名指しで出さないと気づけない
+warn_unreachable_tools() {
+  local target=$1 manifest=$2
+  shift 2
+  local -a kept=("$@") unreachable=()
+  local pkg dir tool
+  for pkg in "${kept[@]}"; do
+    [[ $pkg == "$manifest" || $pkg == */$manifest ]] || continue
+    dir=${pkg%"$manifest"}
+    for tool in "$SEED_ROOT/$dir"scripts/*; do
+      [[ -f $tool ]] || continue
+      grep -qF -- "${tool##*/}" "$target/$pkg" || unreachable+=("${dir}scripts/${tool##*/}")
+    done
+  done
+  ((${#unreachable[@]} > 0)) || return 0
+  printf '\n%s: %d tool(s) landed with no way to run them — %s is this project'"'"'s:\n' \
+    "$PROG" "${#unreachable[@]}" "$manifest" >&2
+  print_paths "${unreachable[@]}"
+  printf 'Add the missing entries to that file by hand, or the tools stay unreachable.\n' >&2
+}
+
 print_paths() {
   local shown=0 rel
   for rel in "$@"; do
@@ -415,6 +436,9 @@ day-0 work. Everything else was updated.
 If a seed change to one of them matters, merge it by hand, or re-run with
 --overwrite and pick your edits back out of git.
 EOF
+  fi
+  if ((keep_foreign)); then
+    warn_unreachable_tools "$target" package.json "${collisions[@]}"
   fi
   if ((replaced > 0)); then
     printf 'overwritten:\n' >&2
