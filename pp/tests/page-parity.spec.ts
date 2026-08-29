@@ -21,7 +21,8 @@ import { openMock } from "../src/targets/mock-target";
 import { openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
 import { diffPagePngs } from "../src/page-diff";
-import type { Box, PageDiffResult } from "../src/page-diff";
+import { boxesAgree, collectImageBoxes } from "../src/image-boxes";
+import type { PageDiffResult } from "../src/page-diff";
 
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "page-parity");
 
@@ -34,38 +35,11 @@ const BASES = [
 const shoot = async (page: Page): Promise<PNG> =>
   PNG.sync.read(await page.screenshot({ type: "png", fullPage: true }));
 
-interface ImageBox extends Box {
-  src: string;
-}
-
-// 置かれ方は常に比較する。中身を外すかは KEEP_IMPL 台帳が決めるので、src も採る
-const imageBoxes = async (page: Page): Promise<ImageBox[]> =>
-  page.evaluate(() =>
-    Array.from(document.querySelectorAll("img, picture, video")).map((el) => {
-      const rect = el.getBoundingClientRect();
-      return {
-        x: rect.left + scrollX,
-        y: rect.top + scrollY,
-        width: rect.width,
-        height: rect.height,
-        src: el instanceof HTMLImageElement ? el.currentSrc || el.src : "",
-      };
-    }),
-  );
-
 // 台帳が名指しした画像だけ中身の比較を外す。載っていない画像の差は落ちる
 const keepImplImages = (): string[] => {
   const ledger = path.join(MOCK_ROOT, "DESIGN-POLICY.md");
   return existsSync(ledger) ? imageTargets(parseKeepImpl(readFileSync(ledger, "utf8"))) : [];
 };
-
-// 1px 未満のずれは縮小時の丸めで出る。ここは「マスクを当ててよいか」の判定なので、寸法の厳密比較は parity に任せる
-const boxesAgree = (mock: readonly Box[], app: readonly Box[]): boolean =>
-  mock.length === app.length &&
-  mock.every((box, index) => {
-    const other = app[index]!;
-    return (["x", "y", "width", "height"] as const).every((key) => Math.abs(box[key] - other[key]) < 1);
-  });
 
 // 落ちた画は必ず残す。pixel 差は数値だけ見ても原因に辿り着けない
 function writeArtifacts(tag: string, mock: PNG, app: PNG, result: PageDiffResult): string {
@@ -98,7 +72,7 @@ for (const [label, contextOptions] of BASES) {
         const appPage = await openScreen(appCtx, CURRENT_SCREEN!);
         // 遅れて届く資産で描画が動くと、撮った時刻の違いがそのまま pixel 差になる
         await Promise.all([mockPage.waitForLoadState("networkidle"), appPage.waitForLoadState("networkidle")]);
-        const [mockBoxes, appBoxes] = await Promise.all([imageBoxes(mockPage), imageBoxes(appPage)]);
+        const [mockBoxes, appBoxes] = await Promise.all([collectImageBoxes(mockPage), collectImageBoxes(appPage)]);
         expect(
           boxesAgree(mockBoxes, appBoxes),
           `page-parity-${label}: 画像の置かれ方が違う（mock ${mockBoxes.length} 枚 / app ${appBoxes.length} 枚）`,
