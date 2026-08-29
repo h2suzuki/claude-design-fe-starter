@@ -17,6 +17,7 @@ import { ANCHOR_VISUAL_ID, SELECTOR_MAP } from "../src/selector-map";
 import { STYLE_ALLOWLIST } from "../src/style-allowlist";
 import { dumpVisualIds } from "../src/dump";
 import { diffStyles, diffGeometry } from "../src/diff";
+import { geometryTargets, keepImplEntries, styleTargets, withoutDeclaredGeometry, withoutDeclaredStyles } from "../src/keep-impl";
 import { writeRunSummary } from "../src/artifact-writer";
 import type { VisualIdReport } from "../src/artifact-writer";
 
@@ -51,8 +52,12 @@ for (const [label, contextOptions] of BASES) {
           dumpVisualIds(appPage, selApp, anchor.appSel, STYLE_ALLOWLIST),
         ]);
 
-        const { diffs: styleDiffs, missing } = diffStyles(mock, app, IDS, STYLE_ALLOWLIST);
-        const { diffs: geometryDiffs } = diffGeometry(mock, app, IDS);
+        const { diffs: allStyleDiffs, missing } = diffStyles(mock, app, IDS, STYLE_ALLOWLIST);
+        const { diffs: allGeometryDiffs } = diffGeometry(mock, app, IDS);
+        // 台帳が名指しした差分だけ落とさない。名指しに無いものは今までどおり落ちる
+        const ledger = keepImplEntries();
+        const styleDiffs = withoutDeclaredStyles(allStyleDiffs, styleTargets(ledger));
+        const geometryDiffs = withoutDeclaredGeometry(allGeometryDiffs, geometryTargets(ledger));
         const reports: VisualIdReport[] = IDS.map((visualId) => ({
           visualId,
           styleDiffs: styleDiffs.filter((d) => d.visualId === visualId),

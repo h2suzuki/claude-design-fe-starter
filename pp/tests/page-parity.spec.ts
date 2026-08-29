@@ -2,7 +2,7 @@
 // style/geometry しか見ないのに対し、こちらは画面まるごとを見る。
 // 折り返し位置のように箱の寸法へ出ない差が落ちるのはここだけ
 import { expect, test } from "@playwright/test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
@@ -15,8 +15,7 @@ import {
   MOCK_ENTRY_FILE,
 } from "../src/config";
 import { installNetworkGuard } from "../src/net-block";
-import { MOCK_ROOT } from "../src/mock-server";
-import { imageTargets, parseKeepImpl } from "../src/keep-impl";
+import { imageTargets, keepImplEntries } from "../src/keep-impl";
 import { openMock } from "../src/targets/mock-target";
 import { openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
@@ -34,12 +33,6 @@ const BASES = [
 
 const shoot = async (page: Page): Promise<PNG> =>
   PNG.sync.read(await page.screenshot({ type: "png", fullPage: true }));
-
-// 台帳が名指しした画像だけ中身の比較を外す。載っていない画像の差は落ちる
-const keepImplImages = (): string[] => {
-  const ledger = path.join(MOCK_ROOT, "DESIGN-POLICY.md");
-  return existsSync(ledger) ? imageTargets(parseKeepImpl(readFileSync(ledger, "utf8"))) : [];
-};
 
 // 落ちた画は必ず残す。pixel 差は数値だけ見ても原因に辿り着けない
 function writeArtifacts(tag: string, mock: PNG, app: PNG, result: PageDiffResult): string {
@@ -77,7 +70,8 @@ for (const [label, contextOptions] of BASES) {
           boxesAgree(mockBoxes, appBoxes),
           `page-parity-${label}: 画像の置かれ方が違う（mock ${mockBoxes.length} 枚 / app ${appBoxes.length} 枚）`,
         ).toBe(true);
-        const targets = keepImplImages();
+        // 台帳が名指しした画像だけ中身の比較を外す。載っていない画像の差は落ちる
+        const targets = imageTargets(keepImplEntries());
         const excluded = mockBoxes.filter((box) => targets.some((target) => box.src.includes(target)));
         const [mockPng, appPng] = await Promise.all([shoot(mockPage), shoot(appPage)]);
         const result = diffPagePngs(mockPng, appPng, excluded);
