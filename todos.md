@@ -4,6 +4,22 @@
 
 ## High
 
+### 意匠の判断を機械に強制させていないか、検査を通しで洗う
+
+起票: user 2026-08-29
+Goal: 機械が「壊れている」と断定できないものを、gate や凍結の blocker にしない。
+Work file: `pp/src/mock-integrity.ts`・`pp/tests/*.spec.ts`・`docs/presentation/ui-mock/README.md`
+
+Exit Criteria:
+
+- [x] `mock:integrity` の文言・token の突合を blocker から外し、気づきとして出す — `201/202/203/205` だけが exit 1 を作る。README 凍結手順 6 も 2 段に書き分けた
+- [ ] `sample-parity` / `page-parity` / `width-sweep` / `list-identity-sweep` / `modal-geometry-sweep` / `poststate-sweep` / `ast-conformance` を同じ目で洗い、意匠の判断を強制している箇所が他に無いか確かめる
+- [ ] 厳密さを要求してよい範囲を規約に書く
+
+H.S. 2026-08-29:「文字列の統一は、アドバイス・気づきであり、不具合とは限らない。統一することで、見た目や可読性が壊れることがある。それにも関わらず、無条件に強制しようとしていることがバグ」
+
+H.S. 2026-08-29:「デザインとコードを一緒にするな。コードは１文字違えば動作しない。デザインは人間が分かりやすいことが１番重要。そうじゃなかったら、1px 光学補正なんて存在しなかったろう？」
+
 ### 見本 page を画面として突き合わせてしまう
 
 起票: opus-5 2026-08-29
