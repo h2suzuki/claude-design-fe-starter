@@ -43,28 +43,6 @@ iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 �
 
 根の原因は、README:25-34 が見本 page に 5 つの別扱いを定めているのに、**pp 側にその区別を表す仕組みが 1 つも無い**こと。`pp/` を検索して当たるのは `pp/tests/mock-screens.spec.ts:20-21` の fixture 名 `design-system.dc.html` だけで、そこは逆に「見本 page も他の画面と同じく列挙される」ことを assert している。参照スクショと閉包収集は全 page を要るので、この assert は正しい。区別が要るのは `vocabularyFindings` の linkTexts だけ。MOCK204 はそれが最初に露呈した箇所。
 
-### page-parity が `<picture>` の箱を二重に数える
-
-起票: opus-5 2026-08-29
-Goal: 画像規約が勧める `<picture>` の書き方をした実装が、page-parity の件数比較で落ちないようにする。
-Work file: `pp/tests/page-parity.spec.ts`
-
-Exit Criteria:
-
-- [x] 採取 selector を `img, video` に変え、`<picture>` に包んだ実装と素の `<img>` の mock で件数が揃うことを実測する — `pp/src/image-boxes.ts` へ採取と突合を出し、`img, video` に変更。旧 selector では新 spec 5 件中 2 件が赤、変更後 5 件緑
-- [x] `display: contents` の `<picture>` が 0×0 の箱を作らないこと（＝箱として採られないこと）を回帰として固定する — `pp/tests/image-boxes.spec.ts` 5 件。`picture > source { display: none }` を欠く形が gap 増として落ちることも含む
-- [x] 変更を iac-web へ一報し、install.sh 束へ足してもらう — 2026-08-29 に一報し、先方が `e7b874f` を install.sh 束へ追加したと報告（束 15 件）。後続の `e4af908` も同日に追加され束 16 件
-
-iac-web からの依頼（2026-08-29）。H.S. 承認済み（2026-08-29 17:14「では、作業を再開してください。」）。
-
-`bun run --cwd pp typecheck` 通過、`bun run --cwd pp test` は 76 passed / 14 skipped（従来 71 passed に新規 5 件）。**`page-parity` 自体は seed では skip のまま**（凍結 mock が無いため）なので、page-parity 本体で件数が揃うことの実測は「実証 2 回目」block の gate 緑が受け皿になる。
-
-当方の実測（Chromium / playwright 1.61.1）: `<picture><source><img>` は現行 selector で 2 箱になり、`picture` の rect は中の `img` と同一。`picture { display: contents }` を掛けると `picture` の rect は 0,0 の 0×0 になる。`img, video` にすると 3 通りの markup すべてで 1 箱。iac-web 側も自 repo の実構成で同じ結論（`getClientRects()` が 0 本）。
-
-`<picture>` は仕様上 `<img>` をちょうど 1 つ持つので、`img` を採れば取りこぼさない。iac-web の `image-variants.spec.ts` は `img` しか箱に使っていないため、影響は page-parity に閉じるとの報告。
-
-**規約側との噛み合わせ**: `picture { display: contents }` は seed が保留にしている `<picture>` block の欠陥（`<source>` が flex item に数えられ gap が 1 つ増える）への対処。seed が勧める書き方と seed の検査が噛み合っていない、というのがこの block の本体。
-
 ### KEEP_IMPL 台帳が pp と結線されていない
 
 起票: opus-5 2026-08-27
