@@ -31,7 +31,7 @@ Exit Criteria:
 
 - [x] 見本 page の宣言点を決めて seed に入れる — `docs/presentation/ui-mock/reference-pages.json`（seed は空で同梱）。読み取りは `pp/src/mock-screens.ts` の `readReferencePages`（export に無い名前は落とす）
 - [x] linkTexts の突合から見本 page が外れ、token の突合には残ることを実測する — `pp/tests/mock-integrity.spec.ts` に 3 件（外れる / token は落とす / 宣言が無ければ従来どおり落ちる）、`pp/tests/mock-screens.spec.ts` に 5 件。typecheck 通過、84 passed / 14 skipped
-- [ ] 適用先の見本 page で MOCK204 が 0 件になることを確認する — iac-web が install 後に `reference-pages.json` へ 1 行足して実測する
+- [ ] 適用先の見本 page で MOCK204 が 0 件になることを確認する — 宣言が slug で突合されない欠陥（適用先が発見）を `readReferencePages` の slug 化で直した。適用先の `reference-pages.json` は書き換え不要なので、次に seed を取り込んだ時点で実測できる
 
 iac-web の実測報告（2026-08-29）。同 repo の DS ページで MOCK204 が 1 件出る: `index.dc.html` へのリンク文言が、7 画面 = 「ホーム」／DS ページ = 「サイトを見る →」で割れる。**MOCK201 を直しても、この 1 件で再凍結が 6 段目で止まる。**
 
@@ -92,7 +92,7 @@ Work file: `tools/install.sh`・`pp/package.json`
 
 Exit Criteria:
 
-- [x] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する（または呼び口を据え置き対象外の場所へ移す） — `warn_unreachable_tools`。据え置いた package.json ごとに同じ dir の `scripts/` の file 名を照合し、現れないものを名指しする。陽性で 2 件名指し・陰性で 0 件を実測（据え置き 2 件は維持されるので対照は空虚でない）。shellcheck 指摘なし
+- [x] 据え置いた file が seed 側で新設された呼び口を含む場合に、install.sh が名指しで警告する — `warn_unreachable_tools`。走査元は**配布集合**（file system を見ると未追跡 file まで数える）。文面は事実を述べて判断は残す形。陽性 2 件・陰性 0 件・未追跡 script を置いても名指ししないことを実測
 - [ ] 適用先で道具を 1 つ入れ、呼び口まで届くことを実測する
 
 iac-web からの報告（2026-08-29、実装依頼ではない）。`pp/scripts/mock-integrity.ts` と `pp/src/mock-integrity.ts` は新規 file として install で入るが、**`pp/package.json` は PJ 所有なので `mock:integrity` の script 定義が入らず、`bun run --cwd pp mock:integrity` が動かない**。適用先は手で足せば済むが、`package.json` は育つ file なので他の適用先でも同じことが起きる。
