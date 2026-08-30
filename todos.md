@@ -132,33 +132,36 @@ iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-
 
 置き場は `tools/` が第 1 候補。iac-web が `pp/scripts/build-images.mjs` へ置いたのは **sharp を pp の devDependency に入れた都合**であって、pp が道具置き場だからではない（2026-08-29 の申し送り）。seed の `tools/` は既に node script を持つ（`ast-tree` / `ast-viewer` が `#!/usr/bin/env node`）ので言語は合う。ただし **`tools/` に package.json が無く**、npm の家は `frontend/` と `pp/` の 2 つだけなので、sharp をどちらの devDependency へ入れるかは取り込み時に決める（出力は frontend の配信資産）。
 
-### Capacitor / PWA として配信するときの発注要件が無い
+### Capacitor / PWA は opt-in — 発注規約に追補が無い
 
 起票: user 2026-08-31
-Goal: 実機の app として配信する要件が出たとき、mock が写せない表示条件を発注規約が先に要求する。
-Work file: `seed-docs/design-order-template.md`（項目 14 と新規項目）・`seed-docs/pre-implementation-questions.md`（favicon と app icon）
+Goal: 既定の発注（普通の Web サイト）は 18 項目のまま変えず、app 配信を選んだ PJ だけが足せる追補として PWA / Capacitor の要件を持つ。
+Work file: `seed-docs/design-order-template.md`（項目 14 と追補）・`.claude/skills/design-order/SKILL.md`（追補を差し込む条件）
 
 Exit Criteria:
 
-- [ ] safe-area（notch とホームバー）の避けを発注規約へ足す。背景は端まで・操作は内側という切り分けと、inset を design system の変数として持たせる形を要求する
-- [ ] app icon の要求を maskable の安全域（内接円 80%）とストア用 1024×1024 まで広げる — 現行の項目 14 は「透過 PNG または SVG」で、iOS のストア icon が要求する不透過と食い違う
-- [ ] 起動画面を opt-in として書く。既定は単色背景 + app icon で足りる（Android 12+ は system が自動で出す）ので、作り込む場合だけ 2732×2732 の元画像とダーク用を要求する
-- [ ] オフライン時の表示を、部品の状態一式（項目 2）へ足す
-- [ ] 画面の向き（縦固定か回転対応か）を決める項目を足す。回転対応なら横向きのレイアウトが発注対象になる
-- [ ] 画面内に戻る導線を持つかどうかを決める項目を足す — app にはブラウザの戻るボタンが無い
-- [ ] manifest の `theme_color` / `background_color` と iOS のステータスバー表示に、どの意味色を充てるかを design system 側で決めさせる
+- [ ] 追補を発注規約の本体と分けて置き、`/design-order` が app 配信を選んだときだけ差し込む。選ばない PJ の発注文に追補が混ざらない
+- [ ] 【既定】項目 14 の元画像を、後から app 化しても撮り直しが要らない形にする — 透過で受け取り、不透過が要る用途では背景色を焼く（`make-favicons.mjs` は apple-touch で既にそうしている）
+- [ ] 【追補】safe-area（notch とホームバー）の避け。背景は端まで・操作は内側という切り分けと、inset を design system の変数として持たせる形を要求する
+- [ ] 【追補】app icon の maskable 安全域（内接円 80%）とストア用 1024×1024
+- [ ] 【追補】起動画面。既定は単色背景 + app icon で足りる（Android 12+ は system が自動で出す）ので、作り込む場合だけ 2732×2732 の元画像とダーク用を要求する
+- [ ] 【追補】オフライン時の表示を、部品の状態一式（項目 2）へ足す
+- [ ] 【追補】画面の向き（縦固定か回転対応か）。回転対応なら横向きのレイアウトが発注対象になる
+- [ ] 【追補】画面内の戻る導線 — app にはブラウザの戻るボタンが無い
+- [ ] 【追補】manifest の `theme_color` / `background_color` と iOS のステータスバー表示に、どの意味色を充てるか
 
-### Capacitor / PWA として配信するときの実装と gate の手当てが無い
+### Capacitor / PWA は opt-in — 実装と gate の受け皿が無い
 
 起票: user 2026-08-31
-Goal: app として配信する要件が出たとき、静的出力・gate の決定性・実機でしか出ない崩れの受け皿が、規約と仕組みの側に用意されている。
+Goal: 既定は普通の Web サイトのままで、後から app 配信へ移る道を塞がない。app 配信を選んだ PJ だけが opt-in で足す。
 Work file: `frontend/svelte.config.js`・`pp/src/config.ts`・`docs/ui-quality-policy.md`（land 前の検証）・`docs/stack.md`
 
 Exit Criteria:
 
-- [ ] web（Vercel）と app（静的）の 2 出力を持てるよう `svelte.config.js` の adapter を分岐させ、切り替え方を `docs/stack.md` に書く — server 側の処理は 0 件なので、いまなら設定だけで済む
-- [ ] service worker を入れても gate が決定的であることを担保する — Playwright の context option `serviceWorkers: "block"` を `pp/src/config.ts` の共有 option へ足す
-- [ ] safe-area の崩れが gate に現れない死角を、`docs/ui-quality-policy.md` の「land 前の検証」へ実機確認の段として足す — 普通のブラウザでは `env(safe-area-inset-*)` が 0 に解決されるので、gate は緑のまま実機だけ崩れる
+- [ ] 【既定】service worker が入っても gate が決定的であることを、選択に関わらず担保する — Playwright の context option `serviceWorkers: "block"` を `pp/src/config.ts` の共有 option へ足す。SW を持たない PJ では挙動が変わらない
+- [ ] 【既定】app 化を塞ぐ書き方を避ける — server 側の処理を足すと静的出力にできなくなることを `docs/stack.md` に注記する（現在 server 側の処理は 0 件）
+- [ ] 【追補】web（Vercel）と app（静的）の 2 出力を持つ adapter 分岐を用意し、切り替え方を `docs/stack.md` に書く。選ばない PJ は `adapter-auto` のまま
+- [ ] 【追補】safe-area の崩れが gate に現れない死角を、`docs/ui-quality-policy.md` の「land 前の検証」へ実機確認の段として足す — 普通のブラウザでは `env(safe-area-inset-*)` が 0 に解決されるので、gate は緑のまま実機だけ崩れる
 - [ ] native build（Xcode / Android Studio）を seed の範囲に含めるかを決め、範囲外とするなら `docs/stack.md` にその線を書く
 
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
