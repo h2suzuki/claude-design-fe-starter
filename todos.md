@@ -34,6 +34,7 @@ Exit Criteria:
 - [ ] 更新後の画面で gate が skip ゼロで緑になる（KEEP_IMPL entry がある場合は、それが `page-parity` の判定に効いていることを含む）
 - [ ] 手順どおりに回らなかった箇所を seed 側で直し、2 回目の実測として記録する
 - [ ] 依存の bump（vite 8.2.2 ほか）を **mock 更新より先に単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）
+- [ ] app 配信をしない PJ で「既定に入れる」手当てが無害だと確かめる — `serviceWorkers: "block"` を入れた gate が、iac-web で同じ結果になる（app 配信の追補は二巡目の対象外）
 
 ユーザー裁定 2026-08-28: 「iac-web を使った実証実験１回目は、完了とします。もう一回、mock のアップデートと反映の流れをやりますので、そのときに再確認しましょう。」
 
