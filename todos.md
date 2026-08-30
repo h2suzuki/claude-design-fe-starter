@@ -148,4 +148,17 @@ Exit Criteria:
 - [ ] 画面内に戻る導線を持つかどうかを決める項目を足す — app にはブラウザの戻るボタンが無い
 - [ ] manifest の `theme_color` / `background_color` と iOS のステータスバー表示に、どの意味色を充てるかを design system 側で決めさせる
 
+### Capacitor / PWA として配信するときの実装と gate の手当てが無い
+
+起票: user 2026-08-31
+Goal: app として配信する要件が出たとき、静的出力・gate の決定性・実機でしか出ない崩れの受け皿が、規約と仕組みの側に用意されている。
+Work file: `frontend/svelte.config.js`・`pp/src/config.ts`・`docs/ui-quality-policy.md`（land 前の検証）・`docs/stack.md`
+
+Exit Criteria:
+
+- [ ] web（Vercel）と app（静的）の 2 出力を持てるよう `svelte.config.js` の adapter を分岐させ、切り替え方を `docs/stack.md` に書く — server 側の処理は 0 件なので、いまなら設定だけで済む
+- [ ] service worker を入れても gate が決定的であることを担保する — Playwright の context option `serviceWorkers: "block"` を `pp/src/config.ts` の共有 option へ足す
+- [ ] safe-area の崩れが gate に現れない死角を、`docs/ui-quality-policy.md` の「land 前の検証」へ実機確認の段として足す — 普通のブラウザでは `env(safe-area-inset-*)` が 0 に解決されるので、gate は緑のまま実機だけ崩れる
+- [ ] native build（Xcode / Android Studio）を seed の範囲に含めるかを決め、範囲外とするなら `docs/stack.md` にその線を書く
+
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
