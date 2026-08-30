@@ -132,4 +132,20 @@ iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-
 
 置き場は `tools/` が第 1 候補。iac-web が `pp/scripts/build-images.mjs` へ置いたのは **sharp を pp の devDependency に入れた都合**であって、pp が道具置き場だからではない（2026-08-29 の申し送り）。seed の `tools/` は既に node script を持つ（`ast-tree` / `ast-viewer` が `#!/usr/bin/env node`）ので言語は合う。ただし **`tools/` に package.json が無く**、npm の家は `frontend/` と `pp/` の 2 つだけなので、sharp をどちらの devDependency へ入れるかは取り込み時に決める（出力は frontend の配信資産）。
 
+### Capacitor / PWA として配信するときの発注要件が無い
+
+起票: user 2026-08-31
+Goal: 実機の app として配信する要件が出たとき、mock が写せない表示条件を発注規約が先に要求する。
+Work file: `seed-docs/design-order-template.md`（項目 14 と新規項目）・`seed-docs/pre-implementation-questions.md`（favicon と app icon）
+
+Exit Criteria:
+
+- [ ] safe-area（notch とホームバー）の避けを発注規約へ足す。背景は端まで・操作は内側という切り分けと、inset を design system の変数として持たせる形を要求する
+- [ ] app icon の要求を maskable の安全域（内接円 80%）とストア用 1024×1024 まで広げる — 現行の項目 14 は「透過 PNG または SVG」で、iOS のストア icon が要求する不透過と食い違う
+- [ ] 起動画面（スプラッシュ）を発注対象へ足す
+- [ ] オフライン時の表示を、部品の状態一式（項目 2）へ足す
+- [ ] 画面の向き（縦固定か回転対応か）を決める項目を足す。回転対応なら横向きのレイアウトが発注対象になる
+- [ ] 画面内に戻る導線を持つかどうかを決める項目を足す — app にはブラウザの戻るボタンが無い
+- [ ] manifest の `theme_color` / `background_color` と iOS のステータスバー表示に、どの意味色を充てるかを design system 側で決めさせる
+
 Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
