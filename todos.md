@@ -39,11 +39,7 @@ Exit Criteria:
 
 ユーザー裁定 2026-08-29: mock 更新の向きは **branch + worktree + PR merge + branch 削除** を基本とする。FE 更新を mock へ反映する逆向きは branch を作らなくてよい。実証 2 回目は前者なので branch を切って進める。
 
-1 回目で通したのは「mock を作る → 実装する」の向きで、**更新の向きは通していない**。再凍結・AST 追従・KEEP_IMPL の還流は、いずれも今日この session で整えたばかりで実地を経ていない（`/mock-freeze` の棚卸し段・`ast:refresh`・台帳結線）。着手時期はユーザーの判断。
-
-2026-08-29 の実測（seed HEAD `ca0ed76` と適用先を install.sh と同じ規則で照合。`pp/` 配下）: install.sh が「PJ のもの」と判定して触らない file が 15 件あり、うち 7 件が spec（`ast-conformance` / `list-identity-sweep` / `modal-geometry-sweep` / `page-parity` / `poststate-sweep` / `self-baseline` / `width-sweep`）。**この 7 件へ seed が入れた変更は install.sh では届かない** — `1164dae` の KEEP_IMPL 結線もこの中。spec を機構だけにする「pp の登録点が 1 画面前提」の解消が、二巡目へ seed 更新を届ける前提になる。COPY_DIRS 全体では据え置き 26 件・更新 21 件・新規 11 件。件数は seed HEAD と適用先の状態で動くので、取り込み時に install.sh の出力で取り直す。
-
-台帳の書式も要調整。適用先の台帳は 2026-08-29 時点で 3 entry あり、いずれも対象列が散文で、gate が 1 行も読まない。**新設した `keep-impl` の書式検査を当てると 3 件とも名指しで落ちる**（当 session で実測済み）。#1（画像 13 枚）と #2（会場写真 7 枚）は `img: assets/` と `img: uploads/` のような prefix 2 行で書ける見込み（`imageTargets` は src の部分一致）。#3（`<picture>` + `srcset`）は箱の件数が揃うようになったので gate を止める力を失っており、entry ごと閉じられる見込み。
+2026-08-30 の実測（iac-web）: seed `8bbfb95` を install し、据え置き 12 file を手で移して 7 画面すべて gate 緑（画面ごとに `npm test` rc=0 / `require-no-skips` rc=0、132–134 passed・skip は台帳の宣言分のみ・0 failed）。install.sh が seed の変更を届けられない spec 7 件と、対象列が散文で gate が読めない台帳 3 entry は、これで解消（台帳は 17 行の `img:` 形式）。`mock:integrity` は直すもの 35 件 / 気づき 0 件で、35 件は design system page の横スクロールだけ。残るのは mock 更新の向き。
 
 seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使うもの:
 
@@ -51,14 +47,10 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | --- | --- | --- |
 | `bun run --cwd pp mock:closure` | `pp/scripts/mock-closure.ts` | 再凍結で `export/` に入れる集合を実測で決める（凍結手順 4） |
 | `bun run --cwd pp mock:integrity` | `pp/scripts/mock-integrity.ts` | 再凍結の前に mock 自身の破れを出す（凍結手順 6）。適用先の現行 mock では design system page が 360/390 で横スクロールする |
-| `SCREENS` 登録点 | `pp/src/screens.ts` + `screen-registry.ts` | 7 spec を機構だけにしたので、以後 seed の gate 更新が install.sh で届く。適用先は 7 spec の PJ 版を捨てて登録点へ移す |
-| KEEP_IMPL の `img:` 結線 | `pp/src/keep-impl.ts` | 台帳が名指しした画像だけ pixel 比較から外れる。適用先の entry #1 は書き直しが要る |
 | §6 の取り込み経路 | `seed-docs/adoption.md` | merge 据え置き。差し替え点で衝突したら作業 branch 側を採る |
 | BE 往復の調整段 | `docs/design-sync.md` 2.3 | mock 更新を BE 結合済み FE へ戻すときの 3 か所（mock fixture・pp fixture・実 BE） |
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
-
-seed 側の依存は 2026-08-28 に vite 8.2.2 へ、`pp/` の導入を bun へ揃えた。適用先の `frontend/package.json`・`bun.lock`・`pp/package.json` はいずれも PJ 所有なので、**同じ bump を適用先で当てる作業が二巡目の頭に要る**。
 
 ## Medium
 
