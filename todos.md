@@ -81,6 +81,20 @@ Exit Criteria:
 
 2026-09-02 iac-web セッションからの報告: script を回すと `desktop-index.png` 等 16 file が新規に生え、AST が指す `index.desktop.png` は更新されない。access の Google My Maps iframe が guard の abort で 4 件数えられ「閉包が足りていない」で exit 1。iac-web 側は改名で回避して凍結準備を進めている。
 
+### 見本 page を mock:integrity の layout 検査（MOCK201/202）が画面として扱う
+
+起票: user 2026-09-02
+Goal: `reference-pages.json` に宣言した見本 page は、リンク文言の突合（MOCK204）だけでなく横スクロール・はみ出しの検査（MOCK201/202）からも外れ、凍結を止めない。
+Work file: `pp/scripts/mock-integrity.ts`（幅の sweep に宣言を渡す）・`pp/src/mock-integrity.ts`・`docs/presentation/ui-mock/README.md`（`reference-pages.json` の効く範囲）
+
+Exit Criteria:
+
+- [ ] 宣言した見本 page が幅の sweep（MOCK201/202）の対象から外れ、`pp/tests/mock-integrity.spec.ts` にその case がある
+- [ ] README の `reference-pages.json` の説明が「外れる検査」を MOCK201/202/204 として列挙し、token の突合からは外れないことは変えない
+- [ ] iac-web の `mock:integrity` が、見本 page 由来の 35 件を裁定なしで「直すもの」から落とす
+
+ユーザー裁定 2026-09-02（iac-web セッション経由）: 「デザインシステムは、スクロールバーという概念がありません。ウェブページではないので。」見本 page は route にならず、site の画面として横幅を守る対象でもない。
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
