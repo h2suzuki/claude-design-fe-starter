@@ -398,7 +398,7 @@ const swipe = async (page: Page, selector: string, direction: "left" | "right"):
   }
 };
 
-const performAction = async (page: Page, action: MockStateAction): Promise<void> => {
+export const performAction = async (page: Page, action: MockStateAction): Promise<void> => {
   if (action.kind === "navigate" || action.kind === "external") return;
   if (action.kind === "click") {
     if (action.selector === null) await clickBackdrop(page);
@@ -414,7 +414,7 @@ const performAction = async (page: Page, action: MockStateAction): Promise<void>
   }
 };
 
-const settle = async (page: Page): Promise<void> => {
+export const settle = async (page: Page): Promise<void> => {
   await page.waitForTimeout(SETTLE_MS);
   await page.waitForLoadState("networkidle");
 };

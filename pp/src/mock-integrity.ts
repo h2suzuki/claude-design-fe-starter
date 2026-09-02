@@ -209,6 +209,15 @@ export async function readRadii(page: Page): Promise<Record<string, number>> {
   });
 }
 
+export function mergeRadii(
+  left: Record<string, number>,
+  right: Record<string, number>,
+): Record<string, number> {
+  const merged = { ...left };
+  for (const [value, count] of Object.entries(right)) merged[value] = (merged[value] ?? 0) + count;
+  return merged;
+}
+
 // 同じ幅で何十件も並べても直す順は変わらない。右へ出ている順に上位だけ挙げ、残りは件数で示す
 const NAMED_OVERFLOW_LIMIT = 5;
 

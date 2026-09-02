@@ -6,7 +6,7 @@ Claude Design で承認された mock の凍結コピーと、その出所を機
 docs/presentation/ui-mock/
 ├── export/               凍結した export 一式（画面 HTML + 共有 JS/CSS/フォント/画像）
 ├── screenshots/          承認時点の参照スクリーンショット（基準 viewport ごと）
-├── states/               操作で到達できる状態と辺の凍結グラフ（画面ごと）
+├── states/               操作で到達できる状態と辺の凍結グラフ（画面ごと）。`ast:refresh` と `mock:integrity` はこのグラフを歩いて overlay の中も測る
 ├── mock-baseline.sha256  export/ 全ファイルの sha256 台帳（provenance pin）
 └── DESIGN-POLICY.md      KEEP_IMPL 台帳（mock と実装の意図的差分・日付付き裁定のみ）
 ```
@@ -43,7 +43,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 3. `export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし。編集 gate が Edit/Write を止めるので、配置は cp 等の Bash で行う）
 4. 閉包を実測して集合を確定する（`bun run --cwd pp mock:closure`。上の「export/ に入れる集合」）。読まれなかった file は外し、取りこぼしが挙がれば足す
 5. **2 回目以降の凍結では、前版との差分を棚卸しする**。修正を依頼した箇所以外にも手が入った export が返ることがある。`git diff --no-index --word-diff=plain <前版> <新版>` を file ごとに読み、依頼した変更・依頼していない変更に仕分ける。後者は採るか差し戻すかを決めてから先へ進む — 決めずに凍結すると、正本が黙って動いたことになる
-6. mock 自身の破れを機械で出す（`bun run --cwd pp mock:integrity`。引数なしで `export/` の全画面。`reference-pages.json` の見本 page は layout 検査から外れ、token の突合にだけ入る）。出力は 2 つに分かれる:
+6. mock 自身の破れを機械で出す（`bun run --cwd pp mock:integrity`。引数なしで `export/` の全画面。`reference-pages.json` の見本 page は layout 検査から外れ、token の突合にだけ入る）。状態グラフがあれば角丸は全状態で集める。出力は 2 つに分かれる:
    - **直してから凍結するもの** — 横スクロール・はみ出した要素・覆われた操作要素・収まらない dialog。見れば壊れているので 1 件でも残さない。ここで見つかれば mock の修正で済むが、実装後に見つかると実装の欠陥に見える
    - **気づき** — 同じ行き先や同じ token が画面ごとに違う言い方をされている。**凍結は止めない**。揃えるかどうかは読んだ人が決める。**機械に揃えさせない** — 短い言い方を長い言い方へ寄せれば layout が壊れることがあり、意匠の基準は文字列の同一性ではなく人が読んで分かることだから（1px の光学補正が要るのと同じ理由）
 

@@ -2,7 +2,7 @@
 // 全画面を /ast-extract し直す代わりに使う。文言の変化は報告するだけで書き換えない（意匠の判断を機械に渡さない）
 // Usage: npm --prefix pp run ast:refresh [-- <画面 slug の prefix>...]
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -12,6 +12,9 @@ import { MOCK_ROOT, UI_AST_SCREENS_DIR } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
 import { collectNodes, mockEntryFile, parseBaseline, propStrings } from "../src/ast-refresh";
+import { isolateStorage } from "../src/mock-states";
+import { screenSlug } from "../src/mock-screens";
+import { loadStateGraph, overlayTargets, replayTo, STATES_DIR, statesInOrder } from "../src/state-walk";
 
 const BASELINE_PATH = path.join(MOCK_ROOT, "mock-baseline.sha256");
 const AST_SUFFIX = ".ui-ast.json";
@@ -49,10 +52,10 @@ async function settle(page: Page): Promise<void> {
 }
 
 // region は page 全体に対する比率で持つ。絶対 px だと viewport を変えた瞬間に全部ずれる
-async function measure(page: Page, nodeRef: string): Promise<Measurement | null> {
-  return page.evaluate((selector) => {
+async function measure(page: Page, nodeRef: string, visibleOnly = false): Promise<Measurement | null> {
+  return page.evaluate(({ selector, visible }) => {
     const node = document.querySelector(selector);
-    if (!node) return null;
+    if (!node || (visible && node.getClientRects().length === 0)) return null;
     const rect = node.getBoundingClientRect();
     const width = document.documentElement.scrollWidth;
     const height = document.documentElement.scrollHeight;
@@ -66,7 +69,7 @@ async function measure(page: Page, nodeRef: string): Promise<Measurement | null>
       ],
       text: node.textContent ?? "",
     };
-  }, nodeRef);
+  }, { selector: nodeRef, visible: visibleOnly });
 }
 
 async function refreshAst(fileName: string, hashes: Map<string, string>): Promise<boolean> {
@@ -96,10 +99,12 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
       await installNetworkGuard(context);
       // tsx (esbuild keepNames) が evaluate へ渡す関数に挿入する __name helper は browser 側に無い
       await context.addInitScript("window.__name = (fn) => fn;");
+      await isolateStorage(context);
       const page = await openMock(context, mockEntryFile(mockFile), "body");
       try {
         await settle(page);
         let measured = 0;
+        let measuredOverlays = 0;
         let mismatched = 0;
         let review = 0;
         for (const node of collectNodes(ast.screen.children)) {
@@ -121,10 +126,54 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
             }
           }
         }
+        const targets = overlayTargets(ast.screen);
+        const overlayNodes = collectNodes(ast.screen.overlays);
+        const pending = new Map(
+          targets.map((target) => [
+            target.nodeId,
+            { target, node: overlayNodes.find((node) => node.id === target.nodeId)! },
+          ]),
+        );
+        if (targets.length > 0) {
+          const slug = screenSlug(mockFile);
+          const graph = loadStateGraph(STATES_DIR, slug, "desktop");
+          if (!graph) {
+            console.log(`OVERLAY_SKIPPED ${fileName} ${targets.length} node（状態グラフ無し）`);
+          } else {
+            for (const stateId of statesInOrder(graph)) {
+              if (pending.size === 0) break;
+              const statePage = await openMock(context, mockEntryFile(mockFile), "body");
+              try {
+                await settle(statePage);
+                await replayTo(statePage, graph, stateId);
+                for (const [nodeId, entry] of pending) {
+                  const result = await measure(statePage, entry.target.nodeRef, true);
+                  if (!result || !isObject(entry.node.source)) continue;
+                  entry.node.source.region = result.region;
+                  entry.node.source.file =
+                    stateId === "root"
+                      ? `screenshots/${slug}.desktop.png`
+                      : `screenshots/${slug}.desktop.${stateId}.png`;
+                  entry.node.source.state = stateId;
+                  pending.delete(nodeId);
+                  measuredOverlays += 1;
+                }
+              } finally {
+                await statePage.close();
+              }
+            }
+            for (const entry of pending.values()) {
+              mismatched += 1;
+              console.log(`NODE_REF_MISMATCH ${fileName}#${entry.target.nodeId} ${entry.target.nodeRef}`);
+            }
+          }
+        }
         provenance.sha256 = actualHash;
         provenance.extractedAt = today();
         writeFileSync(astPath, `${JSON.stringify(ast, null, 2)}\n`);
-        console.log(`UPDATED ${fileName} region=${measured} nodeRefMismatch=${mismatched} copyReview=${review}`);
+        console.log(
+          `UPDATED ${fileName} region=${measured} nodeRefMismatch=${mismatched} copyReview=${review} overlays=${measuredOverlays}/${targets.length}`,
+        );
       } finally {
         await page.close();
       }
@@ -139,7 +188,7 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
 
 async function main(): Promise<void> {
   const prefixes = process.argv.slice(2);
-  const files = readdirSync(UI_AST_SCREENS_DIR)
+  const files = (existsSync(UI_AST_SCREENS_DIR) ? readdirSync(UI_AST_SCREENS_DIR) : [])
     .filter((name) => name.endsWith(AST_SUFFIX))
     .sort()
     .filter((name) => prefixes.length === 0 || prefixes.some((p) => name.slice(0, -AST_SUFFIX.length).startsWith(p)));

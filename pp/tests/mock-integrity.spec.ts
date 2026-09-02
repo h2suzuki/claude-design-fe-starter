@@ -13,6 +13,7 @@ import {
   findCoveredControls,
   findUnfitDialogs,
   measureWidth,
+  mergeRadii,
   radiusFindings,
   readRadii,
   readVocabulary,
@@ -239,6 +240,10 @@ test.describe("mock-integrity — 凍結を止めるのはどれか", () => {
 });
 
 test.describe("mock-integrity — design system の角丸", () => {
+  test("状態ごとの角丸を値別に合算する", () => {
+    expect(mergeRadii({ "6": 2, "12": 1 }, { "6": 1, "16": 3 })).toEqual({ "6": 3, "12": 1, "16": 3 });
+  });
+
   test("可視要素ごとに 0 以外の角丸を数える", async ({ browser }) => {
     const context = await browser.newContext(page360);
     const page = await context.newPage();

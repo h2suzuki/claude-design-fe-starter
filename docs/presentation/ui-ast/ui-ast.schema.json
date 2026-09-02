@@ -120,6 +120,7 @@
           "items": { "type": "number", "minimum": 0, "maximum": 1 }
         },
         "file": { "type": "string" },
+        "state": { "type": "string" },
         "nodeRef": { "type": "string" }
       },
       "additionalProperties": false

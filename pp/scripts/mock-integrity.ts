@@ -15,7 +15,9 @@ import {
 } from "../src/config";
 import { EXPORT_DIR, MOCK_ROOT } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
+import { isolateStorage } from "../src/mock-states";
 import { listMockScreens, listSiteScreens, readReferencePages, screenSlug } from "../src/mock-screens";
+import { loadStateGraph, replayTo, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { openMock } from "../src/targets/mock-target";
 import {
   coveredFindings,
@@ -23,6 +25,7 @@ import {
   findCoveredControls,
   findUnfitDialogs,
   measureWidth,
+  mergeRadii,
   radiusFindings,
   readRadii,
   readVocabulary,
@@ -77,6 +80,7 @@ async function main(): Promise<void> {
       const context = await browser.newContext(contextOptions);
       try {
         await installNetworkGuard(context);
+        await isolateStorage(context);
         for (const screen of pages) {
           const page = await openMock(context, screen, "body");
           await page.waitForLoadState("networkidle");
@@ -86,8 +90,24 @@ async function main(): Promise<void> {
           }
           // 語彙は画面ごとに 1 度取れば足りる。基準の第一正本で揃える
           if (viewport === "mobile") {
-            vocabularies[screenSlug(screen)] = await readVocabulary(page);
-            radii[screenSlug(screen)] = await readRadii(page);
+            const slug = screenSlug(screen);
+            vocabularies[slug] = await readVocabulary(page);
+            let collectedRadii = await readRadii(page);
+            const graph = loadStateGraph(STATES_DIR, slug, "mobile");
+            if (graph) {
+              const stateIds = statesInOrder(graph);
+              for (const stateId of stateIds.filter((id) => id !== "root")) {
+                const statePage = await openMock(context, screen, "body");
+                try {
+                  await replayTo(statePage, graph, stateId);
+                  collectedRadii = mergeRadii(collectedRadii, await readRadii(statePage));
+                } finally {
+                  await statePage.close();
+                }
+              }
+              console.log(`角丸: ${slug} は ${stateIds.length} 状態で収集`);
+            }
+            radii[slug] = collectedRadii;
           }
           await page.close();
         }

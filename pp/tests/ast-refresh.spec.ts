@@ -2,6 +2,7 @@
 // props の走査を誤ると「文言が古いまま」の検出が丸ごと沈黙する
 import { expect, test } from "@playwright/test";
 import { collectNodes, mockEntryFile, parseBaseline, propStrings } from "../src/ast-refresh";
+import { overlayTargets } from "../src/state-walk";
 
 test.describe("parseBaseline", () => {
   test("maps every listed path to its hash", () => {
@@ -78,5 +79,22 @@ test.describe("mockEntryFile", () => {
 
   test("a path that is already relative is left alone", () => {
     expect(mockEntryFile("index.dc.html")).toBe("index.dc.html");
+  });
+});
+
+test.describe("overlayTargets", () => {
+  test("overlay 配下の nodeRef 付き node だけを返す", () => {
+    const screen = {
+      children: [{ id: "base", source: { nodeRef: "#base" } }],
+      overlays: [
+        { id: "dialog", source: { nodeRef: "#dialog" }, children: [{ id: "title", source: { nodeRef: "#title" } }] },
+        { id: "without-ref", source: { kind: "mock" } },
+      ],
+    };
+
+    expect(overlayTargets(screen)).toEqual([
+      { nodeId: "dialog", nodeRef: "#dialog" },
+      { nodeId: "title", nodeRef: "#title" },
+    ]);
   });
 });

@@ -110,7 +110,7 @@ modal / overlay を通常の page tree に混ぜない。
 - AST104: `layout.gap` / `layout.maxWidth`（`responsive` の override 内も含む）に実測 px を書かない。token 名を書き、逆引き不能なら key を省く
 - AST105: `interactions[].targetId` と `triggerNodeIds[]` が実在 `id` を指す
 - AST106: `screen.name` = `<slug>` かつ `provenance.mockFile` の file 名が最初の dot まで `<slug>` と一致（`<slug>.dc.html` のような複数段の拡張子も通る）
-- `source.region` を持つ node には `source.file` も書く（例 `screenshots/<slug>.desktop.png`）。region は viewport 依存の実測値なので、どの画に対する座標かが AST 自身に無いと後から検証できず、tools/ast-viewer も枠を描けない。overlay は省いてよい
+- `source.region` を持つ node には `source.file` も書く（例 `screenshots/<slug>.desktop.png`）。region は viewport 依存の実測値なので、どの画に対する座標かが AST 自身に無いと後から検証できず、tools/ast-viewer も枠を描けない。overlay も `ast:refresh` が状態グラフを歩いて測る。`source.state` に状態 id、`source.file` にその状態の画を持つ
 
 ## Reporting rule
 
