@@ -68,6 +68,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - 先に `pp/src/screens.ts` へこの画面を登録する (`PP_MOCK_FILE` の slug を key に、route・描画完了セレクタ・操作・fixture)。登録が無い slug で回すと gate は skip でなく error で止まる
 - sample-parity (structural parity) + width-sweep + poststate-sweep + self-baseline スクショ回帰 + mock-provenance を全て実行する
 - 画面が増えると self-baseline の baseline PNG も増える。`pp/tests/*-snapshots/` は追跡対象なので同じ commit に載せる (追跡しないと比較対象が消えて回帰網が空回りする)
+- 状態グラフがある画面では sample-parity / page-parity の状態ごとの test も回す。凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す (所要時間の目安と上限は docs/ui-quality-policy.md)
 - 完了条件: DoD 3 分類の機械側が全て「実行されて緑」。skip 混じりを緑と報告しない
 
 ### ⑧ LLM スクショ一次レビュー + 人間受入
