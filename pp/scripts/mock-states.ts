@@ -54,6 +54,8 @@ async function main(): Promise<void> {
             if (response.status() === 404) unreadable.add(`${viewport} ${screen}: ${response.url()}（HTTP 404）`);
           });
           await installNetworkGuard(context);
+          // tsx (esbuild keepNames) が evaluate へ渡す関数に挿入する __name helper は browser 側に無い
+          await context.addInitScript("window.__name = (fn) => fn;");
           const slug = screenSlug(screen);
           const result = await exploreStates({
             open: () => openMock(context, screen, "body"),
