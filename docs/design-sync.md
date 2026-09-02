@@ -164,6 +164,16 @@ mock は Claude Design 上で外部 fetch できないため、実装をその�
 機械側から見えない。実データで動線を歩く screen-loop ⑧ が唯一の網なので、この経路を通った画面は
 ⑧ を省略しない。
 
+**fixture の出所は BE の test 出力にする。** `pp/src/fixtures/` の値を手で書くと、BE が返せない値
+（実例: 満席枠）が fixture に残って pp は緑のまま本番で欠ける。規約は次の 2 段。
+
+1. BE の route test（外部 API は mock）が応答 JSON を `pp/fixtures/be/<route path の "/" を "__" にした名前>.json`
+   に書き出す。書き出しは BE 側の test の責務で、seed は置き場と名前だけを決める
+2. `bun run --cwd pp fixture:diff` が、`pp/src/fixtures/` の responder が返す値と 1 の JSON を突き合わせ、
+   **fixture にあって BE 出力に無い key / 配列要素** を route ごとに出す。差があれば fixture を BE 出力に
+   寄せるか、BE を直す（screen-loop ②′ の「BE のバグ」）。手書きのまま残す fixture は、responder の
+   隣に「生成できない理由」を 1 行書く（1 の JSON が無い route は diff が「BE 出力なし」として列挙する）
+
 ### 2.4 pixel-perfect 化
 
 pixel-perfect 検証の実装と pack 一覧は `pp/README.md` を正とする。
