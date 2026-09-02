@@ -5,7 +5,7 @@ import { chromium } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DESKTOP_CONTEXT_OPTIONS, MOBILE_CONTEXT_OPTIONS, MOCK_STATE_LIMITS, PP_LAUNCH_OPTIONS } from "../src/config";
-import { exploreStates } from "../src/mock-states";
+import { exploreStates, isolateStorage } from "../src/mock-states";
 import { EXPORT_DIR, MOCK_ROOT } from "../src/mock-server";
 import { listMockScreens, listSiteScreens, screenSlug } from "../src/mock-screens";
 import { installNetworkGuard, isEmbedRequest } from "../src/net-block";
@@ -56,6 +56,7 @@ async function main(): Promise<void> {
           await installNetworkGuard(context);
           // tsx (esbuild keepNames) が evaluate へ渡す関数に挿入する __name helper は browser 側に無い
           await context.addInitScript("window.__name = (fn) => fn;");
+          await isolateStorage(context);
           const slug = screenSlug(screen);
           const result = await exploreStates({
             open: () => openMock(context, screen, "body"),

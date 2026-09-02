@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Locator, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 
 export interface MockStateLimits {
   maxDepth: number;
@@ -62,6 +62,11 @@ interface ExploreStatesOptions {
 }
 
 const SETTLE_MS = 150;
+
+// 探索の副作用（下書き保存・予約）が storage に残ると、同じ context の再生が初期状態を再現できない
+export async function isolateStorage(context: BrowserContext): Promise<void> {
+  await context.addInitScript("try { localStorage.clear(); sessionStorage.clear(); } catch {}");
+}
 
 const addBound = (bounds: MockStateBound[], bound: MockStateBound): void => {
   if (!bounds.includes(bound)) bounds.push(bound);

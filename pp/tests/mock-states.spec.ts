@@ -4,6 +4,7 @@ import {
   collectStateActions,
   exploreStates,
   fingerprintVisibleDom,
+  isolateStorage,
   selectorForElement,
 } from "../src/mock-states";
 
@@ -112,5 +113,30 @@ test("export 内リンクと外部リンクは遷移せず分類する", async (
     { kind: "external", selector: "body > a:nth-child(2)", url: "https://example.com/path" },
   ]);
   expect(Object.keys(result.states)).toEqual(["root"]);
+  await context.close();
+});
+
+test("探索の副作用が storage に残っても、開き直した root は同じ形に戻る", async ({ browser }) => {
+  // mock が localStorage に書く（下書き保存・予約）と、同じ context の再生が初期状態を再現できない。
+  const context = await browser.newContext();
+  const html = `<button id="save">保存</button><main></main>
+    <script>
+      const n = Number(localStorage.getItem("n") ?? 0);
+      for (let i = 0; i < n; i++) document.querySelector("main").append(document.createElement("span"));
+      document.querySelector("#save").onclick = () => {
+        localStorage.setItem("n", String(n + 1));
+        if (!document.querySelector("main span")) document.querySelector("main").append(document.createElement("span"));
+      };
+    </script>`;
+  await context.route("http://fixture.local/**", (route) => route.fulfill({ contentType: "text/html", body: html }));
+  await isolateStorage(context);
+  const open = async () => {
+    const page = await context.newPage();
+    await page.goto("http://fixture.local/");
+    return page;
+  };
+  const result = await exploreStates({ open, viewport: "desktop", limits: LIMITS, siteFiles: new Set() });
+  expect(result.replayFailures).toEqual([]);
+  expect(Object.keys(result.states)).toHaveLength(2);
   await context.close();
 });
