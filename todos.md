@@ -67,6 +67,20 @@ Exit Criteria:
 
 2026-09-02 iac-web セッションからの報告: 2 巡目 export の `lint:mock` が MOCK104 5 件（1.7–4.0 MB の写真・会場画像）で rc=1。5 file は前版と byte 一致で、KEEP_IMPL 台帳（2026-08-28 裁定）で app 側が軽量版を使うと確定済み。凍結が止まるのは意図どおりかの照会。
 
+### mock:screenshots が凍結手順 7 で使えない — file 名の割れと外部 embed の誤検知
+
+起票: fable-5 2026-09-02
+Goal: `bun run --cwd pp mock:screenshots` が、AST の `source.file` が指す名前で参照スクショを上書きし、live な外部 embed の abort では落ちないようにする。
+Work file: `pp/scripts/mock-screenshots.ts`・`pp/scripts/mock-closure.ts`（`isEmbed` を共有する）・`.claude/skills/ast-extract/40-reconcile-pass.md:113`
+
+Exit Criteria:
+
+- [ ] 出力名を `<slug>.<viewport>.png` に揃える（AST 文書と適用先の既存参照がこの形。script だけが `<viewport>-<slug>.png`）
+- [ ] 子 frame の navigation（外部 embed）は `mock:closure` と同じ判定で unreachable から外し、件数として別に出す
+- [ ] iac-web の 2 巡目再凍結が、改名の回避なしに手順 7 を通る
+
+2026-09-02 iac-web セッションからの報告: script を回すと `desktop-index.png` 等 16 file が新規に生え、AST が指す `index.desktop.png` は更新されない。access の Google My Maps iframe が guard の abort で 4 件数えられ「閉包が足りていない」で exit 1。iac-web 側は改名で回避して凍結準備を進めている。
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
