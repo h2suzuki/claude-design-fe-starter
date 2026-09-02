@@ -127,7 +127,7 @@ Exit Criteria:
 
 - [ ] JS 無効の初回描画と hydration 後で背景色・主要色を比べる spec があり、テーマ 3 通りを回す
 - [ ] SSR を使わない PJ では `gate-not-applicable.json` で宣言できる
-- [ ] kickoff の質問票に「描画前に決めるべき状態」の項がある
+- [x] kickoff の質問票に「描画前に決めるべき状態」の項がある — `8d2836e`（質問票の初回項目、fe-kickoff 手順 5 から `prePaintStates` 登録を参照）
 - [ ] iac-web で「一瞬ライト表示」が赤になり、修正後に緑になる
 
 実例: テーマを onMount で決めるため SSR がライトで出る。gate は data-ready を待ってから撮るので初回描画を見ない。mock は client 描画なので mock 比較でも出ない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
