@@ -78,6 +78,8 @@ Exit Criteria:
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「クリックしてモーダルがでる画面、モーダル上にさらにタブがある画面は、よくある画面なので、正しく扱えないのは大きな制約に感じます。」dialog 内のタブは探索が clickable として拾う前提で、第 2 段の突合対象に含める。
 
+iac-web の再実測 2026-09-02（seed `64991cb`、trial のみ）: 再生不一致 0、mobile 状態 40 / desktop 45、両 viewport とも 600 秒の時間上限で打ち切り（深さ 4 まで）、rc=0。日付セルは押せる日が月 1〜3 個なので代表化は掛からない（4 未満は全部押す設計どおり）。icon だけの月送り button は label が空だったので `d4f669d` で aria-label / title を fallback にした。
+
 iac-web の実測 2026-09-02（`mock:states`）: calendar-dialog（3 画面）・photo-dialog 内のタブ・trial の picker がすべて状態と辺として出た。trial だけ再生 23 件不一致 → mock が localStorage に書く副作用が原因で、storage を空にして開く修正を seed に入れた。実行時間は trial 7.5 分を含め 7 画面 14.7 分（凍結時 1 回）。
 
 iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので overlay 配下の `visualId` は必ず MISS。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
