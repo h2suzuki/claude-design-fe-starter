@@ -28,7 +28,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 
 - **凍結には含める**。表現規則と部品 variant の参照先なので sha256 で固定する
 - **route として実装しない**。旧実装の page 対応で存否を判断する対象でもない
-- **`reference-pages.json` に file 名を書く**。書いた page は画面間のリンク文言の突合から外れる（見本 page は site の導線を持たないので、仕様書から本体へ戻るリンクを画面の導線として比べない）。宣言が無い / 空なら見本 page は無いものとして全 page を突き合わせる。export に無い名前を書くと落ちる。**token の突合からは外れない** — 下の「pixel の正本にしない」を機械で見る段がこれにあたる
+- **`reference-pages.json` に file 名を書く**。書いた page は画面ではないものとして扱われ、layout 検査（MOCK201/202/203/205 — 見本 page はブラウザで見る画面ではないので横幅や重なりを課さない）・参照スクショ・画面間のリンク文言の突合（MOCK204 — 見本 page は site の導線を持たない）から外れる。宣言が無い / 空なら見本 page は無いものとして全 page を画面として扱う。export に無い名前を書くと落ちる。**token の突合からは外れない** — 下の「pixel の正本にしない」を機械で見る段がこれにあたる
 - **token 名の母体にはするが pixel の正本にしない**。値は各画面の実値を正とする — 見本 page を第 2 の正本にすると二重管理のドリフト（轍 #8）が再発する。画面と見本で値が割れたら、まず見本側の生成ぶれを疑って mock へ差し戻す。差し戻せない事情があるときだけ DESIGN-POLICY.md に日付付きの裁定として残す
 - 部品 variant の初期一覧はこの page から取る。足りない状態（disabled / loading / empty / 長文）は Claude Design へ追加発注し、実装側で作らない
 - コピー規則・icon / logo 規則は受入時の checklist にする。違反は実装で直さず mock 側へ差し戻す
@@ -42,7 +42,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 3. `export/` へ相対 path を保って逐語保存する（整形・切詰め・末尾改行の増減なし。編集 gate が Edit/Write を止めるので、配置は cp 等の Bash で行う）
 4. 閉包を実測して集合を確定する（`bun run --cwd pp mock:closure`。上の「export/ に入れる集合」）。読まれなかった file は外し、取りこぼしが挙がれば足す
 5. **2 回目以降の凍結では、前版との差分を棚卸しする**。修正を依頼した箇所以外にも手が入った export が返ることがある。`git diff --no-index --word-diff=plain <前版> <新版>` を file ごとに読み、依頼した変更・依頼していない変更に仕分ける。後者は採るか差し戻すかを決めてから先へ進む — 決めずに凍結すると、正本が黙って動いたことになる
-6. mock 自身の破れを機械で出す（`bun run --cwd pp mock:integrity`。引数なしで `export/` の全画面）。出力は 2 つに分かれる:
+6. mock 自身の破れを機械で出す（`bun run --cwd pp mock:integrity`。引数なしで `export/` の全画面。`reference-pages.json` の見本 page は layout 検査から外れ、token の突合にだけ入る）。出力は 2 つに分かれる:
    - **直してから凍結するもの** — 横スクロール・はみ出した要素・覆われた操作要素・収まらない dialog。見れば壊れているので 1 件でも残さない。ここで見つかれば mock の修正で済むが、実装後に見つかると実装の欠陥に見える
    - **気づき** — 同じ行き先や同じ token が画面ごとに違う言い方をされている。**凍結は止めない**。揃えるかどうかは読んだ人が決める。**機械に揃えさせない** — 短い言い方を長い言い方へ寄せれば layout が壊れることがあり、意匠の基準は文字列の同一性ではなく人が読んで分かることだから（1px の光学補正が要るのと同じ理由）
 
@@ -57,7 +57,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    | MOCK205 | dialog が viewport に収まらない | 基準 2 viewport・DOM にある dialog を 1 つずつ現して測る |
 
    **検査していないもの**: click で初めて mount する dialog（DOM に無いので測れない）、本文中のリンク文言（文脈で言い方が変わってよい）、意匠そのものの良し悪し。これらは screen-loop ⑧ の人間受入で見る
-7. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する（`bun run --cwd pp mock:screenshots`。引数なしで `export/` の全画面を撮り、資産の 404 と abort があれば落ちる）。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — 同じ viewport・同じ DPR で撮った app 側の画と寸法が揃うので、mock と実装の pixel 差はここから直接取れる（`pp/` の self-baseline は app 自身の過去としか比べないため、mock との一致は見ていない）。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
+7. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する（`bun run --cwd pp mock:screenshots`。引数なしで `export/` の全画面を撮り、資産の 404 と abort があれば落ちる。`reference-pages.json` の見本 page は画面ではないので撮らない）。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — 同じ viewport・同じ DPR で撮った app 側の画と寸法が揃うので、mock と実装の pixel 差はここから直接取れる（`pp/` の self-baseline は app 自身の過去としか比べないため、mock との一致は見ていない）。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
 8. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash

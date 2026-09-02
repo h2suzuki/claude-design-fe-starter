@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { listMockScreens, readReferencePages, screenSlug } from "../src/mock-screens";
+import { listMockScreens, listSiteScreens, readReferencePages, screenSlug } from "../src/mock-screens";
 
 function fixtureExport(files: readonly string[]): string {
   const dir = mkdtempSync(path.join(os.tmpdir(), "pp-mock-screens-"));
@@ -82,5 +82,31 @@ test.describe("mock-screens — 見本帳の宣言", () => {
     const dir = fixtureExport(["index.dc.html"]);
     const file = declare(dir, { version: "1", pages: "design-system.dc.html" });
     expect(() => readReferencePages(file, ["index.dc.html"])).toThrow();
+  });
+});
+
+test.describe("mock-screens — 画面だけの列挙", () => {
+  const declare = (dir: string, pages: string[]): string => {
+    const file = path.join(dir, "reference-pages.json");
+    writeFileSync(file, JSON.stringify({ version: "1", pages }));
+    return file;
+  };
+
+  test("宣言した見本帳は画面ではないので layout 検査と参照スクショの対象から外れる", () => {
+    const dir = fixtureExport(["index.dc.html", "design-system.dc.html"]);
+    expect(listSiteScreens(dir, declare(dir, ["design-system.dc.html"]), [])).toEqual(["index.dc.html"]);
+  });
+
+  test("宣言が無ければ全 page が画面", () => {
+    const dir = fixtureExport(["index.dc.html", "design-system.dc.html"]);
+    expect(listSiteScreens(dir, path.join(dir, "reference-pages.json"), [])).toEqual([
+      "design-system.dc.html",
+      "index.dc.html",
+    ]);
+  });
+
+  test("引数で見本帳を名指ししても画面にはならない", () => {
+    const dir = fixtureExport(["index.dc.html", "design-system.dc.html"]);
+    expect(listSiteScreens(dir, declare(dir, ["design-system.dc.html"]), ["design-system.dc.html"])).toEqual([]);
   });
 });

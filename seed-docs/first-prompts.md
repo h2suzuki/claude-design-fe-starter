@@ -68,7 +68,7 @@ design system の発注より**先に**渡す。以後の意匠判断はすべ�
 
 - export の受け取りと再凍結は `docs/presentation/ui-mock/README.md` の凍結手順。sha256 台帳が変わる
 - 凍結が変われば AST の provenance も変わる。`bun run --cwd pp ast:refresh` で region と provenance を追従させ、`COPY_REVIEW` に出た文言だけを手で直す（意匠が変わった画面は `/ast-extract` からやり直す）
-- 参照スクショも撮り直す（凍結手順のとおり `export/` の全画面分）
+- 参照スクショも撮り直す（凍結手順のとおり `export/` の全画面分。見本 page は画面ではないので撮らない）
 
 ## 定常作業
 

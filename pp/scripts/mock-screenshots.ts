@@ -1,4 +1,4 @@
-// 承認時点の参照スクショを基準 viewport ごとに撮る。既定は export 全画面
+// 承認時点の参照スクショを基準 viewport ごとに撮る。既定は export の全画面（見本帳を除く）
 // Usage: npm run mock:screenshots [-- <export 内の file> ...]
 // 出力: docs/presentation/ui-mock/screenshots/<viewport>-<画面 slug>.png
 import { chromium } from "@playwright/test";
@@ -8,7 +8,7 @@ import { DESKTOP_CONTEXT_OPTIONS, MOBILE_CONTEXT_OPTIONS, PP_LAUNCH_OPTIONS } fr
 import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
 import { EXPORT_DIR, MOCK_ROOT } from "../src/mock-server";
-import { listMockScreens, screenSlug } from "../src/mock-screens";
+import { listSiteScreens, screenSlug } from "../src/mock-screens";
 
 const OUT_DIR = path.join(MOCK_ROOT, "screenshots");
 
@@ -19,9 +19,10 @@ const BASES = [
 ] as const;
 
 async function main(): Promise<void> {
-  const screens = listMockScreens(EXPORT_DIR, process.argv.slice(2));
+  // 見本帳は画面ではないので撮らない（AST も起こさず、region が指す画を要しない）
+  const screens = listSiteScreens(EXPORT_DIR, path.join(MOCK_ROOT, "reference-pages.json"), process.argv.slice(2));
   if (screens.length === 0) {
-    console.log("mock-screenshots: 対象なし（docs/presentation/ui-mock/export/ が空）");
+    console.log("mock-screenshots: 対象なし（docs/presentation/ui-mock/export/ に画面が無い）");
     return;
   }
   mkdirSync(OUT_DIR, { recursive: true });

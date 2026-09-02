@@ -15,7 +15,7 @@ import {
 } from "../src/config";
 import { EXPORT_DIR, MOCK_ROOT } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
-import { listMockScreens, readReferencePages, screenSlug } from "../src/mock-screens";
+import { listMockScreens, listSiteScreens, readReferencePages, screenSlug } from "../src/mock-screens";
 import { openMock } from "../src/targets/mock-target";
 import {
   coveredFindings,
@@ -41,8 +41,11 @@ const BASES = [
 ] as const;
 
 async function main(): Promise<void> {
-  const screens = listMockScreens(EXPORT_DIR, process.argv.slice(2));
-  if (screens.length === 0) {
+  const declaration = path.join(MOCK_ROOT, "reference-pages.json");
+  const pages = listMockScreens(EXPORT_DIR, process.argv.slice(2));
+  // 見本帳は画面ではないので layout 検査から外す。語彙と token の突合は見本帳も読む
+  const screens = listSiteScreens(EXPORT_DIR, declaration, process.argv.slice(2));
+  if (pages.length === 0) {
     console.log("mock-integrity: 対象なし（docs/presentation/ui-mock/export/ が空）");
     return;
   }
@@ -68,11 +71,13 @@ async function main(): Promise<void> {
       const context = await browser.newContext(contextOptions);
       try {
         await installNetworkGuard(context);
-        for (const screen of screens) {
+        for (const screen of pages) {
           const page = await openMock(context, screen, "body");
           await page.waitForLoadState("networkidle");
-          findings.push(...coveredFindings(screen, viewport, await findCoveredControls(page)));
-          findings.push(...dialogFindings(screen, viewport, await findUnfitDialogs(page)));
+          if (screens.includes(screen)) {
+            findings.push(...coveredFindings(screen, viewport, await findCoveredControls(page)));
+            findings.push(...dialogFindings(screen, viewport, await findUnfitDialogs(page)));
+          }
           // 語彙は画面ごとに 1 度取れば足りる。基準の第一正本で揃える
           if (viewport === "mobile") vocabularies[screenSlug(screen)] = await readVocabulary(page);
           await page.close();
@@ -84,8 +89,7 @@ async function main(): Promise<void> {
   } finally {
     await browser.close();
   }
-  const referencePages = readReferencePages(path.join(MOCK_ROOT, "reference-pages.json"), listMockScreens(EXPORT_DIR, []));
-  findings.push(...vocabularyFindings(vocabularies, referencePages));
+  findings.push(...vocabularyFindings(vocabularies, readReferencePages(declaration, listMockScreens(EXPORT_DIR, []))));
 
   const defects = blockingFindings(findings);
   const advice = findings.filter(isAdvisory);

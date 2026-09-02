@@ -45,3 +45,9 @@ export function readReferencePages(file: string, screens: readonly string[]): st
   }
   return (pages as string[]).map(screenSlug);
 }
+
+// 見本帳は画面ではない。layout 検査と参照スクショは画面だけを対象にする（語彙・token の突合は全 page）
+export function listSiteScreens(exportDir: string, declaration: string, args: readonly string[]): string[] {
+  const referencePages = readReferencePages(declaration, listMockScreens(exportDir, []));
+  return listMockScreens(exportDir, args).filter((file) => !referencePages.includes(screenSlug(file)));
+}
