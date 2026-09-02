@@ -28,7 +28,7 @@ when_to_use: TRIGGER when the user declares a mock complete, when an export need
    (cd docs/presentation/ui-mock && sha256sum --check --quiet mock-baseline.sha256)
    ```
 
-9. `pp/` で `bun run lint:mock` と `bun run test:provenance` を実行し、緑を確認してから export と台帳を同一 commit にする
+9. `pp/` で `bun run lint:mock` と `bun run test:provenance` を実行し、緑を確認してから export と台帳を同一 commit にする。緑の意味は MOCK101〜103 が 0 件であること — MOCK104（重い資産）は凍結を止めず、実装前ヒアリング（`seed-docs/pre-implementation-questions.md` の「重い資産」）へ持ち越す。`lint:mock` が印字するヒアリング文面を、言い換えずそのまま発注側へ聞く
 
 ## Rules
 

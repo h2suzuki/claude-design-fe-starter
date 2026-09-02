@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 凍結 mock の静的 lint: 外部資産参照（CDN 依存 = 検証の非決定性）と size cap を検査する
 // MOCK101 = vendor 化されていない外部資産参照 / MOCK102 = size cap 超過 / MOCK103 = 途中で切れた document
-// MOCK104 = 資産が重い（人に「どれが重いか」を聞かずに済ませるための検知）
+// MOCK104 = 資産が重い（凍結は止めず、実装前ヒアリングの材料として出す）
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -68,8 +68,32 @@ function lintAsset(file) {
     file,
     line: 1,
     id: 'MOCK104',
-    message: `asset is ${bytes} bytes; cap is ${ASSET_CAP_BYTES} — 先読みを既定にしたうえで、解像度を下げてよいかを発注側に確認する`,
+    message: `asset is ${bytes} bytes; cap is ${ASSET_CAP_BYTES}`,
   }];
+}
+
+// MOCK104 は凍結後・実装前のヒアリング材料なので、凍結を止める違反から外す
+function isBlocking(violations) {
+  return violations.some(({ id }) => id !== 'MOCK104');
+}
+
+// 引数指定で export 外の file を見ることもあるので、その時は相対化せず出す
+function exportRelative(file) {
+  const rel = path.relative(EXPORT_DIR, file);
+  return rel.startsWith('..') ? file : rel;
+}
+
+// 発注側への聞き方は seed-docs/pre-implementation-questions.md「重い資産」が正。そのまま貼れる形で出す
+function hearingBlock(heavy) {
+  const total = heavy.reduce((sum, { file }) => sum + fs.statSync(file).size, 0);
+  return [
+    '',
+    '実装前に発注側へ確認する（凍結は止めない）:',
+    `重い資産 ${heavy.length} 件 / 合計 ${(total / 1_048_576).toFixed(2)} MB`,
+    ...heavy.map(({ file }) => `  - ${exportRelative(file)}  ${(fs.statSync(file).size / 1_048_576).toFixed(2)} MB`),
+    '既定の処置: 写真は JPEG 化、表示寸法の 2 倍まで解像度を落とす、AVIF を <picture> で足す、先読みする、十分小さいものは data URI で埋め込む',
+    '聞くこと: この処置でよいか / 粗くしてはいけないものはどれか / 先読みを外すものはあるか',
+  ].join('\n');
 }
 
 function lintFile(file, allowed) {
@@ -202,10 +226,15 @@ function runSelfTest() {
     assert(lintFile(nsFile).length === 0, 'namespace fixture must produce no violations');
 
     assert(fs.readdirSync(tempDir).filter((name) => SCANNED_RE.test(name)).length === 9, 'SCANNED_RE must cover the html/css/js fixtures');
+
+    // MOCK104 は凍結後・実装前のヒアリング材料。凍結を止めると手順の順序が壊れる
+    assert(isBlocking(heavyViolations) === false, 'MOCK104 alone must not block the freeze');
+    assert(isBlocking(cdnViolations), 'MOCK101 must block');
+    assert(isBlocking([...heavyViolations, ...cdnViolations]), 'MOCK104 must not mask a blocking violation');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
-  console.log('mock-lint self-test: clean passes; MOCK101..MOCK104 each fire once; kind scoping holds');
+  console.log('mock-lint self-test: clean passes; MOCK101..MOCK104 each fire once; kind scoping holds; MOCK104 alone is non-blocking');
 }
 
 function main(args) {
@@ -223,7 +252,10 @@ function main(args) {
   // 個別が上限内でも枚数で重くなる。判断材料として合計を必ず出す
   const assetBytes = files.filter((file) => !SCANNED_RE.test(file)).reduce((sum, file) => sum + fs.statSync(file).size, 0);
   if (assetBytes > 0) console.log(`mock-lint: assets total ${(assetBytes / 1_048_576).toFixed(2)} MB`);
-  if (violations.length) process.exitCode = 1;
+  const heavy = violations.filter(({ id }) => id === 'MOCK104');
+  if (heavy.length) console.log(hearingBlock(heavy));
+  if (isBlocking(violations)) process.exitCode = 1;
+  else if (heavy.length) console.log(`mock-lint: ${files.length} file(s) OK（重い資産 ${heavy.length} 件は実装前の確認事項）`);
   else console.log(`mock-lint: ${files.length} file(s) OK`);
 }
 
