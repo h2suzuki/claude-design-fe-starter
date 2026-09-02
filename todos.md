@@ -111,8 +111,8 @@ Work file: `pp/src/mock-states.ts`（辺の種類 `back`）・`pp/scripts/mock-l
 
 Exit Criteria:
 
-- [ ] 凍結時に URL 状態（hash / history）を使う overlay が機械で列挙される
-- [ ] `mock:states` が overlay 内の navigate 辺に対して「遷移 → goBack」の辺を持ち、復元後の状態が記録される
+- [x] 凍結時に URL 状態（hash / history）を使う overlay が機械で列挙される — `393fd39`（`mock:branches` の `history` 種: pushState / replaceState / location.hash 代入 / hashchange / popstate / pageshow を file と行で出す）
+- [x] `mock:states` が overlay 内の navigate 辺に対して「遷移 → goBack」の辺を持ち、復元後の状態が記録される — `393fd39`（`back` 辺: 復元されれば自己ループ、失われれば root 行き。state-parity は app 側で同じ往復を再生。spec 163 pass）
 - [ ] iac-web の稽古カレンダー（#cal<offset> と popstate/pageshow で復元）で、戻った後の modal が状態として出る
 
 実例: カレンダーから会場ページへ行き「戻る」と modal が戻らない。poststate-sweep は登録操作の直後だけ比べ、離脱→戻るを辿らない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
