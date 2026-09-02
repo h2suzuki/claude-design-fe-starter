@@ -3,7 +3,7 @@
 walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 1 枚追加するたびに回す手順。①〜⑨を順に踏む。
 
 ```text
-① mock (部品→状態→画面) → ② export 凍結 + provenance pin → ③ AST 抽出 + 部品候補 3 分類
+① mock (部品→状態→画面) → ② export 凍結 + provenance pin → ②′ 表示分岐 × BE 経路 → ③ AST 抽出 + 部品候補 3 分類
 → ④ 実装前ヒアリング → ⑤ 新部品の単体実装 (states 込み) → ⑥ page composition
 → ⑦ 機械 gate → ⑧ LLM 一次レビュー + 人間受入 → ⑨ 差分の裁定
 ```
@@ -30,6 +30,13 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - /mock-freeze で export 一式を docs/presentation/ui-mock/export/ へ置き、sha256 を docs/presentation/ui-mock/mock-baseline.sha256 に pin する (手順詳細: docs/presentation/ui-mock/README.md)
 - 凍結の前に、mock 自身が発注どおり成立しているかを `bun run --cwd pp mock:integrity` で確かめる (全幅での横スクロールとはみ出し、dialog の収まり、操作要素の重なり、画面間の文言と token の割れ)。破れは (c) 修正依頼として Claude Design へ差し戻す — **FE 実装の途中で mock を直すより桁違いに安い**
 - 完了条件: mock-provenance spec が緑 (検証 gate が今回凍結した正本を向いている証明)。凍結せずに実装へ入らない — 突合先ドリフトの再発源になる
+
+### ②′ 表示分岐 × BE 経路 (凍結直後、AST 更新の前)
+
+- mock の JS は「空1 / 満 / 受付終了 / お休み / 祝日」のような**表示分岐を見本の論理で描いている**。実装はその分岐を BE の応答から作るので、凍結直後に分岐を全部列挙し、分岐ごとに BE の route と条件を表にする (表の雛形と実例: seed-docs/pre-implementation-questions.md「表示分岐と BE 経路」)
+- 候補の列挙は `bun run --cwd pp mock:branches` が mock の JS から機械で出す (三項演算の文字列・条件付きの textContent・class 切替・case・固定値との比較)。出力は候補であって分岐そのものではないので、人が表へ写しながら取捨する
+- 分岐ごとに 4 分類する: **経路あり** / **BE のバグ** (route はあるが値を落とす等) / **FE の欠落** (BE は返すが FE が使わない) / **到達不能パス** (mock の見本論理にしか無い)。後ろ 3 つは⑨と同じ裁定の場に出す
+- 完了条件: 表に空欄が無く、「BE のバグ」「FE の欠落」「到達不能パス」の各行に裁定 (直す / 台帳に残す) が付いている。gate は分岐の欠落を出せない — 満席枠を BE が落としていても fixture に満席があれば緑になる — ので、この表が唯一の網
 
 ### ③ AST 抽出 + 部品候補 3 分類
 
