@@ -57,7 +57,7 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 
 起票: user 2026-09-02
 Goal: mock の状態グラフ（root から click・Escape・swipe・代表値入力で辿れる画面状態と辺）を機械探索して凍結し、AST 抽出・`ast:refresh`・parity 検査がそのグラフを歩くことで、overlay を含む全状態が実測と突合の対象になる。
-Work file: `pp/scripts/mock-states.ts`（新規、第 1 段）・`docs/presentation/ui-mock/states/<slug>.json`（凍結出力）・`pp/scripts/ast-refresh.ts`・`pp/tests/sample-parity.spec.ts`・`pp/tests/page-parity.spec.ts`・`.claude/skills/ast-extract/`（状態 json を証拠として写す）・Codex 発注書 `drafts/mock-states-order.md`
+Work file: `last-session-handoff.md`（同名 section）・`pp/scripts/mock-states.ts`（新規、第 1 段）・`docs/presentation/ui-mock/states/<slug>.json`（凍結出力）・`pp/scripts/ast-refresh.ts`・`pp/tests/sample-parity.spec.ts`・`pp/tests/page-parity.spec.ts`・`.claude/skills/ast-extract/`（状態 json を証拠として写す）・Codex 発注書 `drafts/mock-states-order.md`
 
 Exit Criteria:
 
@@ -93,7 +93,7 @@ Exit Criteria:
 
 起票: user 2026-09-02
 Goal: PJ の API fixture を手書きでなく BE route の test 出力（外部 API は mock）から生成する規約と道具を持ち、fixture にあって BE が返せない値を生成時に検知する。
-Work file: `pp/src/fixtures/`・`docs/design-sync.md` 2.3（BE 往復の調整段）・`seed-docs/adoption.md`
+Work file: `last-session-handoff.md`（同名 section）・`pp/src/fixtures/`・`docs/design-sync.md` 2.3（BE 往復の調整段）・`seed-docs/adoption.md`
 
 Exit Criteria:
 
@@ -107,7 +107,7 @@ Exit Criteria:
 
 起票: user 2026-09-02
 Goal: mock の JS から pushState / replaceState / hashchange / pageshow の利用を凍結時に静的抽出して「URL 状態を持つ overlay」を一覧化し、`mock:states` に overlay 内の別ページ link → `page.goBack()` の辺を足して、復元後の状態を mock と app で比べられるようにする。
-Work file: `pp/src/mock-states.ts`（辺の種類 `back`）・`pp/scripts/mock-lint.mjs` か新 script（静的抽出）・`pp/tests/poststate-sweep.spec.ts`
+Work file: `last-session-handoff.md`（同名 section）・`pp/src/mock-states.ts`（辺の種類 `back`）・`pp/scripts/mock-lint.mjs` か新 script（静的抽出）・`pp/tests/poststate-sweep.spec.ts`
 
 Exit Criteria:
 
@@ -121,7 +121,7 @@ Exit Criteria:
 
 起票: user 2026-09-02
 Goal: localStorage の light / dark / system それぞれで、JS を止めた初回描画の背景色・主要色と hydration 後の値を比べる spec を標準に入れ、kickoff の質問票に「描画前に決めるべき状態（テーマ・言語など）」を足す。
-Work file: `pp/tests/`（新 spec、SSR の PJ 向け。静的 PJ では宣言 skip）・`seed-docs/pre-implementation-questions.md`・`.claude/skills/fe-kickoff/`
+Work file: `last-session-handoff.md`（同名 section）・`pp/tests/ssr-first-paint.spec.ts`・`seed-docs/pre-implementation-questions.md`・`.claude/skills/fe-kickoff/`
 
 Exit Criteria:
 
