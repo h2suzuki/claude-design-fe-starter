@@ -63,7 +63,7 @@ Exit Criteria:
 
 - [x] 第 1 段: `bun run --cwd pp mock:states` が画面ごとに状態グラフ（状態 = 文字を除いた可視 DOM の形の hash、辺 = 操作の種類と対象）を探索し、状態 json と状態ごとの viewport 画を凍結物として書く。同じ状態への到達は辺として記録し、反応の無い操作は捨てる — `d193368`（Codex 実装、受け入れ: spec 6 pass・typecheck・既存 38 pass・空 export で rc=0 を発注側で再実行）
 - [x] 第 1 段: 探索の上限（深さ・1 状態あたりの辺数・総状態数）は `pp/src/config.ts` の定数で持ち、到達したら「気づき」として出して先へ進む（落とさない）— `d193368`、`MOCK_STATE_LIMITS`。初期値は仮置き（comment に明記）
-- [ ] 上限の初期値の根拠を iac-web の実測（最大深さ・状態数・辺数）で決め、定数の comment に残す
+- [x] 上限の初期値の根拠を iac-web の実測（最大深さ・状態数・辺数）で決め、定数の comment に残す — iac-web 実測 2026-09-02（7 画面 × 2 viewport、最大 深さ 5 / 状態 22 / 辺 162、上限到達 0、合計 14.7 分）→ 12 / 100 / 100 に設定、`pp/src/config.ts`
 - [x] 第 1 段: 凍結手順（README・mock-freeze SKILL）に `mock:states` を足す。単体 test（fingerprint・辺の列挙・上限）がある — `d193368`、手順 7b・`pp/tests/mock-states.spec.ts` 6 case
 - [ ] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する
 - [ ] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない
@@ -76,6 +76,8 @@ Exit Criteria:
 ユーザー裁定 2026-09-02: 土台は「mock の clickable を全部 click して状態の tree を先に作り、同じ状態に戻ればループ、押すものが無ければ葉として記録し、AST 構築前に行う」。操作は click だけでなく swipe 等も含める。探索深度には上限を設け、到達したらユーザーに情報だけ出して先に進む。上限の値（30 と仮に言った）は根拠のある値として扱わない。
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「クリックしてモーダルがでる画面、モーダル上にさらにタブがある画面は、よくある画面なので、正しく扱えないのは大きな制約に感じます。」dialog 内のタブは探索が clickable として拾う前提で、第 2 段の突合対象に含める。
+
+iac-web の実測 2026-09-02（`mock:states`）: calendar-dialog（3 画面）・photo-dialog 内のタブ・trial の picker がすべて状態と辺として出た。trial だけ再生 23 件不一致 → mock が localStorage に書く副作用が原因で、storage を空にして開く修正を seed に入れた。実行時間は trial 7.5 分を含め 7 画面 14.7 分（凍結時 1 回）。
 
 iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので overlay 配下の `visualId` は必ず MISS。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
 
