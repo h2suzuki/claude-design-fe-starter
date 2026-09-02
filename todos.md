@@ -71,7 +71,7 @@ Exit Criteria:
 - [x] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る — `efb3606`（desktop の状態でも集める）、iac-web 実測 2026-09-03: mobile 40 状態 + desktop 45 状態で 6 / 11 / 12 / 13 / 16 / 18 / 24 px が出た（rc=0、175 秒）
 - [ ] 第 2 段: 辺が `.dp-grid > button:nth-child(N)` のような index 指定の兄弟を押すとき、AST の親 node の visualId + 子 index で app に写せる（iac-web 実測 2026-09-03: 日セル 42 件が同じ visualId だと strict mode で落ち、picker 系の状態が全部到達不能）
 - [ ] 第 2 段: AST で「状態限定」と宣言した visualId（picker の月送り・閉じる、一時保存 message）は base の「all mapped visual ids」test の突合から外れ、状態 test でだけ見る（iac-web 実測 2026-09-03: 付けると緑の test が赤くなるので付けられない）
-- [ ] 到達不能の失敗行の trigger を末尾 2〜3 段 + 可視 text に丸める（iac-web 実測 2026-09-03: full CSS path 200 文字超が 35 行並ぶ）
+- [x] 到達不能の失敗行の trigger を末尾 3 段 + 可視 text に丸める（iac-web 実測 2026-09-03: full CSS path 200 文字超が 35 行並ぶ）— `4944ade`、`shortSelector`。同日 `7137b43`（状態 test の画像 mask を viewport 座標に）・`a27e983`（状態 test の app 側を `openScreen` に）も iac-web 報告の bug 修正
 - [ ] `ast:refresh` が desktop の状態グラフで測れない overlay node（mobile 専用の一覧など）を mobile の状態グラフでも探す（iac-web 実測: 14 node 中 10 が desktop で測れ、1 が mobile 専用、3 が送信完了）
 - [ ] 記入後の送信（fill 後の submit）が状態グラフに現れない設計の穴を埋める。fill は DOM の形を変えないので状態にならず、埋めた状態から submit を押す経路が探索されない → 「可視の入力を全部埋めてから続ける」複合辺を足す等（iac-web 実測: 送信完了の 3 node が状態グラフに無い）
 - [ ] 状態ごとの parity を「凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す」運用として `docs/ui-quality-policy.md` と screen-loop の完了条件に書く。日常の小修正の gate に含めるかは未裁定のまま、`PARITY_STATE_LIMIT` と所要時間（iac-web 実測: trial で 1 本 3.2〜3.7 分 × 4 本、7 画面で +30〜40 分の見積もり）を併記する
