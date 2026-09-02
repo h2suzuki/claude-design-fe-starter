@@ -88,27 +88,26 @@ async function main(): Promise<void> {
             findings.push(...coveredFindings(screen, viewport, await findCoveredControls(page)));
             findings.push(...dialogFindings(screen, viewport, await findUnfitDialogs(page)));
           }
+          const slug = screenSlug(screen);
           // 語彙は画面ごとに 1 度取れば足りる。基準の第一正本で揃える
-          if (viewport === "mobile") {
-            const slug = screenSlug(screen);
-            vocabularies[slug] = await readVocabulary(page);
-            let collectedRadii = await readRadii(page);
-            const graph = loadStateGraph(STATES_DIR, slug, "mobile");
-            if (graph) {
-              const stateIds = statesInOrder(graph);
-              for (const stateId of stateIds.filter((id) => id !== "root")) {
-                const statePage = await openMock(context, screen, "body");
-                try {
-                  await replayTo(statePage, graph, stateId);
-                  collectedRadii = mergeRadii(collectedRadii, await readRadii(statePage));
-                } finally {
-                  await statePage.close();
-                }
+          if (viewport === "mobile") vocabularies[slug] = await readVocabulary(page);
+          // 角丸は viewport ごとに描く部品が違う（一覧 / 日セル）ので両方の状態グラフで集めて合算する
+          let collectedRadii = mergeRadii(radii[slug] ?? {}, await readRadii(page));
+          const graph = loadStateGraph(STATES_DIR, slug, viewport);
+          if (graph) {
+            const stateIds = statesInOrder(graph);
+            for (const stateId of stateIds.filter((id) => id !== "root")) {
+              const statePage = await openMock(context, screen, "body");
+              try {
+                await replayTo(statePage, graph, stateId);
+                collectedRadii = mergeRadii(collectedRadii, await readRadii(statePage));
+              } finally {
+                await statePage.close();
               }
-              console.log(`角丸: ${slug} は ${stateIds.length} 状態で収集`);
             }
-            radii[slug] = collectedRadii;
+            console.log(`角丸: ${slug} は ${viewport} の ${stateIds.length} 状態で収集`);
           }
+          radii[slug] = collectedRadii;
           await page.close();
         }
       } finally {
