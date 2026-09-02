@@ -53,49 +53,6 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
-### MOCK104（重い資産）が再凍結を止める — lint:mock の exit と凍結手順 9 の矛盾
-
-起票: fable-5 2026-09-02
-Goal: 重い資産の検知は「実装前に聞く材料」として残しつつ、凍結（`/mock-freeze` 手順 9 の `lint:mock` 緑）を止めないようにする。
-Work file: `pp/scripts/mock-lint.mjs`（exit の扱い）・`.claude/skills/mock-freeze/SKILL.md` 手順 9・`docs/presentation/ui-mock/README.md` 手順 9
-
-Exit Criteria:
-
-- [x] MOCK104 だけの `lint:mock` が exit 0 になり、検知行と合計 MB は今までどおり出る（`--self-test` を更新して確かめる）— `992fd06`、self-test rc=0
-- [x] MOCK104 が出たら、実装前に発注側へ聞く文面（file 名・MB・既定の処置・聞くこと）をそのまま貼れる形で出す — `992fd06`。ユーザー裁定 2026-09-02: 何の画像でどうしたいのか相談が来ず「重い画像がある」とだけ届いたことを bug と認定
-- [x] 凍結手順 9 の「緑」が MOCK101–103 を指すことを SKILL.md と README の両方に書く — `992fd06`
-- [x] iac-web の 2 巡目再凍結が、台帳処置済みの重い 5 file を持ったまま通る — iac-web 実測 2026-09-02（seed `992fd06` を install）: `lint:mock` rc=0「26 file(s) OK（重い資産 8 件は実装前の確認事項）」、ヒアリング文面が出力された。8 件はすべて iac-web の台帳に載っている
-
-2026-09-02 iac-web セッションからの報告: 2 巡目 export の `lint:mock` が MOCK104 5 件（1.7–4.0 MB の写真・会場画像）で rc=1。5 file は前版と byte 一致で、KEEP_IMPL 台帳（2026-08-28 裁定）で app 側が軽量版を使うと確定済み。凍結が止まるのは意図どおりかの照会。
-
-### mock:screenshots が凍結手順 7 で使えない — file 名の割れと外部 embed の誤検知
-
-起票: fable-5 2026-09-02
-Goal: `bun run --cwd pp mock:screenshots` が、AST の `source.file` が指す名前で参照スクショを上書きし、live な外部 embed の abort では落ちないようにする。
-Work file: `pp/scripts/mock-screenshots.ts`・`pp/scripts/mock-closure.ts`（`isEmbed` を共有する）・`.claude/skills/ast-extract/40-reconcile-pass.md:113`
-
-Exit Criteria:
-
-- [x] 出力名を `<slug>.<viewport>.png` に揃える（AST 文書と適用先の既存参照がこの形。script だけが `<viewport>-<slug>.png`）— `efb5ed7`、`screenshotFile` の test
-- [x] 子 frame の navigation（外部 embed）は `mock:closure` と同じ判定で unreachable から外し、件数として別に出す — `efb5ed7`、`isEmbedRequest` を net-block.ts で共有、`tests/net-block.spec.ts` 3 case
-- [x] iac-web の 2 巡目再凍結が、改名の回避なしに手順 7 を通る — iac-web 実測 2026-09-02: rc=0、14 file が `<slug>.<viewport>.png`、改名済みの凍結版と byte 一致、「外部 embed 4 件」が別枠
-
-2026-09-02 iac-web セッションからの報告: script を回すと `desktop-index.png` 等 16 file が新規に生え、AST が指す `index.desktop.png` は更新されない。access の Google My Maps iframe が guard の abort で 4 件数えられ「閉包が足りていない」で exit 1。iac-web 側は改名で回避して凍結準備を進めている。
-
-### 見本 page を mock:integrity の layout 検査（MOCK201/202）が画面として扱う
-
-起票: user 2026-09-02
-Goal: `reference-pages.json` に宣言した見本 page は、リンク文言の突合（MOCK204）だけでなく横スクロール・はみ出しの検査（MOCK201/202）からも外れ、凍結を止めない。
-Work file: `pp/scripts/mock-integrity.ts`（幅の sweep に宣言を渡す）・`pp/src/mock-integrity.ts`・`docs/presentation/ui-mock/README.md`（`reference-pages.json` の効く範囲）
-
-Exit Criteria:
-
-- [x] 宣言した見本 page が layout 検査（MOCK201/202/203/205）と参照スクショの対象から外れ、test にその case がある — `87c44e4`、`listSiteScreens` の 3 case は `pp/tests/mock-screens.spec.ts` に置いた
-- [x] README の `reference-pages.json` の説明が「外れる検査」を layout 検査・参照スクショ・MOCK204 として列挙し、token の突合からは外れないことは変えない — `87c44e4`
-- [x] iac-web の `mock:integrity` が、見本 page 由来の 35 件を裁定なしで「直すもの」から落とす — iac-web 実測 2026-09-02: 「7 画面 × 23 幅: 直すもの 0 件 / 気づき 0 件」rc=0（取り込み前は 8 画面で 35 件 rc=1）
-
-ユーザー裁定 2026-09-02（iac-web セッション経由）: 「デザインシステムは、スクロールバーという概念がありません。ウェブページではないので。」見本 page は route にならず、site の画面として横幅を守る対象でもない。
-
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
