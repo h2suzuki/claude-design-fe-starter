@@ -56,19 +56,24 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 ### overlay（click で開く dialog）が AST の実測と parity 検査の外にある
 
 起票: user 2026-09-02
-Goal: mock が click で初めて DOM に出す overlay（dialog / lightbox / picker）を、開いた状態で AST の `source.region` に測り、pp の structural / pixel 突合の対象に含める。
-Work file: `pp/scripts/ast-refresh.ts`（`screen.children` しか測らない）・`pp/src/screen-registry.ts`（`modals[].run` に開く操作が既にある）・`pp/tests/sample-parity.spec.ts`・`pp/tests/page-parity.spec.ts`・`.claude/skills/ast-extract/40-reconcile-pass.md`（「overlay は省いてよい」を改める）
+Goal: mock の状態グラフ（root から click・Escape・swipe・代表値入力で辿れる画面状態と辺）を機械探索して凍結し、AST 抽出・`ast:refresh`・parity 検査がそのグラフを歩くことで、overlay を含む全状態が実測と突合の対象になる。
+Work file: `pp/scripts/mock-states.ts`（新規、第 1 段）・`docs/presentation/ui-mock/states/<slug>.json`（凍結出力）・`pp/scripts/ast-refresh.ts`・`pp/tests/sample-parity.spec.ts`・`pp/tests/page-parity.spec.ts`・`.claude/skills/ast-extract/`（状態 json を証拠として写す）・Codex 発注書 `drafts/mock-states-order.md`
 
 Exit Criteria:
 
-- [ ] `ast:refresh` が `screen.overlays` の node を、その overlay を開いてから測る。開く操作の出所（mock 側は `triggerNodeIds` の trigger を click / app 側は `modals[].run`）を 1 つに決めて文書に書く
-- [ ] sample-parity / page-parity に「overlay を開いた状態」の突合があり、overlay 配下の `binding.visualId` は base 状態では MISS にならず、開いた状態でだけ突合される
-- [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` か README に書く
-- [ ] iac-web の trial / index / schedule / access の overlay で実測し、overlay の部品が structural / pixel の判定に入ることを確かめる
+- [ ] 第 1 段: `bun run --cwd pp mock:states` が画面ごとに状態グラフ（状態 = 文字を除いた可視 DOM の形の hash、辺 = 操作の種類と対象）を探索し、状態 json と状態ごとの viewport 画を凍結物として書く。同じ状態への到達は辺として記録し、反応の無い操作は捨てる
+- [ ] 第 1 段: 探索の上限（深さ・1 状態あたりの辺数・総状態数）は `pp/src/config.ts` の定数で持ち、到達したら「気づき」として出して先へ進む（落とさない）。初期値は仮置きで、根拠は iac-web の実測で決めて定数の comment に残す
+- [ ] 第 1 段: 凍結手順（README・mock-freeze SKILL）に `mock:states` を足す。単体 test（fingerprint・辺の列挙・上限）がある
+- [ ] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する
+- [ ] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない
+- [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` に書く
+- [ ] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「overlay が正しく扱えない問題は、fe-starter に改善を依頼してください。挙動については、mock で十分に作り込まれています。overlay も pp 対象に含めるべきです。」
 
-iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず、11 node とも region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので、overlay 配下に `visualId` を付けると必ず MISS。既存の calendar-dialog / photo-dialog も同じ理由で突合されていない。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
+ユーザー裁定 2026-09-02: 土台は「mock の clickable を全部 click して状態の tree を先に作り、同じ状態に戻ればループ、押すものが無ければ葉として記録し、AST 構築前に行う」。操作は click だけでなく swipe 等も含める。探索深度には上限を設け、到達したらユーザーに情報だけ出して先に進む。上限の値（30 と仮に言った）は根拠のある値として扱わない。
+
+iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので overlay 配下の `visualId` は必ず MISS。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
 
 ## Medium
 
