@@ -154,8 +154,8 @@ Work file: `seed-docs/screen-loop.md`（完了条件）・`seed-docs/adoption.md
 
 Exit Criteria:
 
-- [ ] Exit Criteria の雛形に smoke の 3 項目（API 応答の内容 / テーマ保存とリロード / history 往復）が入っている
-- [ ] smoke の手順が copy-paste で回せる形で文書にある
+- [x] Exit Criteria の雛形に smoke の 3 項目（API 応答の内容 / テーマ保存とリロード / history 往復）が入っている — `a212e6a`（screen-loop ⑩、walking-skeleton の完了条件、fe-kickoff の Rules）
+- [x] smoke の手順が copy-paste で回せる形で文書にある — `a212e6a`（screen-loop ⑩ の 3 手順、adoption §10 手順 2 から参照）
 
 ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
 
