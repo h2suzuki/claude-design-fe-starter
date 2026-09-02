@@ -68,7 +68,10 @@ Exit Criteria:
 - [x] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する — `eb2cd91`（`state-walk.ts` の replay、overlay は現れる最初の状態で測り `source.state` と状態の画を記録。Codex 実装を受け入れ、spec 55 pass・typecheck・CLI を発注側で再実行。iac-web の実測は次の criterion で確かめる）
 - [x] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない — `032a44d`（`state-parity.ts`: 辺が押した mock 要素を AST の nodeRef で引き visualId を app selector にする。写せない state は「到達不能」で失敗。Codex 実装を受け入れ、spec 19 pass・parity 2 spec は宣言 skip・typecheck・no-skips self-test を発注側で再実行。iac-web の実測は次の criterion で確かめる）
 - [ ] 第 2 段: 深さ 2 以上の状態（dialog の中のタブ切替など）も同じ経路で突合され、iac-web の会場写真 lightbox のタブ 2 枚がその実例として通る
-- [ ] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る（iac-web 実測 2026-09-02: mobile の 40 状態で 13 / 18 / 24 が出た。11 / 12 / 16 は desktop 専用の部品で、mobile だけの収集では出ない → desktop の状態グラフでも集める修正を入れた。再実測待ち）
+- [x] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る — `efb3606`（desktop の状態でも集める）、iac-web 実測 2026-09-03: mobile 40 状態 + desktop 45 状態で 6 / 11 / 12 / 13 / 16 / 18 / 24 px が出た（rc=0、175 秒）
+- [ ] 第 2 段: 辺が `.dp-grid > button:nth-child(N)` のような index 指定の兄弟を押すとき、AST の親 node の visualId + 子 index で app に写せる（iac-web 実測 2026-09-03: 日セル 42 件が同じ visualId だと strict mode で落ち、picker 系の状態が全部到達不能）
+- [ ] 第 2 段: AST で「状態限定」と宣言した visualId（picker の月送り・閉じる、一時保存 message）は base の「all mapped visual ids」test の突合から外れ、状態 test でだけ見る（iac-web 実測 2026-09-03: 付けると緑の test が赤くなるので付けられない）
+- [ ] 到達不能の失敗行の trigger を末尾 2〜3 段 + 可視 text に丸める（iac-web 実測 2026-09-03: full CSS path 200 文字超が 35 行並ぶ）
 - [ ] `ast:refresh` が desktop の状態グラフで測れない overlay node（mobile 専用の一覧など）を mobile の状態グラフでも探す（iac-web 実測: 14 node 中 10 が desktop で測れ、1 が mobile 専用、3 が送信完了）
 - [ ] 記入後の送信（fill 後の submit）が状態グラフに現れない設計の穴を埋める。fill は DOM の形を変えないので状態にならず、埋めた状態から submit を押す経路が探索されない → 「可視の入力を全部埋めてから続ける」複合辺を足す等（iac-web 実測: 送信完了の 3 node が状態グラフに無い）
 - [ ] 状態ごとの parity を「凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す」運用として `docs/ui-quality-policy.md` と screen-loop の完了条件に書く。日常の小修正の gate に含めるかは未裁定のまま、`PARITY_STATE_LIMIT` と所要時間（iac-web 実測: trial で 1 本 3.2〜3.7 分 × 4 本、7 画面で +30〜40 分の見積もり）を併記する
