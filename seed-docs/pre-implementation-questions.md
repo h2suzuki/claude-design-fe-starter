@@ -21,6 +21,13 @@ mock は「何がどう見えるか」の正本だが、**「どれだけある�
 
 > mock は 1 つの状態しか描かない。描かれていない状態は「無い」のか「描いていないだけ」なのか、mock からは区別できない。
 
+**描画前に決めるべき状態**
+
+- テーマ（light / dark / system）・言語・文字サイズなど、**最初の 1 枚を描く前に決まっていなければならない状態**はあるか。どこに保存するか（cookie なら server が初回描画に使える、localStorage なら描画前の inline script で読む）
+- その状態を切り替えて reload したとき、初回描画から保存値で出るか
+
+> SSR する PJ では、mount 後に決める実装だと初回描画が既定値（ライト）で出て一瞬光る。gate は描画完了を待ってから撮るので見えず、mock は client 描画なので mock 比較でも出ない。答えを `pp/src/screens.ts` の `prePaintStates`（状態名と、その状態を作る手順の組）に登録すると、`ssr-first-paint` spec が初回描画と hydration 後の色を状態ごとに比べる。SSR しない PJ は `pp/gate-not-applicable.json` で宣言する。
+
 **favicon と app icon**
 
 - 元画像はあるか。**形式は何か**（写真 JPEG なら、そのままでは使えない）
