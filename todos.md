@@ -81,6 +81,26 @@ iac-web の実測 2026-09-02（`mock:states`）: calendar-dialog（3 画面）�
 
 iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので overlay 配下の `visualId` は必ず MISS。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
 
+### 画面 mock の生の値が design system のスケールから外れても、凍結でもヒアリングでも検知されない
+
+起票: user 2026-09-02
+Goal: 最初の凍結の時点で、画面 mock が使う角丸・余白・字級の値のうち design system が宣言も使用もしていないものを機械で列挙し、「気づき」として実装前ヒアリング（Claude Design に「宣言に無い値 X はどちらが正か」を聞く）に落とす。凍結は止めない。
+Work file: `pp/src/mock-integrity.ts`（MOCK204 と同じ「気づき」扱いの新 id）・`pp/scripts/mock-integrity.ts`・`seed-docs/pre-implementation-questions.md`（聞き方の雛形）・`docs/presentation/ui-mock/README.md` 手順 6
+
+Exit Criteria:
+
+- [ ] `mock:integrity` が site 画面の computed `border-radius`（余白・字級は同じ経路で足せる形）を集め、見本 page（`reference-pages.json`）が使う値の集合と突き合わせて、画面だけにある値を「気づき」として画面名・箇所数つきで出す
+- [ ] 見本 page が「スケール」を文で宣言している場合に備え、PJ が `docs/presentation/ui-mock/design-scale.json` で宣言値を書けば、見本 page の使用値でなく宣言値と突き合わせる（宣言が無ければ使用値）
+- [ ] 出力の末尾に、`lint:mock` の MOCK104 と同じ「そのまま貼れる質問文」（宣言に無い値の一覧と「どちらが正か」）が出る
+- [ ] test にその case（宣言外の値が気づきになる / 宣言内は出ない / 宣言 file があればそちらが優先）がある
+- [ ] iac-web の index / trial で、報告済みの宣言外 8 値（6 9 10 11 12 13 16 18 20 24 のうち画面にあるもの）が気づきとして出る
+
+ユーザー裁定 2026-09-02（iac-web セッション経由）: 「design system に不備があるようなら、fe-starter の最初の mock 凍結時に検知して、Claude Design 側に質問すべきです。後になったものがあれば、理由を考えてください。」
+
+後になった理由: 画面間の値の割れを見る MOCK204 は `:root` の custom property だけを読む（`pp/src/mock-integrity.ts:176`）。角丸は custom property を持たず inline の生 px なので、突合の対象に入っていなかった。実装側は token に無い値を生 px で書き、それを機械が止める段も無かった。見えたのは fix round の報告書を検証 subagent が読んだからで、機構ではない。
+
+iac-web の実測 2026-09-02: design system の宣言は角丸 4 段（14 / 22 / 28 / 999）、見本 page 自身は 16 / 18 / 24 も使う。画面の border-radius は index で 9 種、trial で 12 種。iac-web は宣言外 8 値を Claude Design に問い、回答まで mock の生の値を写す（H.S. 裁定 21:47）。
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
