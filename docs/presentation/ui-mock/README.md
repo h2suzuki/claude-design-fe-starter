@@ -6,7 +6,7 @@ Claude Design で承認された mock の凍結コピーと、その出所を機
 docs/presentation/ui-mock/
 ├── export/               凍結した export 一式（画面 HTML + 共有 JS/CSS/フォント/画像）
 ├── screenshots/          承認時点の参照スクリーンショット（基準 viewport ごと）
-├── states/               操作で到達できる状態と辺の凍結グラフ（画面ごと）。`ast:refresh` と `mock:integrity` はこのグラフを歩いて overlay の中も測り、parity も各状態を歩く
+├── states/               操作で到達できる状態と辺の凍結グラフ（画面ごと）。`ast:refresh` と `mock:integrity` はこのグラフを歩いて overlay の中も測り（desktop で見えない overlay は mobile の状態でも探し `source.viewport` に記す）、parity も各状態を歩く
 ├── mock-baseline.sha256  export/ 全ファイルの sha256 台帳（provenance pin）
 └── DESIGN-POLICY.md      KEEP_IMPL 台帳（mock と実装の意図的差分・日付付き裁定のみ）
 ```

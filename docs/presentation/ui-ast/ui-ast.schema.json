@@ -121,6 +121,7 @@
         },
         "file": { "type": "string" },
         "state": { "type": "string" },
+        "viewport": { "type": "string", "enum": ["mobile", "desktop"] },
         "nodeRef": { "type": "string" }
       },
       "additionalProperties": false

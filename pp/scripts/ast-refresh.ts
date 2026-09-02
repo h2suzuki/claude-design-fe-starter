@@ -5,8 +5,8 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
-import type { Page } from "@playwright/test";
-import { DESKTOP_CONTEXT_OPTIONS, PP_LAUNCH_OPTIONS, TIMEZONE } from "../src/config";
+import type { BrowserContext, Page } from "@playwright/test";
+import { DESKTOP_CONTEXT_OPTIONS, PP_LAUNCH_OPTIONS, SCREENSHOT_BASES, TIMEZONE } from "../src/config";
 import { freezePage } from "../src/freeze";
 import { MOCK_ROOT, UI_AST_SCREENS_DIR } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
@@ -14,7 +14,7 @@ import { openMock } from "../src/targets/mock-target";
 import { collectNodes, isObject, mockEntryFile, parseBaseline, propStrings } from "../src/ast-refresh";
 import { isolateStorage } from "../src/mock-states";
 import { screenSlug, screenshotFile } from "../src/mock-screens";
-import { loadStateGraph, overlayTargets, replayTo, STATES_DIR, statesInOrder } from "../src/state-walk";
+import { loadStateGraph, overlayTargets, STATES_DIR, walkStatesForTargets } from "../src/state-walk";
 
 const BASELINE_PATH = path.join(MOCK_ROOT, "mock-baseline.sha256");
 const AST_SUFFIX = ".ui-ast.json";
@@ -100,7 +100,6 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
       try {
         await settle(page);
         let measured = 0;
-        let measuredOverlays = 0;
         let mismatched = 0;
         let review = 0;
         for (const node of collectNodes(ast.screen.children)) {
@@ -124,35 +123,49 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
         }
         const targets = overlayTargets(ast.screen);
         const pending = new Map(targets.map((target) => [target.nodeId, target]));
+        const slug = screenSlug(mockFile);
+        let measuredOverlays = 0;
+        let mobileOverlays = 0;
+        // desktop で測れない overlay（mobile 専用の一覧など）は mobile の状態グラフでも探す
+        const measureOverlays = async (viewport: "mobile" | "desktop", ctx: BrowserContext, rootPage?: Page) => {
+          const graph = loadStateGraph(STATES_DIR, slug, viewport);
+          if (!graph) return false;
+          await walkStatesForTargets(graph, pending, {
+            rootPage,
+            openPage: async () => {
+              const statePage = await openMock(ctx, mockEntryFile(mockFile), "body");
+              await settle(statePage);
+              return statePage;
+            },
+            probe: (statePage, nodeRef) => measure(statePage, nodeRef, true),
+            found: (_nodeId, entry, stateId, result) => {
+              if (!isObject(entry.node.source)) return;
+              entry.node.source.region = result.region;
+              entry.node.source.file = graph.states[stateId]?.screenshot ?? `screenshots/${screenshotFile(slug, viewport)}`;
+              entry.node.source.state = stateId;
+              entry.node.source.viewport = viewport;
+              measuredOverlays += 1;
+              if (viewport === "mobile") mobileOverlays += 1;
+            },
+          });
+          return true;
+        };
         if (targets.length > 0) {
-          const slug = screenSlug(mockFile);
-          const graph = loadStateGraph(STATES_DIR, slug, "desktop");
-          if (!graph) {
+          const hasDesktop = await measureOverlays("desktop", context, page);
+          if (pending.size > 0) {
+            const mobileContext = await browser.newContext(SCREENSHOT_BASES[0][1]);
+            try {
+              await installNetworkGuard(mobileContext);
+              await mobileContext.addInitScript("window.__name = (fn) => fn;");
+              await isolateStorage(mobileContext);
+              await measureOverlays("mobile", mobileContext);
+            } finally {
+              await mobileContext.close();
+            }
+          }
+          if (!hasDesktop && pending.size === targets.length) {
             console.log(`OVERLAY_SKIPPED ${fileName} ${targets.length} node（状態グラフ無し）`);
           } else {
-            for (const stateId of statesInOrder(graph)) {
-              if (pending.size === 0) break;
-              // root は開いたばかりの page がそのまま該当する（辺を 1 本も再生しない）
-              const statePage = stateId === "root" ? page : await openMock(context, mockEntryFile(mockFile), "body");
-              try {
-                if (statePage !== page) {
-                  await settle(statePage);
-                  await replayTo(statePage, graph, stateId);
-                }
-                for (const [nodeId, entry] of pending) {
-                  const result = await measure(statePage, entry.nodeRef, true);
-                  if (!result || !isObject(entry.node.source)) continue;
-                  entry.node.source.region = result.region;
-                  entry.node.source.file =
-                    graph.states[stateId]?.screenshot ?? `screenshots/${screenshotFile(slug, "desktop")}`;
-                  entry.node.source.state = stateId;
-                  pending.delete(nodeId);
-                  measuredOverlays += 1;
-                }
-              } finally {
-                if (statePage !== page) await statePage.close();
-              }
-            }
             for (const entry of pending.values()) {
               mismatched += 1;
               console.log(`NODE_REF_MISMATCH ${fileName}#${entry.nodeId} ${entry.nodeRef}`);
@@ -163,7 +176,7 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
         provenance.extractedAt = today();
         writeFileSync(astPath, `${JSON.stringify(ast, null, 2)}\n`);
         console.log(
-          `UPDATED ${fileName} region=${measured} nodeRefMismatch=${mismatched} copyReview=${review} overlays=${measuredOverlays}/${targets.length}`,
+          `UPDATED ${fileName} region=${measured} nodeRefMismatch=${mismatched} copyReview=${review} overlays=${measuredOverlays}/${targets.length}（mobile ${mobileOverlays}）`,
         );
       } finally {
         await page.close();

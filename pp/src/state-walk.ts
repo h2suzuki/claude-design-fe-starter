@@ -59,3 +59,37 @@ export async function replayTo(page: Page, graph: FrozenStateGraph, stateId: str
   if (!state) throw new Error(`state-walk: state が見つからない — ${stateId}`);
   await replayPath(page, graph.edges, state.path, undefined, "state-walk:");
 }
+
+export interface TargetWalk<T extends { nodeRef: string }, R> {
+  // root には開いたばかりの page をそのまま使えるので、呼び手が渡せる
+  rootPage?: Page;
+  openPage: () => Promise<Page>;
+  probe: (page: Page, nodeRef: string) => Promise<R | null>;
+  found: (id: string, entry: T, stateId: string, result: R) => void;
+  onState?: (stateId: string) => void;
+}
+
+// 対象が初めて見える状態を depth 順に探す。見つかった対象は pending から消え、残りは呼び手が報告する
+export async function walkStatesForTargets<T extends { nodeRef: string }, R>(
+  graph: FrozenStateGraph,
+  pending: Map<string, T>,
+  walk: TargetWalk<T, R>,
+): Promise<void> {
+  for (const stateId of statesInOrder(graph)) {
+    if (pending.size === 0) return;
+    walk.onState?.(stateId);
+    const reuse = stateId === "root" && walk.rootPage !== undefined;
+    const page = reuse ? walk.rootPage! : await walk.openPage();
+    try {
+      if (!reuse) await replayTo(page, graph, stateId);
+      for (const [id, entry] of pending) {
+        const result = await walk.probe(page, entry.nodeRef);
+        if (result === null) continue;
+        walk.found(id, entry, stateId, result);
+        pending.delete(id);
+      }
+    } finally {
+      if (!reuse) await page.close();
+    }
+  }
+}

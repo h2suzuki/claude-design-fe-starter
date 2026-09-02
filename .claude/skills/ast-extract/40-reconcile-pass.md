@@ -68,6 +68,7 @@ modal / overlay を通常の page tree に混ぜない。
 - 強い反証がない限り overlay として扱う: Dialog / AlertDialog / Sheet / Drawer / Popover / Tooltip / DropdownMenu
 - 通常の page 内容は `screen.children`、overlay は `screen.overlays` へ置く
 - `screen.overlays` 配下の node と `source.state` を持つ node の `binding.visualId` は、pp が「状態限定」として扱う: 基準幅の突合（all mapped visual ids）からは外れ、状態ごとの突合だけが見る。overlay の trigger・タブ・閉じるにも visualId を付けてよい
+- overlay の `source.region` は `ast:refresh` が状態グラフを歩いて測る。desktop の状態で見えない node（mobile 専用の一覧など）は mobile の状態でも探し、測れた側を `source.viewport` に記す
 - 日セルや枠行のように同じ形の兄弟が並ぶ部品は、個々の子でなく親（grid / list）の node に visualId を付ける。pp は押された子を親の visualId + `:nth-child(N)` で app 側へ写す
 - trigger 側 node に `interactions: [{ "type": "openOverlay", "targetId": "<overlay-id>" }]` を持たせる
 - overlay 側 node に `triggerNodeIds: ["<trigger-id>"]` を持たせる
