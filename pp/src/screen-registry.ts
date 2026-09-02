@@ -1,5 +1,5 @@
 // 画面ごとの登録点を引く機構。表そのものは screens.ts（PJ が埋める差し替え点）にある
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import type { JsonResponder, PatternFixture } from "./fixtures/route-intercept";
 import { MOCK_ENTRY_FILE } from "./config";
 import { screenSlug } from "./mock-screens";
@@ -30,6 +30,8 @@ export interface ScreenSpec {
   modals: NamedStep[];
   // 選択行に対する状態変更操作。run は完了まで進める
   edges: NamedStep[];
+  // 描画前に決まっていなければならない状態（theme 等）。apply は cookie / addInitScript で navigation 前に仕込む
+  prePaintStates?: { name: string; apply: (context: BrowserContext) => Promise<void> }[];
   list?: ListRegistration;
   // 画面固有の API fixture。省略すると fixtures/app-fixtures.ts の共通 fixture が使われる
   fixtures?: Record<string, JsonResponder>;
