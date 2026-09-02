@@ -43,6 +43,12 @@ export const DESKTOP_CONTEXT_OPTIONS: BrowserContextOptions = {
   deviceScaleFactor: 1,
 };
 
+// 参照スクショ・状態探索・整合診断が使う基準 2 点。DPR を上げると縦長 fullPage が MB 級になり repo を圧迫する
+export const SCREENSHOT_BASES = [
+  ["mobile", { ...MOBILE_CONTEXT_OPTIONS, deviceScaleFactor: 1 }],
+  ["desktop", DESKTOP_CONTEXT_OPTIONS],
+] as const;
+
 export function sweepContextOptions(width: number): BrowserContextOptions {
   return { ...SHARED, viewport: { width, height: 900 }, deviceScaleFactor: 1 };
 }

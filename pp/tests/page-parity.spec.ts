@@ -19,14 +19,13 @@ import { findScreenForMock } from "../src/ast-screen";
 import { installNetworkGuard } from "../src/net-block";
 import { imageTargets, keepImplEntries } from "../src/keep-impl";
 import { UI_AST_SCREENS_DIR } from "../src/mock-server";
-import { isolateStorage } from "../src/mock-states";
 import { screenSlug } from "../src/mock-screens";
 import { openMock } from "../src/targets/mock-target";
 import { openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
 import { SELECTOR_MAP } from "../src/selector-map";
-import { mapPathToApp, replayOnApp, summarizeFailures } from "../src/state-parity";
-import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
+import { forEachFrozenState, formatStateFailure, summarizeFailures } from "../src/state-parity";
+import { loadStateGraph, STATES_DIR } from "../src/state-walk";
 import { diffPagePngs } from "../src/page-diff";
 import { blurBleed, boxesAgree, collectImageBoxes, describeCoverage, describeExcluded, padBoxes } from "../src/image-boxes";
 import type { PageDiffResult } from "../src/page-diff";
@@ -103,37 +102,24 @@ for (const [label, contextOptions] of BASES) {
       test.skip(graph === null, "状態グラフ無し — bun run --cwd pp mock:states で凍結すると有効化される");
       test.setTimeout(15 * 60_000);
       if (!graph) return;
-      const failures: string[] = [];
-      const stateIds = statesInOrder(graph).filter((stateId) => stateId !== "root");
-      const targets = stateIds.slice(0, PARITY_STATE_LIMIT);
-      if (stateIds.length > targets.length) {
-        console.log(`state 上限 ${PARITY_STATE_LIMIT} に達した（残り ${stateIds.length - targets.length} 状態は未突合）`);
-      }
-      for (const stateId of targets) {
-        const mockCtx = await browser.newContext(contextOptions);
-        const appCtx = await browser.newContext(contextOptions);
-        try {
-          await Promise.all([isolateStorage(mockCtx), isolateStorage(appCtx)]);
-          await Promise.all([installNetworkGuard(mockCtx), installNetworkGuard(appCtx)]);
-          const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, CURRENT_SCREEN!.mockReadySelector);
-          const mapped = await mapPathToApp(mockPage, graph, stateId, AST_NODES);
-          const idCount = await mockPage.evaluate(
-            (selectors) => selectors.filter((selector) => document.querySelector(selector) !== null).length,
-            IDS.map((id) => SELECTOR_MAP[id]!.mockSel),
-          );
-          if (mapped.unmapped.length > 0) {
-            failures.push(...mapped.unmapped.map((item) => `state ${stateId}: 到達不能 ${item.edgeId} ${item.reason} / artifacts なし`));
-            console.log(`state ${stateId}: ids ${idCount} / 到達不能`);
-            continue;
-          }
-          const appPage = await openScreen(appCtx, CURRENT_SCREEN!);
-          try {
-            await replayOnApp(appPage, mapped.steps);
-          } catch (error) {
-            failures.push(`state ${stateId}: 到達不能 app replay ${(error as Error).message.split("\n")[0]} / artifacts なし`);
-            console.log(`state ${stateId}: ids ${idCount} / 到達不能`);
-            continue;
-          }
+      const failures = await forEachFrozenState<number>(
+        {
+          browser,
+          contextOptions,
+          graph,
+          nodes: AST_NODES,
+          limit: PARITY_STATE_LIMIT,
+          artifact: "artifacts なし",
+          openMock: (context) => openMock(context, MOCK_ENTRY_FILE, CURRENT_SCREEN!.mockReadySelector),
+          openApp: (context) => openScreen(context, CURRENT_SCREEN!),
+          inspect: (mockPage) =>
+            mockPage.evaluate(
+              (selectors) => selectors.filter((selector) => document.querySelector(selector) !== null).length,
+              IDS.map((id) => SELECTOR_MAP[id]!.mockSel),
+            ),
+          ids: (idCount) => idCount,
+        },
+        async (idCount, mockPage, appPage, stateId) => {
           await Promise.all([mockPage.waitForLoadState("networkidle"), appPage.waitForLoadState("networkidle")]);
           const [mockBoxes, appBoxes] = await Promise.all([
             collectImageBoxes(mockPage, { origin: "viewport" }),
@@ -149,15 +135,23 @@ for (const [label, contextOptions] of BASES) {
           const result = diffPagePngs(mockPng, appPng, excluded);
           const boxesMatch = boxesAgree(mockBoxes, appBoxes);
           const failed = !boxesMatch || !result.matched;
-          const artifactPath = failed ? writeArtifacts(`${label}-${stateId}`, mockPng, appPng, result) : "";
-          if (!boxesMatch) failures.push(`state ${stateId}: 画像配置 mock ${mockBoxes.length} / app ${appBoxes.length} / ${artifactPath}`);
-          if (!result.matched) failures.push(`state ${stateId}: pixel ${describeFailure(result)}（KEEP_IMPL で除外: ${describeExcluded(targets, mockBoxes)}）/ ${artifactPath}`);
+          const artifact = failed ? writeArtifacts(`${label}-${stateId}`, mockPng, appPng, result) : "";
+          const found: string[] = [];
+          if (!boxesMatch) {
+            found.push(
+              formatStateFailure({ stateId, kind: "画像配置", detail: `mock ${mockBoxes.length} / app ${appBoxes.length}`, artifact }),
+            );
+          }
+          // 既存の失敗文言は `）/` に空白を挟まないので、この行だけ組み立てを共有しない
+          if (!result.matched) {
+            found.push(
+              `state ${stateId}: pixel ${describeFailure(result)}（KEEP_IMPL で除外: ${describeExcluded(targets, mockBoxes)}）/ ${artifact}`,
+            );
+          }
           console.log(`state ${stateId}: ids ${idCount} / diff ${failed ? "あり" : "0"} / ${describeCoverage(mockBoxes, targets)}`);
-        } finally {
-          await mockCtx.close();
-          await appCtx.close();
-        }
-      }
+          return found;
+        },
+      );
       expect(summarizeFailures(failures)).toBe("");
     });
   });

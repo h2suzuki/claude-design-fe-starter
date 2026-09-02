@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { BrowserContext, Locator, Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
 export interface MockStateLimits {
   maxDepth: number;
@@ -51,8 +51,12 @@ export interface MockStateGraph {
 
 export interface StateActionCandidate {
   action: MockStateAction;
-  selector: string | null;
   label: string;
+}
+
+export interface StateActionResult {
+  candidates: StateActionCandidate[];
+  sampled: number;
 }
 
 interface ExploreStatesOptions {
@@ -66,71 +70,11 @@ interface ExploreStatesOptions {
 
 const SETTLE_MS = 150;
 
+export const DIALOG_SELECTOR = '[role="dialog"], dialog[open]';
+
 // 探索の副作用（下書き保存・予約）が storage に残ると、同じ context の再生が初期状態を再現できない
 export async function isolateStorage(context: BrowserContext): Promise<void> {
   await context.addInitScript("try { localStorage.clear(); sessionStorage.clear(); } catch {}");
-}
-
-const addBound = (bounds: MockStateBound[], bound: MockStateBound): void => {
-  if (!bounds.includes(bound)) bounds.push(bound);
-};
-
-const visibleDomShape = (page: Page): Promise<string> =>
-  page.evaluate(() => {
-    const excluded = new Set(["SCRIPT", "STYLE", "TEMPLATE"]);
-    return [...document.querySelectorAll<HTMLElement>("*")]
-      .filter((element) => {
-        if (excluded.has(element.tagName) || element.closest('[aria-hidden="true"]')) return false;
-        let ancestor: HTMLElement | null = element;
-        while (ancestor) {
-          const style = getComputedStyle(ancestor);
-          if (style.display === "none" || style.visibility === "hidden") return false;
-          ancestor = ancestor.parentElement;
-        }
-        return true;
-      })
-      .map((element) => {
-        const aria = [...element.attributes]
-          .filter((attribute) => attribute.name.startsWith("aria-"))
-          .sort((left, right) => left.name.localeCompare(right.name))
-          .map((attribute) => [attribute.name, attribute.value]);
-        const type = element.getAttribute("type");
-        return JSON.stringify({
-          tagName: element.tagName.toLowerCase(),
-          role: element.getAttribute("role"),
-          aria,
-          disabled: element.hasAttribute("disabled"),
-          open: element.hasAttribute("open"),
-          hidden: element.hasAttribute("hidden"),
-          dataState: element.getAttribute("data-state"),
-          type,
-          checked:
-            element instanceof HTMLInputElement && (element.type === "checkbox" || element.type === "radio")
-              ? element.checked
-              : null,
-        });
-      })
-      .join("\n");
-  });
-
-export async function fingerprintVisibleDom(page: Page): Promise<string> {
-  return createHash("sha256").update(await visibleDomShape(page)).digest("hex");
-}
-
-export async function selectorForElement(locator: Locator): Promise<string> {
-  return locator.evaluate((target) => {
-    const parts: string[] = [];
-    let element: Element | null = target;
-    while (element && element !== document.body) {
-      const parent: Element | null = element.parentElement;
-      if (!parent) throw new Error("mock-states: body 配下でない要素は操作できない");
-      const index = [...parent.children].indexOf(element) + 1;
-      parts.unshift(`${element.tagName.toLowerCase()}:nth-child(${index})`);
-      element = parent;
-    }
-    if (element !== document.body) throw new Error("mock-states: body 配下でない要素は操作できない");
-    return parts.length === 0 ? "body" : `body > ${parts.join(" > ")}`;
-  });
 }
 
 interface BrowserCandidate {
@@ -148,8 +92,9 @@ interface BrowserActions {
   dialogLabel: string;
 }
 
-const browserActions = (page: Page): Promise<BrowserActions> =>
-  page.evaluate(() => {
+// 可視判定と selector 組み立てを 1 箇所に置くため、形の採取と候補収集を同じ evaluate 本体へ載せる
+const inPage = (page: Page, mode: "shape" | "actions"): Promise<string | BrowserActions> =>
+  page.evaluate((selected) => {
     const isVisible = (element: HTMLElement): boolean => {
       if (element.closest('[aria-hidden="true"]')) return false;
       let ancestor: HTMLElement | null = element;
@@ -171,16 +116,42 @@ const browserActions = (page: Page): Promise<BrowserActions> =>
       }
       return parts.length === 0 ? "body" : `body > ${parts.join(" > ")}`;
     };
+    if (selected === "shape") {
+      const excluded = new Set(["SCRIPT", "STYLE", "TEMPLATE"]);
+      return [...document.querySelectorAll<HTMLElement>("*")]
+        .filter((element) => !excluded.has(element.tagName) && isVisible(element))
+        .map((element) => {
+          const aria = [...element.attributes]
+            .filter((attribute) => attribute.name.startsWith("aria-"))
+            .sort((left, right) => left.name.localeCompare(right.name))
+            .map((attribute) => [attribute.name, attribute.value]);
+          const type = element.getAttribute("type");
+          return JSON.stringify({
+            tagName: element.tagName.toLowerCase(),
+            role: element.getAttribute("role"),
+            aria,
+            disabled: element.hasAttribute("disabled"),
+            open: element.hasAttribute("open"),
+            hidden: element.hasAttribute("hidden"),
+            dataState: element.getAttribute("data-state"),
+            type,
+            checked:
+              element instanceof HTMLInputElement && (element.type === "checkbox" || element.type === "radio")
+                ? element.checked
+                : null,
+          });
+        })
+        .join("\n");
+    }
     // icon だけの button は文字が無いので、人が辺を読める名前を aria-label / title から取る
-    const label = (element: HTMLElement): string =>
-      [
-        ...(element.innerText ?? element.textContent ?? "").trim().replace(/\s+/g, " ") ||
-          element.getAttribute("aria-label") ||
-          element.getAttribute("title") ||
-          "",
-      ]
-        .slice(0, 40)
-        .join("");
+    const label = (element: HTMLElement): string => {
+      const text =
+        (element.innerText ?? element.textContent ?? "").trim().replace(/\s+/g, " ") ||
+        element.getAttribute("aria-label") ||
+        element.getAttribute("title") ||
+        "";
+      return text.slice(0, 40);
+    };
     const dialogs = [...document.querySelectorAll<HTMLElement>('[role="dialog"], dialog[open]')].filter(isVisible);
     const dialog = dialogs[0] ?? null;
     const all = [...document.body.querySelectorAll<HTMLElement>("*")];
@@ -211,7 +182,9 @@ const browserActions = (page: Page): Promise<BrowserActions> =>
       const siblings = groups.get(parent) ?? new Map<string, HTMLElement[]>();
       groups.set(parent, siblings);
       const key = JSON.stringify([element.tagName, element.getAttribute("role")]);
-      siblings.set(key, [...(siblings.get(key) ?? []), element]);
+      const list = siblings.get(key);
+      if (list) list.push(element);
+      else siblings.set(key, [element]);
     }
     const keptClicks = new Set<HTMLElement>();
     let sampled = 0;
@@ -264,7 +237,26 @@ const browserActions = (page: Page): Promise<BrowserActions> =>
       dialogSelector: dialog ? selector(dialog) : null,
       dialogLabel: dialog ? label(dialog) : "",
     };
+  }, mode);
+
+const visibleDomShape = async (page: Page): Promise<string> => (await inPage(page, "shape")) as string;
+
+const browserActions = async (page: Page): Promise<BrowserActions> => (await inPage(page, "actions")) as BrowserActions;
+
+// 候補ごとに DOM 全文を CDP へ渡すと重いので、page 内で 32bit hash まで畳んでから比べる
+const domHash = (page: Page): Promise<number> =>
+  page.evaluate(() => {
+    const html = document.documentElement.outerHTML;
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < html.length; index += 1) {
+      hash = Math.imul(hash ^ html.charCodeAt(index), 0x01000193);
+    }
+    return hash >>> 0;
   });
+
+export async function fingerprintVisibleDom(page: Page): Promise<string> {
+  return createHash("sha256").update(await visibleDomShape(page)).digest("hex");
+}
 
 const representativeValue = (candidate: BrowserCandidate): string => {
   if (candidate.fill?.tag === "select") return candidate.fill.value ?? "";
@@ -297,11 +289,11 @@ const linkedAction = (
   return null;
 };
 
-const collectStateActionResult = async (
+export async function collectStateActions(
   page: Page,
   viewport: "mobile" | "desktop",
   siteFiles: ReadonlySet<string>,
-): Promise<{ candidates: StateActionCandidate[]; sampled: number }> => {
+): Promise<StateActionResult> {
   const found = await browserActions(page);
   const candidates: StateActionCandidate[] = found.clicks.map((candidate) => ({
     action:
@@ -311,52 +303,30 @@ const collectStateActionResult = async (
             kind: "click",
             selector: candidate.selector,
           },
-    selector: candidate.selector,
     label: candidate.label,
   }));
   if (found.dialogSelector) {
-    candidates.push({
-      action: { kind: "click", selector: null, backdrop: true },
-      selector: null,
-      label: "backdrop",
-    });
-    candidates.push({ action: { kind: "key", key: "Escape" }, selector: null, label: found.dialogLabel });
+    candidates.push({ action: { kind: "click", selector: null, backdrop: true }, label: "backdrop" });
+    candidates.push({ action: { kind: "key", key: "Escape" }, label: found.dialogLabel });
     if (viewport === "mobile") {
       candidates.push(
-        {
-          action: { kind: "swipe", selector: found.dialogSelector, direction: "left" },
-          selector: found.dialogSelector,
-          label: found.dialogLabel,
-        },
-        {
-          action: { kind: "swipe", selector: found.dialogSelector, direction: "right" },
-          selector: found.dialogSelector,
-          label: found.dialogLabel,
-        },
+        { action: { kind: "swipe", selector: found.dialogSelector, direction: "left" }, label: found.dialogLabel },
+        { action: { kind: "swipe", selector: found.dialogSelector, direction: "right" }, label: found.dialogLabel },
       );
     }
   }
   candidates.push(
     ...found.fills.map((candidate) => ({
       action: { kind: "fill" as const, selector: candidate.selector, value: representativeValue(candidate) },
-      selector: candidate.selector,
       label: candidate.label,
     })),
   );
   return { candidates, sampled: found.sampled };
-};
-
-export async function collectStateActions(
-  page: Page,
-  viewport: "mobile" | "desktop",
-  siteFiles: ReadonlySet<string>,
-): Promise<StateActionCandidate[]> {
-  return (await collectStateActionResult(page, viewport, siteFiles)).candidates;
 }
 
-const clickBackdrop = async (page: Page): Promise<void> => {
-  const point = await page.evaluate(() => {
-    const dialog = [...document.querySelectorAll<HTMLElement>('[role="dialog"], dialog[open]')].find((element) => {
+export const clickBackdrop = async (page: Page): Promise<void> => {
+  const point = await page.evaluate((dialogSelector) => {
+    const dialog = [...document.querySelectorAll<HTMLElement>(dialogSelector)].find((element) => {
       const style = getComputedStyle(element);
       return style.display !== "none" && style.visibility !== "hidden";
     });
@@ -371,12 +341,17 @@ const clickBackdrop = async (page: Page): Promise<void> => {
     const outside = points.find(({ x, y }) => x < rect.left || x > rect.right || y < rect.top || y > rect.bottom);
     if (!outside) throw new Error("mock-states: dialog 外の click 点が見つからない");
     return outside;
-  });
+  }, DIALOG_SELECTOR);
   await page.mouse.click(point.x, point.y);
 };
 
-const swipe = async (page: Page, selector: string, direction: "left" | "right"): Promise<void> => {
-  const box = await page.locator(selector).boundingBox();
+// 既定は開いている dialog。mock 側は探索が採った nth-child path を渡す
+export const swipe = async (
+  page: Page,
+  direction: "left" | "right",
+  selector: string = DIALOG_SELECTOR,
+): Promise<void> => {
+  const box = await page.locator(selector).locator("visible=true").first().boundingBox();
   if (!box) throw new Error(`mock-states: swipe 対象が見つからない — ${selector}`);
   const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   const distance = (page.viewportSize()?.width ?? box.width) * 0.6 * (direction === "left" ? -1 : 1);
@@ -406,7 +381,7 @@ export const performAction = async (page: Page, action: MockStateAction): Promis
   } else if (action.kind === "key") {
     await page.keyboard.press(action.key);
   } else if (action.kind === "swipe") {
-    await swipe(page, action.selector, action.direction);
+    await swipe(page, action.direction, action.selector);
   } else if (await page.locator(action.selector).evaluate((element) => element instanceof HTMLSelectElement)) {
     await page.locator(action.selector).selectOption(action.value);
   } else {
@@ -417,6 +392,24 @@ export const performAction = async (page: Page, action: MockStateAction): Promis
 export const settle = async (page: Page): Promise<void> => {
   await page.waitForTimeout(SETTLE_MS);
   await page.waitForLoadState("networkidle");
+};
+
+// source は呼び出し元ごとに違う既存の error 文言を保つためだけの引数
+export const replayPath = async (
+  page: Page,
+  edges: readonly MockStateEdge[],
+  path: readonly string[],
+  beforeEdge?: (edge: MockStateEdge) => Promise<void>,
+  source = "mock-states: replay",
+): Promise<void> => {
+  const byId = new Map(edges.map((edge) => [edge.id, edge]));
+  for (const edgeId of path) {
+    const edge = byId.get(edgeId);
+    if (!edge) throw new Error(`${source} edge が見つからない — ${edgeId}`);
+    await beforeEdge?.(edge);
+    await performAction(page, edge.action);
+    await settle(page);
+  }
 };
 
 export async function exploreStates(options: ExploreStatesOptions): Promise<MockStateGraph> {
@@ -431,7 +424,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
   const elapsedSeconds = (): number => Math.floor((Date.now() - startedAt) / 1000);
   const hitBound = (bound: MockStateBound): void => {
     if (boundsHit.includes(bound)) return;
-    addBound(boundsHit, bound);
+    boundsHit.push(bound);
     options.onProgress?.(`上限 ${bound}`);
   };
   const timeExpired = (): boolean => Date.now() - startedAt >= options.limits.maxSeconds * 1000;
@@ -445,12 +438,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
   const openAt = async (stateId: string): Promise<Page | null> => {
     options.onProgress?.(`再生 ${stateId}（path 長 ${states[stateId]?.path.length ?? 0}）`);
     const opened = await options.open();
-    for (const edgeId of states[stateId]?.path ?? []) {
-      const edge = edges.find((candidate) => candidate.id === edgeId);
-      if (!edge) throw new Error(`mock-states: replay edge が見つからない — ${edgeId}`);
-      await performAction(opened, edge.action);
-      await settle(opened);
-    }
+    await replayPath(opened, edges, states[stateId]?.path ?? []);
     const actual = await fingerprintVisibleDom(opened);
     const expected = states[stateId]?.fingerprint ?? "";
     if (actual === expected) return opened;
@@ -471,7 +459,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
     if (!stateId) break;
     page = (await openAt(stateId)) as Page;
     if (!page) continue;
-    const found = await collectStateActionResult(page, options.viewport, options.siteFiles);
+    const found = await collectStateActions(page, options.viewport, options.siteFiles);
     let candidates = found.candidates;
     sampled += found.sampled;
     options.onProgress?.(
@@ -486,7 +474,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
       hitBound("edgesPerState");
       candidates = candidates.slice(0, options.limits.maxEdgesPerState);
     }
-    for (const candidate of candidates) {
+    for (const [index, candidate] of candidates.entries()) {
       if (timeExpired()) {
         hitBound("time");
         await page.close();
@@ -501,11 +489,11 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
         });
         continue;
       }
-      const before = await page.content();
+      const before = await domHash(page);
       await performAction(page, candidate.action);
       await settle(page);
       const fingerprint = await fingerprintVisibleDom(page);
-      const observableChanged = (await page.content()) !== before;
+      const observableChanged = (await domHash(page)) !== before;
       if (fingerprint === states[stateId].fingerprint && !observableChanged) {
         unchanged += 1;
         continue;
@@ -530,6 +518,8 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
         }
       }
       await page.close();
+      // 最後の候補を試した後の再生は誰も使わない
+      if (index === candidates.length - 1) break;
       const reopened = await openAt(stateId);
       if (!reopened) break;
       page = reopened;

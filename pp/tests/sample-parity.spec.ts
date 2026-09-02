@@ -13,10 +13,9 @@ import {
 import { findScreenForMock } from "../src/ast-screen";
 import { installNetworkGuard } from "../src/net-block";
 import { UI_AST_SCREENS_DIR } from "../src/mock-server";
-import { isolateStorage } from "../src/mock-states";
 import { screenSlug } from "../src/mock-screens";
-import { mapPathToApp, replayOnApp, summarizeFailures } from "../src/state-parity";
-import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
+import { forEachFrozenState, formatStateFailure, summarizeFailures } from "../src/state-parity";
+import { loadStateGraph, STATES_DIR } from "../src/state-walk";
 import { openMock } from "../src/targets/mock-target";
 import { openApp, openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
@@ -87,46 +86,33 @@ for (const [label, contextOptions] of BASES) {
       test.skip(graph === null, "状態グラフ無し — bun run --cwd pp mock:states で凍結すると有効化される");
       test.setTimeout(15 * 60_000);
       if (!graph) return;
-      const failures: string[] = [];
-      const stateIds = statesInOrder(graph).filter((stateId) => stateId !== "root");
-      const targets = stateIds.slice(0, PARITY_STATE_LIMIT);
-      if (stateIds.length > targets.length) {
-        console.log(`state 上限 ${PARITY_STATE_LIMIT} に達した（残り ${stateIds.length - targets.length} 状態は未突合）`);
-      }
       const baseAnchor = SELECTOR_MAP[ANCHOR_VISUAL_ID] ?? SELECTOR_MAP[IDS[0] as string];
       if (!baseAnchor) throw new Error("pp: SELECTOR_MAP is empty");
-      for (const stateId of targets) {
-        const mockCtx = await browser.newContext(contextOptions);
-        const appCtx = await browser.newContext(contextOptions);
-        try {
-          await Promise.all([isolateStorage(mockCtx), isolateStorage(appCtx)]);
-          await Promise.all([installNetworkGuard(mockCtx), installNetworkGuard(appCtx)]);
-          const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, baseAnchor.mockSel);
-          const mapped = await mapPathToApp(mockPage, graph, stateId, AST_NODES);
-          const stateIds = await mockPage.evaluate(
-            ({ ids, selectors }) => ids.filter((id) => document.querySelector(selectors[id]!) !== null),
-            { ids: IDS, selectors: Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.mockSel])) },
-          );
-          if (mapped.unmapped.length > 0) {
-            failures.push(...mapped.unmapped.map((item) => `state ${stateId}: 到達不能 ${item.edgeId} ${item.reason} / summary なし`));
-            console.log(`state ${stateId}: ids ${stateIds.length} / 到達不能`);
-            continue;
-          }
-          if (stateIds.length === 0) {
-            failures.push(`state ${stateId}: MISS mock に visual id が無い / summary なし`);
+      const failures = await forEachFrozenState<string[]>(
+        {
+          browser,
+          contextOptions,
+          graph,
+          nodes: AST_NODES,
+          limit: PARITY_STATE_LIMIT,
+          artifact: "summary なし",
+          openMock: (context) => openMock(context, MOCK_ENTRY_FILE, baseAnchor.mockSel),
+          openApp: (context) => openScreen(context, CURRENT_SCREEN!),
+          inspect: (mockPage) =>
+            mockPage.evaluate(
+              ({ ids, selectors }) => ids.filter((id) => document.querySelector(selectors[id]!) !== null),
+              { ids: IDS, selectors: Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.mockSel])) },
+            ),
+          ids: (stateIds) => stateIds.length,
+          precheck: (stateIds, stateId) => {
+            if (stateIds.length > 0) return null;
             console.log(`state ${stateId}: ids 0 / diff MISS 1`);
-            continue;
-          }
+            return formatStateFailure({ stateId, kind: "MISS", detail: "mock に visual id が無い", artifact: "summary なし" });
+          },
+        },
+        async (stateIds, mockPage, appPage, stateId) => {
           const anchorId = stateIds.includes(ANCHOR_VISUAL_ID) ? ANCHOR_VISUAL_ID : stateIds[0]!;
           const anchor = SELECTOR_MAP[anchorId]!;
-          const appPage = await openScreen(appCtx, CURRENT_SCREEN!);
-          try {
-            await replayOnApp(appPage, mapped.steps);
-          } catch (error) {
-            failures.push(`state ${stateId}: 到達不能 app replay ${(error as Error).message.split("\n")[0]} / summary なし`);
-            console.log(`state ${stateId}: ids ${stateIds.length} / 到達不能`);
-            continue;
-          }
           const [mock, app] = await Promise.all([
             dumpVisualIds(mockPage, Object.fromEntries(stateIds.map((id) => [id, SELECTOR_MAP[id]!.mockSel])), anchor.mockSel, STYLE_ALLOWLIST),
             dumpVisualIds(appPage, Object.fromEntries(stateIds.map((id) => [id, SELECTOR_MAP[id]!.appSel])), anchor.appSel, STYLE_ALLOWLIST),
@@ -142,15 +128,17 @@ for (const [label, contextOptions] of BASES) {
             geometryDiffs: geometryDiffs.filter((diff) => diff.visualId === visualId),
           }));
           const { summaryPath } = writeRunSummary(`parity-${label}-${stateId}`, reports, missing, mock, app);
-          if (missing.length > 0) failures.push(`state ${stateId}: MISS ${missing.length} / ${summaryPath}`);
-          if (styleDiffs.length > 0) failures.push(`state ${stateId}: style ${styleDiffs.length} / ${summaryPath}`);
-          if (geometryDiffs.length > 0) failures.push(`state ${stateId}: geometry ${geometryDiffs.length} / ${summaryPath}`);
+          const found: string[] = [];
+          const add = (kind: string, count: number): void => {
+            if (count > 0) found.push(formatStateFailure({ stateId, kind, detail: `${count}`, artifact: summaryPath }));
+          };
+          add("MISS", missing.length);
+          add("style", styleDiffs.length);
+          add("geometry", geometryDiffs.length);
           console.log(`state ${stateId}: ids ${stateIds.length} / diff MISS ${missing.length} style ${styleDiffs.length} geometry ${geometryDiffs.length}`);
-        } finally {
-          await mockCtx.close();
-          await appCtx.close();
-        }
-      }
+          return found;
+        },
+      );
       expect(summarizeFailures(failures)).toBe("");
     });
   });

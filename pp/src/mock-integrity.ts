@@ -288,8 +288,11 @@ export function vocabularyFindings(
   return findings;
 }
 
-const radiusOrder = (a: string, b: string): number =>
+export const radiusOrder = (a: string, b: string): number =>
   Number.parseFloat(a) - Number.parseFloat(b) || a.localeCompare(b);
+
+// % は単位が書かれた値、それ以外は px 値として読む
+export const formatRadius = (value: string): string => (value.endsWith("%") ? value : `${value}px`);
 
 export function resolveRadiusScale(
   declaration: string | null,
@@ -337,7 +340,7 @@ export function radiusFindings(
           .map(([value, count]) => ({
             id: "MOCK206",
             screen,
-            detail: `角丸 ${value.endsWith("%") ? value : `${value}px`} が design system に無い（${count} 箇所）`,
+            detail: `角丸 ${formatRadius(value)} が design system に無い（${count} 箇所）`,
           })),
   );
 }

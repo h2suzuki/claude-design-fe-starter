@@ -59,14 +59,22 @@ function vendorPrefixes() {
   return JSON.parse(fs.readFileSync(VENDOR_ROUTES_FILE, 'utf8')).routes.map(({ urlPattern }) => urlPattern.split('*')[0]);
 }
 
+// 同じ資産を違反・合計・ヒアリングで 3 度見るので、大きさは 1 度だけ測る
+const assetSizes = new Map();
+function assetBytes(file) {
+  if (!assetSizes.has(file)) assetSizes.set(file, fs.statSync(file).size);
+  return assetSizes.get(file);
+}
+
 // callback として渡されると第 2 引数に index が来る。配列でなければ台帳から引く
 // 資産は中身でなく重さだけを見る。「どれが重いか」は測れば分かるので、発注側に聞く項目にしない
 function lintAsset(file) {
-  const bytes = fs.statSync(file).size;
+  const bytes = assetBytes(file);
   if (bytes <= ASSET_CAP_BYTES) return [];
   return [{
     file,
     line: 1,
+    bytes,
     id: 'MOCK104',
     message: `asset is ${bytes} bytes; cap is ${ASSET_CAP_BYTES}`,
   }];
@@ -85,12 +93,12 @@ function exportRelative(file) {
 
 // 発注側への聞き方は seed-docs/pre-implementation-questions.md「重い資産」が正。そのまま貼れる形で出す
 function hearingBlock(heavy) {
-  const total = heavy.reduce((sum, { file }) => sum + fs.statSync(file).size, 0);
+  const total = heavy.reduce((sum, { bytes }) => sum + bytes, 0);
   return [
     '',
     '実装前に発注側へ確認する（凍結は止めない）:',
     `重い資産 ${heavy.length} 件 / 合計 ${(total / 1_048_576).toFixed(2)} MB`,
-    ...heavy.map(({ file }) => `  - ${exportRelative(file)}  ${(fs.statSync(file).size / 1_048_576).toFixed(2)} MB`),
+    ...heavy.map(({ file, bytes }) => `  - ${exportRelative(file)}  ${(bytes / 1_048_576).toFixed(2)} MB`),
     '既定の処置: 写真は JPEG 化、表示寸法の 2 倍まで解像度を落とす、AVIF を <picture> で足す、先読みする、十分小さいものは data URI で埋め込む',
     '聞くこと: この処置でよいか / 粗くしてはいけないものはどれか / 先読みを外すものはあるか',
   ].join('\n');
@@ -250,8 +258,8 @@ function main(args) {
   const violations = files.flatMap(lintFile);
   for (const item of violations) console.log(`${item.file}:${item.line} ${item.id} ${item.message}`);
   // 個別が上限内でも枚数で重くなる。判断材料として合計を必ず出す
-  const assetBytes = files.filter((file) => !SCANNED_RE.test(file)).reduce((sum, file) => sum + fs.statSync(file).size, 0);
-  if (assetBytes > 0) console.log(`mock-lint: assets total ${(assetBytes / 1_048_576).toFixed(2)} MB`);
+  const assetTotal = files.filter((file) => !SCANNED_RE.test(file)).reduce((sum, file) => sum + assetBytes(file), 0);
+  if (assetTotal > 0) console.log(`mock-lint: assets total ${(assetTotal / 1_048_576).toFixed(2)} MB`);
   const heavy = violations.filter(({ id }) => id === 'MOCK104');
   if (heavy.length) console.log(hearingBlock(heavy));
   if (isBlocking(violations)) process.exitCode = 1;

@@ -29,15 +29,16 @@ export const collectImageBoxes = async (page: Page, options: { origin?: "page" |
 // backdrop-filter / filter の blur は要素の縁から半径ぶん滲むので、状態の screenshot ではその幅だけ mask を広げる
 export const blurBleed = async (page: Page): Promise<number> =>
   page.evaluate(() =>
-    Math.max(
-      0,
-      ...Array.from(document.querySelectorAll("*"))
-        .filter((el) => el.getClientRects().length > 0)
-        .flatMap((el) => {
-          const style = getComputedStyle(el);
-          return [style.backdropFilter, style.filter].map((value) => Number(/blur\((\d+(?:\.\d+)?)px\)/.exec(value)?.[1] ?? 0));
-        }),
-    ),
+    Array.from(document.querySelectorAll("*")).reduce((widest, el) => {
+      const style = getComputedStyle(el);
+      // filter を持たない要素が大半なので、幾何を測る前に落とす
+      if (style.filter === "none" && style.backdropFilter === "none") return widest;
+      if (el.getClientRects().length === 0) return widest;
+      return [style.backdropFilter, style.filter].reduce(
+        (best, value) => Math.max(best, Number(/blur\((\d+(?:\.\d+)?)px\)/.exec(value)?.[1] ?? 0)),
+        widest,
+      );
+    }, 0),
   );
 
 export const padBoxes = <T extends Box>(boxes: readonly T[], pad: number): T[] =>

@@ -7,16 +7,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   BREAKPOINT_EDGE_WIDTHS,
-  DESKTOP_CONTEXT_OPTIONS,
-  MOBILE_CONTEXT_OPTIONS,
   PP_LAUNCH_OPTIONS,
+  SCREENSHOT_BASES,
   SWEEP_WIDTHS,
   sweepContextOptions,
 } from "../src/config";
-import { EXPORT_DIR, MOCK_ROOT } from "../src/mock-server";
+import { EXPORT_DIR, MOCK_ROOT, REFERENCE_PAGES_FILE } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
 import { isolateStorage } from "../src/mock-states";
-import { listMockScreens, listSiteScreens, readReferencePages, screenSlug } from "../src/mock-screens";
+import { listMockScreens, readReferencePages, screenSlug } from "../src/mock-screens";
 import { loadStateGraph, replayTo, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { openMock } from "../src/targets/mock-target";
 import {
@@ -26,7 +25,9 @@ import {
   findUnfitDialogs,
   measureWidth,
   mergeRadii,
+  formatRadius,
   radiusFindings,
+  radiusOrder,
   readRadii,
   readVocabulary,
   blockingFindings,
@@ -40,19 +41,14 @@ import type { Finding, ScreenVocabulary } from "../src/mock-integrity";
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "mock-integrity.json");
 const WIDTHS = [...SWEEP_WIDTHS, ...BREAKPOINT_EDGE_WIDTHS];
 
-// 重なりと dialog は幅より視野に依るので、基準 2 点だけで見る（全幅で回すと時間が幅数倍になる）
-const BASES = [
-  ["mobile", { ...MOBILE_CONTEXT_OPTIONS, deviceScaleFactor: 1 }],
-  ["desktop", DESKTOP_CONTEXT_OPTIONS],
-] as const;
-
 async function main(): Promise<void> {
-  const declaration = path.join(MOCK_ROOT, "reference-pages.json");
   const scaleDeclaration = path.join(MOCK_ROOT, "design-scale.json");
   const pages = listMockScreens(EXPORT_DIR, process.argv.slice(2));
-  const referencePages = readReferencePages(declaration, listMockScreens(EXPORT_DIR, []));
+  const referencePages = readReferencePages(REFERENCE_PAGES_FILE, listMockScreens(EXPORT_DIR, []));
   // 見本帳は画面ではないので layout 検査から外す。語彙と token の突合は見本帳も読む
-  const screens = listSiteScreens(EXPORT_DIR, declaration, process.argv.slice(2));
+  const referenceSlugs = new Set(referencePages);
+  const screens = pages.filter((file) => !referenceSlugs.has(screenSlug(file)));
+  const screenFiles = new Set(screens);
   if (pages.length === 0) {
     console.log("mock-integrity: 対象なし（docs/presentation/ui-mock/export/ が空）");
     return;
@@ -76,7 +72,8 @@ async function main(): Promise<void> {
         await context.close();
       }
     }
-    for (const [viewport, contextOptions] of BASES) {
+    // 重なりと dialog は幅より視野に依るので、基準 2 点だけで見る（全幅で回すと時間が幅数倍になる）
+    for (const [viewport, contextOptions] of SCREENSHOT_BASES) {
       const context = await browser.newContext(contextOptions);
       try {
         await installNetworkGuard(context);
@@ -84,7 +81,7 @@ async function main(): Promise<void> {
         for (const screen of pages) {
           const page = await openMock(context, screen, "body");
           await page.waitForLoadState("networkidle");
-          if (screens.includes(screen)) {
+          if (screenFiles.has(screen)) {
             findings.push(...coveredFindings(screen, viewport, await findCoveredControls(page)));
             findings.push(...dialogFindings(screen, viewport, await findUnfitDialogs(page)));
           }
@@ -147,8 +144,7 @@ async function main(): Promise<void> {
   show("気づき（凍結は止めない。直すかは読んだ人が決める）", advice);
   const radiusAdvice = advice.filter((finding) => finding.id === "MOCK206");
   if (radiusAdvice.length > 0 && radiusScale !== null) {
-    const ordered = (values: readonly string[]): string[] =>
-      [...values].sort((a, b) => Number.parseFloat(a) - Number.parseFloat(b) || a.localeCompare(b));
+    const ordered = (values: readonly string[]): string[] => [...values].sort(radiusOrder);
     const screensWithAdvice = [...new Set(radiusAdvice.map((finding) => finding.screen))];
     console.log(
       [
@@ -158,7 +154,7 @@ async function main(): Promise<void> {
         ...screensWithAdvice.map((screen) => {
           const values = ordered(Object.keys(radii[screen] ?? {}).filter((value) => !radiusScale.has(value)));
           return `  - ${screen}: ${values
-            .map((value) => `${value.endsWith("%") ? value : `${value}px`}（${radii[screen]![value]} 箇所）`)
+            .map((value) => `${formatRadius(value)}（${radii[screen]![value]} 箇所）`)
             .join(", ")}`;
         }),
         "聞くこと: 画面の値と design system のどちらが正か / 正なら design system に段を足すか、画面を宣言の段に寄せるか",

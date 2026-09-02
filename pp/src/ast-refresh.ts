@@ -20,7 +20,7 @@ export const NON_TEXT_PROP_KEYS = new Set([
 // sha256sum の出力形式。binary mode の ` *` は marker であって path の一部ではない
 const CHECKSUM_LINE = /^([0-9a-f]{64})\s+[* ]?(.+)$/;
 
-function isObject(value: unknown): value is Record<string, unknown> {
+export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

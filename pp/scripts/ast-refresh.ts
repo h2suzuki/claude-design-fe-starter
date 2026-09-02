@@ -11,9 +11,9 @@ import { freezePage } from "../src/freeze";
 import { MOCK_ROOT, UI_AST_SCREENS_DIR } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
-import { collectNodes, mockEntryFile, parseBaseline, propStrings } from "../src/ast-refresh";
+import { collectNodes, isObject, mockEntryFile, parseBaseline, propStrings } from "../src/ast-refresh";
 import { isolateStorage } from "../src/mock-states";
-import { screenSlug } from "../src/mock-screens";
+import { screenSlug, screenshotFile } from "../src/mock-screens";
 import { loadStateGraph, overlayTargets, replayTo, STATES_DIR, statesInOrder } from "../src/state-walk";
 
 const BASELINE_PATH = path.join(MOCK_ROOT, "mock-baseline.sha256");
@@ -25,10 +25,6 @@ const SETTLE_MS = 1500;
 interface Measurement {
   region: number[];
   text: string;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const squeeze = (value: string): string => value.replace(/\s+/g, "");
@@ -127,13 +123,7 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
           }
         }
         const targets = overlayTargets(ast.screen);
-        const overlayNodes = collectNodes(ast.screen.overlays);
-        const pending = new Map(
-          targets.map((target) => [
-            target.nodeId,
-            { target, node: overlayNodes.find((node) => node.id === target.nodeId)! },
-          ]),
-        );
+        const pending = new Map(targets.map((target) => [target.nodeId, target]));
         if (targets.length > 0) {
           const slug = screenSlug(mockFile);
           const graph = loadStateGraph(STATES_DIR, slug, "desktop");
@@ -142,29 +132,30 @@ async function refreshAst(fileName: string, hashes: Map<string, string>): Promis
           } else {
             for (const stateId of statesInOrder(graph)) {
               if (pending.size === 0) break;
-              const statePage = await openMock(context, mockEntryFile(mockFile), "body");
+              // root は開いたばかりの page がそのまま該当する（辺を 1 本も再生しない）
+              const statePage = stateId === "root" ? page : await openMock(context, mockEntryFile(mockFile), "body");
               try {
-                await settle(statePage);
-                await replayTo(statePage, graph, stateId);
+                if (statePage !== page) {
+                  await settle(statePage);
+                  await replayTo(statePage, graph, stateId);
+                }
                 for (const [nodeId, entry] of pending) {
-                  const result = await measure(statePage, entry.target.nodeRef, true);
+                  const result = await measure(statePage, entry.nodeRef, true);
                   if (!result || !isObject(entry.node.source)) continue;
                   entry.node.source.region = result.region;
                   entry.node.source.file =
-                    stateId === "root"
-                      ? `screenshots/${slug}.desktop.png`
-                      : `screenshots/${slug}.desktop.${stateId}.png`;
+                    graph.states[stateId]?.screenshot ?? `screenshots/${screenshotFile(slug, "desktop")}`;
                   entry.node.source.state = stateId;
                   pending.delete(nodeId);
                   measuredOverlays += 1;
                 }
               } finally {
-                await statePage.close();
+                if (statePage !== page) await statePage.close();
               }
             }
             for (const entry of pending.values()) {
               mismatched += 1;
-              console.log(`NODE_REF_MISMATCH ${fileName}#${entry.target.nodeId} ${entry.target.nodeRef}`);
+              console.log(`NODE_REF_MISMATCH ${fileName}#${entry.nodeId} ${entry.nodeRef}`);
             }
           }
         }

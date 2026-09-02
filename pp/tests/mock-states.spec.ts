@@ -1,12 +1,14 @@
 import { expect, test } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
-import {
-  collectStateActions,
-  exploreStates,
-  fingerprintVisibleDom,
-  isolateStorage,
-  selectorForElement,
-} from "../src/mock-states";
+import { collectStateActions, exploreStates, fingerprintVisibleDom, isolateStorage } from "../src/mock-states";
+
+const clickCandidates = async (page: Page): Promise<{ selector: string | null; label: string }[]> =>
+  (await collectStateActions(page, "desktop", new Set())).candidates
+    .filter((candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action))
+    .map((candidate) => ({
+      selector: candidate.action.kind === "click" ? candidate.action.selector : null,
+      label: candidate.label,
+    }));
 
 const LIMITS = { maxDepth: 30, maxEdgesPerState: 60, maxStates: 200, maxSeconds: 600 };
 
@@ -43,9 +45,7 @@ test("候補は可視要素に絞り、入れ子では外側だけを採る", as
     <button id="display-none" style="display:none">不可視</button>
     <div aria-hidden="true"><button id="aria-hidden">不可視</button></div>
     <button id="plain">通常</button>`);
-  const clicks = (await collectStateActions(page, "desktop", new Set())).filter(
-    (candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action),
-  );
+  const clicks = await clickCandidates(page);
   expect(clicks.map((candidate) => candidate.selector)).toEqual([
     "body > div:nth-child(1)",
     "body > button:nth-child(4)",
@@ -55,7 +55,7 @@ test("候補は可視要素に絞り、入れ子では外側だけを採る", as
 test(":nth-child selector は同じ要素へ戻る", async ({ page }) => {
   // document 順から作る selector は再生時にも対象を一意に復元できる。
   await page.setContent(`<main><div></div><section><span></span><button id="target">選ぶ</button></section></main>`);
-  const selector = await selectorForElement(page.locator("#target"));
+  const selector = (await clickCandidates(page))[0]?.selector ?? "";
   expect(selector).toBe("body > main:nth-child(1) > section:nth-child(2) > button:nth-child(2)");
   expect(await page.locator(selector).getAttribute("id")).toBe("target");
 });
@@ -148,9 +148,7 @@ test("同じ親の同種 click 候補が 4 つ以上なら先頭と末尾に代�
     <nav><button role="tab">前</button><button role="tab">後</button></nav>
     <script>document.querySelectorAll('button').forEach((button) => button.onclick=()=>button.parentElement.dataset.state=button.dataset.index ?? button.textContent)</script>`;
   const page = await fixtureOpener(context, html)();
-  const clicks = (await collectStateActions(page, "desktop", new Set())).filter(
-    (candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action),
-  );
+  const clicks = await clickCandidates(page);
   expect(clicks.map((candidate) => candidate.label)).toEqual(["0", "5", "前", "後"]);
   await page.close();
   const result = await exploreStates({
@@ -166,9 +164,7 @@ test("同じ親の同種 click 候補が 4 つ以上なら先頭と末尾に代�
 test("同じ親の同種 click 候補が 3 つ以下ならすべて残す", async ({ page }) => {
   // 少数のタブや月送りを代表化で失わない。
   await page.setContent(`<main><button>1</button><button>2</button><button>3</button></main>`);
-  const clicks = (await collectStateActions(page, "desktop", new Set())).filter(
-    (candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action),
-  );
+  const clicks = await clickCandidates(page);
   expect(clicks.map((candidate) => candidate.label)).toEqual(["1", "2", "3"]);
 });
 
@@ -208,8 +204,6 @@ test("状態の展開を進行 log へ逐次通知する", async ({ browser }) =
 test("文字の無い icon button は aria-label か title を辺の label にする", async ({ page }) => {
   // 月送りのような icon だけの button でも、人が辺を読めるように名前を残す。
   await page.setContent(`<button aria-label="前月"><svg></svg></button><button title="翌月"><svg></svg></button><button>次へ</button>`);
-  const clicks = (await collectStateActions(page, "desktop", new Set())).filter(
-    (candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action),
-  );
+  const clicks = await clickCandidates(page);
   expect(clicks.map((candidate) => candidate.label)).toEqual(["前月", "翌月", "次へ"]);
 });

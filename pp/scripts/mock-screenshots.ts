@@ -4,34 +4,26 @@
 import { chromium } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DESKTOP_CONTEXT_OPTIONS, MOBILE_CONTEXT_OPTIONS, PP_LAUNCH_OPTIONS } from "../src/config";
+import { PP_LAUNCH_OPTIONS, SCREENSHOT_BASES } from "../src/config";
 import { installNetworkGuard, isEmbedRequest } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
-import { EXPORT_DIR, MOCK_ROOT } from "../src/mock-server";
+import { EXPORT_DIR, REFERENCE_PAGES_FILE, SCREENSHOTS_DIR } from "../src/mock-server";
 import { listSiteScreens, screenSlug, screenshotFile } from "../src/mock-screens";
-
-const OUT_DIR = path.join(MOCK_ROOT, "screenshots");
-
-// 人が意匠を見返すための参照。DPR を上げると縦長 fullPage が MB 級になり repo を圧迫する
-const BASES = [
-  ["mobile", { ...MOBILE_CONTEXT_OPTIONS, deviceScaleFactor: 1 }],
-  ["desktop", DESKTOP_CONTEXT_OPTIONS],
-] as const;
 
 async function main(): Promise<void> {
   // 見本帳は画面ではないので撮らない（AST も起こさず、region が指す画を要しない）
-  const screens = listSiteScreens(EXPORT_DIR, path.join(MOCK_ROOT, "reference-pages.json"), process.argv.slice(2));
+  const screens = listSiteScreens(EXPORT_DIR, REFERENCE_PAGES_FILE, process.argv.slice(2));
   if (screens.length === 0) {
     console.log("mock-screenshots: 対象なし（docs/presentation/ui-mock/export/ に画面が無い）");
     return;
   }
-  mkdirSync(OUT_DIR, { recursive: true });
+  mkdirSync(SCREENSHOTS_DIR, { recursive: true });
   const browser = await chromium.launch(PP_LAUNCH_OPTIONS);
   let unreachable = 0;
   let embeds = 0;
   try {
     for (const screen of screens) {
-      for (const [label, contextOptions] of BASES) {
+      for (const [label, contextOptions] of SCREENSHOT_BASES) {
         const context = await browser.newContext(contextOptions);
         try {
           // 取りこぼさないよう navigate 前に張る。取得できない資産があれば export の閉包が足りていない
@@ -51,7 +43,7 @@ async function main(): Promise<void> {
           await installNetworkGuard(context);
           const page = await openMock(context, screen, "body");
           await page.waitForLoadState("networkidle");
-          const file = path.join(OUT_DIR, screenshotFile(screenSlug(screen), label));
+          const file = path.join(SCREENSHOTS_DIR, screenshotFile(screenSlug(screen), label));
           writeFileSync(file, await page.screenshot({ type: "png", fullPage: true }));
           console.log(`wrote ${path.relative(process.cwd(), file)}`);
         } finally {

@@ -84,17 +84,16 @@ test.describe("mockEntryFile", () => {
 
 test.describe("overlayTargets", () => {
   test("overlay 配下の nodeRef 付き node だけを返す", () => {
+    const title = { id: "title", source: { nodeRef: "#title" } };
+    const dialog = { id: "dialog", source: { nodeRef: "#dialog" }, children: [title] };
     const screen = {
       children: [{ id: "base", source: { nodeRef: "#base" } }],
-      overlays: [
-        { id: "dialog", source: { nodeRef: "#dialog" }, children: [{ id: "title", source: { nodeRef: "#title" } }] },
-        { id: "without-ref", source: { kind: "mock" } },
-      ],
+      overlays: [dialog, { id: "without-ref", source: { kind: "mock" } }],
     };
 
     expect(overlayTargets(screen)).toEqual([
-      { nodeId: "dialog", nodeRef: "#dialog" },
-      { nodeId: "title", nodeRef: "#title" },
+      { nodeId: "dialog", nodeRef: "#dialog", node: dialog },
+      { nodeId: "title", nodeRef: "#title", node: title },
     ]);
   });
 });
