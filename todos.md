@@ -68,7 +68,10 @@ Exit Criteria:
 - [x] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する — `eb2cd91`（`state-walk.ts` の replay、overlay は現れる最初の状態で測り `source.state` と状態の画を記録。Codex 実装を受け入れ、spec 55 pass・typecheck・CLI を発注側で再実行。iac-web の実測は次の criterion で確かめる）
 - [x] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない — `032a44d`（`state-parity.ts`: 辺が押した mock 要素を AST の nodeRef で引き visualId を app selector にする。写せない state は「到達不能」で失敗。Codex 実装を受け入れ、spec 19 pass・parity 2 spec は宣言 skip・typecheck・no-skips self-test を発注側で再実行。iac-web の実測は次の criterion で確かめる）
 - [ ] 第 2 段: 深さ 2 以上の状態（dialog の中のタブ切替など）も同じ経路で突合され、iac-web の会場写真 lightbox のタブ 2 枚がその実例として通る
-- [ ] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る（seed 側は `eb2cd91` で全状態の合算まで実装済み。iac-web の実測待ち）
+- [ ] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る（iac-web 実測 2026-09-02: mobile の 40 状態で 13 / 18 / 24 が出た。11 / 12 / 16 は desktop 専用の部品で、mobile だけの収集では出ない → desktop の状態グラフでも集める修正を入れた。再実測待ち）
+- [ ] `ast:refresh` が desktop の状態グラフで測れない overlay node（mobile 専用の一覧など）を mobile の状態グラフでも探す（iac-web 実測: 14 node 中 10 が desktop で測れ、1 が mobile 専用、3 が送信完了）
+- [ ] 記入後の送信（fill 後の submit）が状態グラフに現れない設計の穴を埋める。fill は DOM の形を変えないので状態にならず、埋めた状態から submit を押す経路が探索されない → 「可視の入力を全部埋めてから続ける」複合辺を足す等（iac-web 実測: 送信完了の 3 node が状態グラフに無い）
+- [ ] parity の状態ごとの test の所要時間を計測し、上限（`PARITY_STATE_LIMIT`）と gate の運用を決める（iac-web 実測: trial で 1 本 3.2〜3.7 分 × 4 本、7 画面で +30〜40 分の見積もり）
 - [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` に書く
 - [ ] 第 2 段が入った後、今日 pp/ に足した code（`mock-states` / `state-walk` / MOCK206 / `mock-screenshots` / `mock-lint`）を seed 側で `/simplify` し、spec と typecheck が緑のまま整理されている（install.sh が上書きする file は seed 側で簡素化する、という裁定）
 - [ ] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる
@@ -78,6 +81,8 @@ Exit Criteria:
 ユーザー裁定 2026-09-02: 土台は「mock の clickable を全部 click して状態の tree を先に作り、同じ状態に戻ればループ、押すものが無ければ葉として記録し、AST 構築前に行う」。操作は click だけでなく swipe 等も含める。探索深度には上限を設け、到達したらユーザーに情報だけ出して先に進む。上限の値（30 と仮に言った）は根拠のある値として扱わない。
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「クリックしてモーダルがでる画面、モーダル上にさらにタブがある画面は、よくある画面なので、正しく扱えないのは大きな制約に感じます。」dialog 内のタブは探索が clickable として拾う前提で、第 2 段の突合対象に含める。
+
+iac-web の実測 2026-09-02（seed `35b5b89`、trial）: `ast:refresh` overlays=10/14（10 は picker を開いた状態で測れた）、MOCK206 40 状態で収集、parity の状態 test は到達不能（trigger 3 種に visualId 無し → iac-web が app 側で付ける）と到達済み 3 状態の実差分を出した。seed 側の bug 2 件（失敗一覧が RangeError / 角丸が mobile のみ）は直した。
 
 ユーザー裁定 2026-09-02（iac-web セッション経由、verbatim）: 「その提案でよいので、最後に /simplify してください。fe-starter で上書きされるものは、fe-starter 側で /simplify すればいいね。」
 
