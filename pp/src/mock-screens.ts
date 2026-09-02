@@ -20,6 +20,11 @@ export function screenSlug(file: string): string {
   return path.basename(file).split(".", 1)[0] ?? "";
 }
 
+// AST の source.file がこの形で参照する（slug 先頭なので画面ごとに並ぶ）
+export function screenshotFile(slug: string, viewport: string): string {
+  return `${slug}.${viewport}.png`;
+}
+
 // 引数は「絞り込み」であって「対象の定義」ではない。export に無い名前は打ち間違いなので落とす
 export function listMockScreens(exportDir: string, args: readonly string[]): string[] {
   const all = walk(exportDir).sort();

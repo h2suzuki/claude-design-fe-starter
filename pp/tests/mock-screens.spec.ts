@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { listMockScreens, listSiteScreens, readReferencePages, screenSlug } from "../src/mock-screens";
+import { listMockScreens, listSiteScreens, readReferencePages, screenSlug, screenshotFile } from "../src/mock-screens";
 
 function fixtureExport(files: readonly string[]): string {
   const dir = mkdtempSync(path.join(os.tmpdir(), "pp-mock-screens-"));
@@ -43,6 +43,14 @@ test.describe("mock-screens — target enumeration", () => {
 
   test("an empty export yields no targets", () => {
     expect(listMockScreens(fixtureExport([]), [])).toEqual([]);
+  });
+});
+
+test.describe("mock-screens — 参照スクショの file 名", () => {
+  test("file 名は <slug>.<viewport>.png", () => {
+    // AST の source.file がこの形で参照する（.claude/skills/ast-extract/40-reconcile-pass.md）
+    expect(screenshotFile("index", "desktop")).toBe("index.desktop.png");
+    expect(screenshotFile("club", "mobile")).toBe("club.mobile.png");
   });
 });
 

@@ -2,13 +2,12 @@
 // Usage: npm run mock:closure [-- <export 内の file> ...]
 // 出力: pp/artifacts/mock-closure.json（closure / embeds / misses）
 import { chromium } from "@playwright/test";
-import type { Request } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DESKTOP_CONTEXT_OPTIONS, MOBILE_CONTEXT_OPTIONS, PP_LAUNCH_OPTIONS, PP_PINNED_NOW_ISO } from "../src/config";
 import { EXPORT_DIR, ensureMockServer } from "../src/mock-server";
-import { installNetworkGuard } from "../src/net-block";
+import { installNetworkGuard, isEmbedRequest } from "../src/net-block";
 import { listMockScreens } from "../src/mock-screens";
 
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "mock-closure.json");
@@ -27,10 +26,6 @@ interface Miss {
   url: string;
   why: string;
 }
-
-// 子 frame の navigation は export の file ではなく live な外部 embed。閉包の取りこぼしと分けて数える
-const isEmbed = (request: Request): boolean =>
-  request.isNavigationRequest() && request.frame().parentFrame() !== null;
 
 async function main(): Promise<void> {
   const screens = listMockScreens(EXPORT_DIR, process.argv.slice(2));
@@ -51,7 +46,7 @@ async function main(): Promise<void> {
         for (const screen of screens) {
           const page = await context.newPage();
           page.on("requestfailed", (request) => {
-            if (isEmbed(request)) embeds.add(request.url());
+            if (isEmbedRequest(request)) embeds.add(request.url());
             else misses.push({ screen, viewport, url: request.url(), why: request.failure()?.errorText ?? "failed" });
           });
           page.on("response", (response) => {

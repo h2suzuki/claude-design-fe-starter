@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import type { BrowserContext } from "@playwright/test";
+import type { BrowserContext, Request } from "@playwright/test";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const VENDOR_DIR = path.join(HERE, "..", "vendor");
@@ -14,6 +14,10 @@ export interface VendorRoute { urlPattern: string; file: string; contentType: st
 export const VENDOR_ROUTES: VendorRoute[] = JSON.parse(
   readFileSync(path.join(VENDOR_DIR, "routes.json"), "utf8"),
 ).routes;
+
+// 子 frame の navigation は export の file ではなく live な外部 embed。guard の abort は閉包の欠落ではない
+export const isEmbedRequest = (request: Request): boolean =>
+  request.isNavigationRequest() && request.frame().parentFrame() !== null;
 
 export async function installNetworkGuard(context: BrowserContext): Promise<void> {
   // Playwright の route は後着優先 — 広い catch-all を先に、個別 vendor route を後に登録する
