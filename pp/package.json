@@ -23,6 +23,7 @@
     "overlay-diff": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/overlay-diff.ts",
     "mock:screenshots": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/mock-screenshots.ts",
     "mock:closure": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/mock-closure.ts",
+    "mock:states": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/mock-states.ts",
     "mock:integrity": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/mock-integrity.ts",
     "ast:refresh": "PLAYWRIGHT_BROWSERS_PATH=\"$(../tools/toolchain-dir)/pw-browsers\" tsx scripts/ast-refresh.ts",
     "typecheck": "tsc --noEmit"

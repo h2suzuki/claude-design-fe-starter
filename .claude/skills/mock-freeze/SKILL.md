@@ -21,6 +21,9 @@ when_to_use: TRIGGER when the user declares a mock complete, when an export need
 5. 2 回目以降は、前版との差分を `git diff --no-index --word-diff=plain <前版> <新版>` で棚卸しし、依頼した変更・依頼していない変更に仕分ける。後者は採るか差し戻すかを決めてから進む
 6. mock 自身の破れを出す: `bun run --cwd pp mock:integrity`（引数なしで `export/` の全画面。`reference-pages.json` に宣言した見本 page は layout 検査から外れる。横スクロール・はみ出し・操作要素の重なり・画面間の値の割れ・dialog の収まり）。1 件でも挙がれば mock を直してから凍結する。検査の範囲は `docs/presentation/ui-mock/README.md` 手順 6
 7. 参照スクショを撮る: `bun run --cwd pp mock:screenshots`（引数なしで `export/` の全画面。見本 page は撮らない。資産の 404 と abort があれば落ちる（外部 embed の abort は閉包の外なので落とさない））
+
+7b. 状態グラフを探索する: `bun run --cwd pp mock:states`（overlay など click で現れる状態と辺を凍結する。上限到達は気づき、再生の非決定は直すもの）
+
 8. 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash

@@ -5,6 +5,9 @@ import type { BrowserContextOptions, LaunchOptions } from "@playwright/test";
 export const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 export const DESKTOP_VIEWPORT = { width: 1280, height: 800 } as const;
 
+// 仮置き。根拠は適用先の実測で決める
+export const MOCK_STATE_LIMITS = { maxDepth: 30, maxEdgesPerState: 60, maxStates: 200 } as const;
+
 // 基準 2 点とは役割が違う: ここは崩れないことだけ見る範囲で、pixel 一致は取らない
 // 差し替え点。下限・上限は発注規約（seed-docs/design-order-template.md 項目 1）と同じ数値にする
 export const SWEEP_WIDTHS: readonly number[] = [360, 390, 480, 640, 768, 1024, 1280, 1440, 1680, 1920];

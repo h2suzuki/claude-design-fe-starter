@@ -6,6 +6,7 @@ Claude Design で承認された mock の凍結コピーと、その出所を機
 docs/presentation/ui-mock/
 ├── export/               凍結した export 一式（画面 HTML + 共有 JS/CSS/フォント/画像）
 ├── screenshots/          承認時点の参照スクリーンショット（基準 viewport ごと）
+├── states/               操作で到達できる状態と辺の凍結グラフ（画面ごと）
 ├── mock-baseline.sha256  export/ 全ファイルの sha256 台帳（provenance pin）
 └── DESIGN-POLICY.md      KEEP_IMPL 台帳（mock と実装の意図的差分・日付付き裁定のみ）
 ```
@@ -58,6 +59,9 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
 
    **検査していないもの**: click で初めて mount する dialog（DOM に無いので測れない）、本文中のリンク文言（文脈で言い方が変わってよい）、意匠そのものの良し悪し。これらは screen-loop ⑧ の人間受入で見る
 7. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する（`bun run --cwd pp mock:screenshots`。引数なしで `export/` の全画面を撮り、資産の 404 と abort があれば落ちる（外部 embed の abort は閉包の外なので落とさない）。`reference-pages.json` の見本 page は画面ではないので撮らない）。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — 同じ viewport・同じ DPR で撮った app 側の画と寸法が揃うので、mock と実装の pixel 差はここから直接取れる（`pp/` の self-baseline は app 自身の過去としか比べないため、mock との一致は見ていない）。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
+
+7b. 状態グラフを探索する（`bun run --cwd pp mock:states`。overlay など click で現れる状態と辺を凍結する。上限到達は気づき、再生の非決定は直すもの）
+
 8. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 
    ```bash
