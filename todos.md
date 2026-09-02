@@ -70,6 +70,7 @@ Exit Criteria:
 - [ ] 第 2 段: 深さ 2 以上の状態（dialog の中のタブ切替など）も同じ経路で突合され、iac-web の会場写真 lightbox のタブ 2 枚がその実例として通る
 - [ ] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る
 - [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` に書く
+- [ ] 第 2 段が入った後、今日 pp/ に足した code（`mock-states` / `state-walk` / MOCK206 / `mock-screenshots` / `mock-lint`）を seed 側で `/simplify` し、spec と typecheck が緑のまま整理されている（install.sh が上書きする file は seed 側で簡素化する、という裁定）
 - [ ] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「overlay が正しく扱えない問題は、fe-starter に改善を依頼してください。挙動については、mock で十分に作り込まれています。overlay も pp 対象に含めるべきです。」
@@ -77,6 +78,8 @@ Exit Criteria:
 ユーザー裁定 2026-09-02: 土台は「mock の clickable を全部 click して状態の tree を先に作り、同じ状態に戻ればループ、押すものが無ければ葉として記録し、AST 構築前に行う」。操作は click だけでなく swipe 等も含める。探索深度には上限を設け、到達したらユーザーに情報だけ出して先に進む。上限の値（30 と仮に言った）は根拠のある値として扱わない。
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「クリックしてモーダルがでる画面、モーダル上にさらにタブがある画面は、よくある画面なので、正しく扱えないのは大きな制約に感じます。」dialog 内のタブは探索が clickable として拾う前提で、第 2 段の突合対象に含める。
+
+ユーザー裁定 2026-09-02（iac-web セッション経由、verbatim）: 「その提案でよいので、最後に /simplify してください。fe-starter で上書きされるものは、fe-starter 側で /simplify すればいいね。」
 
 iac-web の再実測 2026-09-02（seed `64991cb`、trial のみ）: 再生不一致 0、mobile 状態 40 / desktop 45、両 viewport とも 600 秒の時間上限で打ち切り（深さ 4 まで）、rc=0。日付セルは押せる日が月 1〜3 個なので代表化は掛からない（4 未満は全部押す設計どおり）。icon だけの月送り button は label が空だったので `d4f669d` で aria-label / title を fallback にした。
 
