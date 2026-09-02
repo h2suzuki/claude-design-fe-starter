@@ -25,6 +25,7 @@ seed からの立ち上げを day-0 手順で完走させる。詳細手順の�
 - mock 承認前に UI 実装へ入らない（CLAUDE.md の mock-first 原則）
 - 一周が終わるまで画面を増やさない — 検証 harness の後付けは高くつく
 - skip された gate を「合格」と報告しない
+- deploy する PJ では、promote 直後の smoke 3 項目（API 応答の内容 / 保存する状態のリロード / history の往復、`seed-docs/screen-loop.md` ⑩）を通すまで完了と報告しない
 
 ## Related
 

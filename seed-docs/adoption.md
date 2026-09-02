@@ -235,6 +235,7 @@ gate 自体は正しく赤を出していたので、**壊れるのは gate で�
 
 1. **deploy 先を切り替える**。本番アドレスを新実装の deploy へ promote する。preview URL で確認して終わりにしない
 2. **本番アドレスで確かめる**。全 route が 200 を返すか、実データが旧実装と同じ値で出るか（件数・日付まで見る）、API の異常系が期待どおりか、favicon など画面に出ない資産が 200 か。ここは fixture が効かない唯一の場所なので、§2 の突合表をそのまま実行する
+   - 続けて `seed-docs/screen-loop.md` ⑩ の smoke 3 項目（API 応答の内容 / 保存する状態のリロード / history の往復）を通す。200 だけを見て promote を終えた PJ で、満席枠の欠落・「戻る」で overlay が戻らない・reload の一瞬の既定テーマ表示の 3 件が本番で見つかった
 3. **旧 URL の扱いを裁定する**。転送するか、しないか。決めずに転送を入れない — 入れた転送は後から消しにくい
 4. **branch を入れ替える**。旧 main を退役名（`old-main` 等）の branch か tag で残し、作業 branch を main へ fast-forward する。**旧 main は消さない**
 5. **worktree を片付ける**。作業 worktree を消す前に、gitignore 下の作業物（`drafts/` 等）を main 側へ退避する。materialize されない資産（`node_modules`・toolchain）は残る checkout 側で取り直しになる
