@@ -89,10 +89,10 @@ Work file: `pp/src/mock-integrity.ts`（MOCK204 と同じ「気づき」扱い�
 
 Exit Criteria:
 
-- [ ] `mock:integrity` が site 画面の computed `border-radius`（余白・字級は同じ経路で足せる形）を集め、見本 page（`reference-pages.json`）が使う値の集合と突き合わせて、画面だけにある値を「気づき」として画面名・箇所数つきで出す
-- [ ] 見本 page が「スケール」を文で宣言している場合に備え、PJ が `docs/presentation/ui-mock/design-scale.json` で宣言値を書けば、見本 page の使用値でなく宣言値と突き合わせる（宣言が無ければ使用値）
-- [ ] 出力の末尾に、`lint:mock` の MOCK104 と同じ「そのまま貼れる質問文」（宣言に無い値の一覧と「どちらが正か」）が出る
-- [ ] test にその case（宣言外の値が気づきになる / 宣言内は出ない / 宣言 file があればそちらが優先）がある
+- [x] `mock:integrity` が site 画面の computed `border-radius`（余白・字級は同じ経路で足せる形）を集め、見本 page（`reference-pages.json`）が使う値の集合と突き合わせて、画面だけにある値を「気づき」として画面名・箇所数つきで出す — `776b959`（MOCK206、Codex 実装を受け入れ。spec 24 pass・typecheck・空 export rc=0 を発注側で再実行）
+- [x] 見本 page が「スケール」を文で宣言している場合に備え、PJ が `docs/presentation/ui-mock/design-scale.json` で宣言値を書けば、見本 page の使用値でなく宣言値と突き合わせる（宣言が無ければ使用値）— `776b959`、`resolveRadiusScale`
+- [x] 出力の末尾に、`lint:mock` の MOCK104 と同じ「そのまま貼れる質問文」（宣言に無い値の一覧と「どちらが正か」）が出る — `776b959`
+- [x] test にその case（宣言外の値が気づきになる / 宣言内は出ない / 宣言 file があればそちらが優先）がある — `776b959`、4 case
 - [ ] iac-web の index / trial で、報告済みの宣言外 8 値（6 9 10 11 12 13 16 18 20 24 のうち画面にあるもの）が気づきとして出る
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「design system に不備があるようなら、fe-starter の最初の mock 凍結時に検知して、Claude Design 側に質問すべきです。後になったものがあれば、理由を考えてください。」
