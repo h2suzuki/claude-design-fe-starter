@@ -146,19 +146,6 @@ Exit Criteria:
 
 実例: テーマを onMount で決めるため SSR がライトで出る。gate は data-ready を待ってから撮るので初回描画を見ない。mock は client 描画なので mock 比較でも出ない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
 
-### 本番 smoke が「全ページ 200」で止まっていて、完了条件の標準に無い
-
-起票: user 2026-09-02
-Goal: promote 直後にブラウザで 1 回通す smoke（API 応答の内容・テーマ保存時のリロード・history の往復）を、完了条件（Exit Criteria）の雛形に入れる。
-Work file: `seed-docs/screen-loop.md`（完了条件）・`seed-docs/adoption.md`・`.claude/skills/fe-kickoff/`
-
-Exit Criteria:
-
-- [x] Exit Criteria の雛形に smoke の 3 項目（API 応答の内容 / テーマ保存とリロード / history 往復）が入っている — `a212e6a`（screen-loop ⑩、walking-skeleton の完了条件、fe-kickoff の Rules）
-- [x] smoke の手順が copy-paste で回せる形で文書にある — `a212e6a`（screen-loop ⑩ の 3 手順、adoption §10 手順 2 から参照）
-
-ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
-
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
