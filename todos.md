@@ -74,8 +74,8 @@ Exit Criteria:
 - [x] 到達不能の失敗行の trigger を末尾 3 段 + 可視 text に丸める（iac-web 実測 2026-09-03: full CSS path 200 文字超が 35 行並ぶ）— `4944ade`、`shortSelector`。同日 `7137b43`（状態 test の画像 mask を viewport 座標に）・`a27e983`（状態 test の app 側を `openScreen` に）も iac-web 報告の bug 修正
 - [ ] `ast:refresh` が desktop の状態グラフで測れない overlay node（mobile 専用の一覧など）を mobile の状態グラフでも探す（iac-web 実測: 14 node 中 10 が desktop で測れ、1 が mobile 専用、3 が送信完了）
 - [ ] 記入後の送信（fill 後の submit）が状態グラフに現れない設計の穴を埋める。fill は DOM の形を変えないので状態にならず、埋めた状態から submit を押す経路が探索されない → 「可視の入力を全部埋めてから続ける」複合辺を足す等（iac-web 実測: 送信完了の 3 node が状態グラフに無い）
-- [ ] 状態ごとの parity を「凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す」運用として `docs/ui-quality-policy.md` と screen-loop の完了条件に書く。日常の小修正の gate に含めるかは未裁定のまま、`PARITY_STATE_LIMIT` と所要時間（iac-web 実測: trial で 1 本 3.2〜3.7 分 × 4 本、7 画面で +30〜40 分の見積もり）を併記する
-- [ ] 検査時間の増分を `docs/ui-quality-policy.md` に書く（iac-web 実測 2026-09-03: 状態 parity 込みの 7 画面 gate 36 分、導入前 17 分 → 増分 +19 分。状態グラフの大きい trial で +8 分、静的 3 画面は +0.5 分）
+- [x] 状態ごとの parity を「凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す」運用として `docs/ui-quality-policy.md` と screen-loop の完了条件に書く。日常の小修正の gate に含めるかは未裁定のまま、`PARITY_STATE_LIMIT` と所要時間（iac-web 実測: trial で 1 本 3.2〜3.7 分 × 4 本、7 画面で +30〜40 分の見積もり）を併記する — `6338f1f`
+- [x] 検査時間の増分を `docs/ui-quality-policy.md` に書く — `6338f1f`（iac-web 実測 2026-09-03: 状態 parity 込みの 7 画面 gate 36 分、導入前 17 分 → 増分 +19 分。状態グラフの大きい trial で +8 分、静的 3 画面は +0.5 分）
 - [ ] 第 2 段が入った後、今日 pp/ に足した code（`mock-states` / `state-walk` / MOCK206 / `mock-screenshots` / `mock-lint`）を seed 側で `/simplify` し、spec と typecheck が緑のまま整理されている（install.sh が上書きする file は seed 側で簡素化する、という裁定）
 - [x] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる — iac-web 実測 2026-09-03: 状態 test で lightbox の閉じるアイコン差（68〜95px）と dialog 状態の fixture 差（49%）を検出、到達不能以外の pixel / style / geometry 行は 0。最大深さ 5 / 状態 22 / 辺 162（2026-09-02）
 
