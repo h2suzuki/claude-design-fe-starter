@@ -9,20 +9,21 @@ export interface ImageBox extends Box {
 // 包む要素は数えない。<picture> は <img> をちょうど 1 つ持つので、img を採れば 1 枚 1 箱になる
 export const IMAGE_BOX_SELECTOR = "img, video";
 
-export const collectImageBoxes = async (page: Page): Promise<ImageBox[]> =>
+// fullPage screenshot には page 座標、viewport screenshot には viewport 座標の箱を当てる
+export const collectImageBoxes = async (page: Page, options: { origin?: "page" | "viewport" } = {}): Promise<ImageBox[]> =>
   page.evaluate(
-    (selector) =>
+    ({ selector, viewport }) =>
       Array.from(document.querySelectorAll(selector)).map((el) => {
         const rect = el.getBoundingClientRect();
         return {
-          x: rect.left + scrollX,
-          y: rect.top + scrollY,
+          x: rect.left + (viewport ? 0 : scrollX),
+          y: rect.top + (viewport ? 0 : scrollY),
           width: rect.width,
           height: rect.height,
           src: el instanceof HTMLImageElement ? el.currentSrc || el.src : "",
         };
       }),
-    IMAGE_BOX_SELECTOR,
+    { selector: IMAGE_BOX_SELECTOR, viewport: options.origin === "viewport" },
   );
 
 // 1px 未満のずれは縮小時の丸めで出る。ここは「マスクを当ててよいか」の判定なので、寸法の厳密比較は parity に任せる

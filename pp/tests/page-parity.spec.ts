@@ -135,7 +135,10 @@ for (const [label, contextOptions] of BASES) {
             continue;
           }
           await Promise.all([mockPage.waitForLoadState("networkidle"), appPage.waitForLoadState("networkidle")]);
-          const [mockBoxes, appBoxes] = await Promise.all([collectImageBoxes(mockPage), collectImageBoxes(appPage)]);
+          const [mockBoxes, appBoxes] = await Promise.all([
+            collectImageBoxes(mockPage, { origin: "viewport" }),
+            collectImageBoxes(appPage, { origin: "viewport" }),
+          ]);
           const targets = imageTargets(keepImplEntries());
           const excluded = mockBoxes.filter((box) => targets.some((target) => box.src.includes(target)));
           const [mockPng, appPng] = await Promise.all([

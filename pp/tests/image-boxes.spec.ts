@@ -87,4 +87,16 @@ test.describe("describeExcluded", () => {
   test("台帳が空なら「なし」", () => {
     expect(describeExcluded([], boxes)).toBe("なし");
   });
+
+  // 状態 test は viewport screenshot に mask を当てるので、scroll した状態では page 座標の箱が絵の外にずれる
+  test("origin viewport は scroll 分を引いた座標で箱を返す", async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 200 });
+    await page.setContent(document_(`<div style="height:1000px"></div><img src="${PIX}" alt="">`));
+    const scrolled = await page.evaluate(() => (window.scrollTo(0, 1000), scrollY));
+    const [pageBox] = await collectImageBoxes(page);
+    const [viewportBox] = await collectImageBoxes(page, { origin: "viewport" });
+    expect(scrolled).toBeGreaterThan(0);
+    expect(pageBox!.y).toBe(1000);
+    expect(viewportBox!.y).toBe(1000 - scrolled);
+  });
 });
