@@ -53,6 +53,20 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
+### MOCK104（重い資産）が再凍結を止める — lint:mock の exit と凍結手順 9 の矛盾
+
+起票: fable-5 2026-09-02
+Goal: 重い資産の検知は「実装前に聞く材料」として残しつつ、凍結（`/mock-freeze` 手順 9 の `lint:mock` 緑）を止めないようにする。
+Work file: `pp/scripts/mock-lint.mjs`（exit の扱い）・`.claude/skills/mock-freeze/SKILL.md` 手順 9・`docs/presentation/ui-mock/README.md` 手順 9
+
+Exit Criteria:
+
+- [ ] MOCK104 だけの `lint:mock` が exit 0 になり、検知行と合計 MB は今までどおり出る（`--self-test` を更新して確かめる）
+- [ ] 凍結手順 9 の「緑」が MOCK101–103 を指すことを SKILL.md と README の両方に書く
+- [ ] iac-web の 2 巡目再凍結が、台帳処置済みの重い 5 file を持ったまま通る
+
+2026-09-02 iac-web セッションからの報告: 2 巡目 export の `lint:mock` が MOCK104 5 件（1.7–4.0 MB の写真・会場画像）で rc=1。5 file は前版と byte 一致で、KEEP_IMPL 台帳（2026-08-28 裁定）で app 側が軽量版を使うと確定済み。凍結が止まるのは意図どおりかの照会。
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
