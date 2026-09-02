@@ -8,6 +8,9 @@ export const DESKTOP_VIEWPORT = { width: 1280, height: 800 } as const;
 // 7 画面の実測（2026-09 時点の最大 深さ 5 / 状態 22 / 辺 162）の 2〜5 倍。maxSeconds は 1 画面 × 1 viewport の壁時計で、上限到達は気づき。PJ で調整可
 export const MOCK_STATE_LIMITS = { maxDepth: 12, maxEdgesPerState: 100, maxStates: 100, maxSeconds: 600 } as const;
 
+// 実測 40〜45 状態 × 2 viewport が数分で回る前提。PJ で調整可
+export const PARITY_STATE_LIMIT = 60;
+
 // 基準 2 点とは役割が違う: ここは崩れないことだけ見る範囲で、pixel 一致は取らない
 // 差し替え点。下限・上限は発注規約（seed-docs/design-order-template.md 項目 1）と同じ数値にする
 export const SWEEP_WIDTHS: readonly number[] = [360, 390, 480, 640, 768, 1024, 1280, 1440, 1680, 1920];

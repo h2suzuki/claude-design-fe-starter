@@ -13,17 +13,28 @@ import {
   MOBILE_CONTEXT_OPTIONS,
   MOCK_CONFIGURED,
   MOCK_ENTRY_FILE,
+  PARITY_STATE_LIMIT,
 } from "../src/config";
+import { findScreenForMock } from "../src/ast-screen";
 import { installNetworkGuard } from "../src/net-block";
 import { imageTargets, keepImplEntries } from "../src/keep-impl";
+import { UI_AST_SCREENS_DIR } from "../src/mock-server";
+import { isolateStorage } from "../src/mock-states";
+import { screenSlug } from "../src/mock-screens";
 import { openMock } from "../src/targets/mock-target";
 import { openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
+import { SELECTOR_MAP } from "../src/selector-map";
+import { mapPathToApp, replayOnApp } from "../src/state-parity";
+import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { diffPagePngs } from "../src/page-diff";
 import { boxesAgree, collectImageBoxes, describeCoverage, describeExcluded } from "../src/image-boxes";
 import type { PageDiffResult } from "../src/page-diff";
 
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "page-parity");
+const IDS = Object.keys(SELECTOR_MAP);
+const AST_SCREEN = findScreenForMock(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE).match?.screen;
+const AST_NODES = [...(AST_SCREEN?.children ?? []), ...(AST_SCREEN?.overlays ?? [])];
 
 // 両側とも DPR 1 で撮る。mobile の DPR 3 は fullPage が数万 px になり、比較にも診断画にも見合わない
 const BASES = [
@@ -51,6 +62,7 @@ function describeFailure(result: PageDiffResult): string {
 }
 
 for (const [label, contextOptions] of BASES) {
+  const graph = loadStateGraph(STATES_DIR, screenSlug(MOCK_ENTRY_FILE), label);
   test.describe(`page pixel parity — ${label}`, () => {
     test.skip(!MOCK_CONFIGURED, "PP_MOCK_FILE 未設定 — docs/presentation/ui-mock/export/ 内の突合先ファイル名を渡す");
     test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
@@ -85,6 +97,64 @@ for (const [label, contextOptions] of BASES) {
         await mockCtx.close();
         await appCtx.close();
       }
+    });
+
+    test("every frozen state: viewport pixel diff = 0", async ({ browser }) => {
+      test.skip(graph === null, "状態グラフ無し — bun run --cwd pp mock:states で凍結すると有効化される");
+      test.setTimeout(15 * 60_000);
+      if (!graph) return;
+      const failures: string[] = [];
+      const stateIds = statesInOrder(graph).filter((stateId) => stateId !== "root");
+      const targets = stateIds.slice(0, PARITY_STATE_LIMIT);
+      if (stateIds.length > targets.length) {
+        console.log(`state 上限 ${PARITY_STATE_LIMIT} に達した（残り ${stateIds.length - targets.length} 状態は未突合）`);
+      }
+      for (const stateId of targets) {
+        const mockCtx = await browser.newContext(contextOptions);
+        const appCtx = await browser.newContext(contextOptions);
+        try {
+          await Promise.all([isolateStorage(mockCtx), isolateStorage(appCtx)]);
+          await Promise.all([installNetworkGuard(mockCtx), installNetworkGuard(appCtx)]);
+          const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, CURRENT_SCREEN!.mockReadySelector);
+          const mapped = await mapPathToApp(mockPage, graph, stateId, AST_NODES);
+          const idCount = await mockPage.evaluate(
+            (selectors) => selectors.filter((selector) => document.querySelector(selector) !== null).length,
+            IDS.map((id) => SELECTOR_MAP[id]!.mockSel),
+          );
+          if (mapped.unmapped.length > 0) {
+            failures.push(...mapped.unmapped.map((item) => `state ${stateId}: 到達不能 ${item.edgeId} ${item.reason} / artifacts なし`));
+            console.log(`state ${stateId}: ids ${idCount} / 到達不能`);
+            continue;
+          }
+          const appPage = await openScreen(appCtx, CURRENT_SCREEN!);
+          try {
+            await replayOnApp(appPage, mapped.steps);
+          } catch (error) {
+            failures.push(`state ${stateId}: 到達不能 app replay ${(error as Error).message.split("\n")[0]} / artifacts なし`);
+            console.log(`state ${stateId}: ids ${idCount} / 到達不能`);
+            continue;
+          }
+          await Promise.all([mockPage.waitForLoadState("networkidle"), appPage.waitForLoadState("networkidle")]);
+          const [mockBoxes, appBoxes] = await Promise.all([collectImageBoxes(mockPage), collectImageBoxes(appPage)]);
+          const targets = imageTargets(keepImplEntries());
+          const excluded = mockBoxes.filter((box) => targets.some((target) => box.src.includes(target)));
+          const [mockPng, appPng] = await Promise.all([
+            mockPage.screenshot({ type: "png", fullPage: false }).then((png) => PNG.sync.read(png)),
+            appPage.screenshot({ type: "png", fullPage: false }).then((png) => PNG.sync.read(png)),
+          ]);
+          const result = diffPagePngs(mockPng, appPng, excluded);
+          const boxesMatch = boxesAgree(mockBoxes, appBoxes);
+          const failed = !boxesMatch || !result.matched;
+          const artifactPath = failed ? writeArtifacts(`${label}-${stateId}`, mockPng, appPng, result) : "";
+          if (!boxesMatch) failures.push(`state ${stateId}: 画像配置 mock ${mockBoxes.length} / app ${appBoxes.length} / ${artifactPath}`);
+          if (!result.matched) failures.push(`state ${stateId}: pixel ${describeFailure(result)}（KEEP_IMPL で除外: ${describeExcluded(targets, mockBoxes)}）/ ${artifactPath}`);
+          console.log(`state ${stateId}: ids ${idCount} / diff ${failed ? "あり" : "0"} / ${describeCoverage(mockBoxes, targets)}`);
+        } finally {
+          await mockCtx.close();
+          await appCtx.close();
+        }
+      }
+      expect(failures, failures.join("\n")).toEqual([]);
     });
   });
 }
