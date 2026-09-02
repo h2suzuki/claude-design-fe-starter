@@ -97,7 +97,7 @@ Work file: `pp/src/fixtures/`・`docs/design-sync.md` 2.3（BE 往復の調整�
 
 Exit Criteria:
 
-- [ ] fixture の出所（BE の test 出力）と生成手順が文書にあり、手書き fixture は「生成できない理由」つきの例外になる
+- [x] fixture の出所（BE の test 出力）と生成手順が文書にあり、手書き fixture は「生成できない理由」つきの例外になる — `c2a608e`（design-sync 2.3 の 2 段の規約、adoption §5 の置き場 `pp/fixtures/be/`）
 - [ ] 生成物と手書きの差（fixture にあって BE に無い key / 値）を機械で出す道具がある
 - [ ] iac-web の /api/schedule（満席枠が応答から落ちていた実例）で検知できることを確かめる
 
