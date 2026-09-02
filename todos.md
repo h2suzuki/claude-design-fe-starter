@@ -84,6 +84,76 @@ iac-web の実測 2026-09-02（`mock:states`）: calendar-dialog（3 画面）�
 
 iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので overlay 配下の `visualId` は必ず MISS。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
 
+### mock の表示分岐ごとに BE 経路を特定する phase が工程に無い
+
+起票: user 2026-09-02
+Goal: 凍結直後（AST 更新の前）に、mock の JS が持つ表示分岐（例: 空N / 満 / 今日 / 受付終了 / お休み / 祝日）を列挙し、各分岐に至る BE の route と条件を表にして、経路の無い分岐を「BE のバグ」か「FE の到達不能パス」に分類して裁定に回す phase を工程に足す。
+Work file: `seed-docs/screen-loop.md`（工程の位置）・`seed-docs/pre-implementation-questions.md`（表の雛形）・`pp/scripts/`（分岐の静的抽出を機械化できる範囲）
+
+Exit Criteria:
+
+- [ ] 工程書に phase の位置（凍結直後、AST 更新の前）と成果物（分岐 × BE 経路の表、分類、裁定）が書かれている
+- [ ] mock の JS から表示分岐の候補（文字列リテラルの出し分け・class の切替）を機械で列挙する道具か、無理なら人手の手順がある
+- [ ] iac-web で今日手で実施した内容（満席 / 当日枠 / 祝日チップ）が表の実例として載る
+
+ユーザー指示 2026-09-02（iac-web セッション経由）: 「mock 上の表示を実現する BE 経路の特定をするフェーズを入れること。BE 経路がなければ、バグか、FE の到達不能パス」。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
+
+### pp の fixture が BE の契約から乖離しても検知されない
+
+起票: user 2026-09-02
+Goal: PJ の API fixture を手書きでなく BE route の test 出力（外部 API は mock）から生成する規約と道具を持ち、fixture にあって BE が返せない値を生成時に検知する。
+Work file: `pp/src/fixtures/`・`docs/design-sync.md` 2.3（BE 往復の調整段）・`seed-docs/adoption.md`
+
+Exit Criteria:
+
+- [ ] fixture の出所（BE の test 出力）と生成手順が文書にあり、手書き fixture は「生成できない理由」つきの例外になる
+- [ ] 生成物と手書きの差（fixture にあって BE に無い key / 値）を機械で出す道具がある
+- [ ] iac-web の /api/schedule（満席枠が応答から落ちていた実例）で検知できることを確かめる
+
+実例: iac-web の pp fixture には満席枠があったので gate は緑、BE は満席枠を落としていた。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
+
+### 状態探索に「別ページへ離脱 → 戻る」の辺が無い
+
+起票: user 2026-09-02
+Goal: mock の JS から pushState / replaceState / hashchange / pageshow の利用を凍結時に静的抽出して「URL 状態を持つ overlay」を一覧化し、`mock:states` に overlay 内の別ページ link → `page.goBack()` の辺を足して、復元後の状態を mock と app で比べられるようにする。
+Work file: `pp/src/mock-states.ts`（辺の種類 `back`）・`pp/scripts/mock-lint.mjs` か新 script（静的抽出）・`pp/tests/poststate-sweep.spec.ts`
+
+Exit Criteria:
+
+- [ ] 凍結時に URL 状態（hash / history）を使う overlay が機械で列挙される
+- [ ] `mock:states` が overlay 内の navigate 辺に対して「遷移 → goBack」の辺を持ち、復元後の状態が記録される
+- [ ] iac-web の稽古カレンダー（#cal<offset> と popstate/pageshow で復元）で、戻った後の modal が状態として出る
+
+実例: カレンダーから会場ページへ行き「戻る」と modal が戻らない。poststate-sweep は登録操作の直後だけ比べ、離脱→戻るを辿らない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
+
+### SSR の初回描画と hydration 後の差（テーマの一瞬ライト表示）が gate に見えない
+
+起票: user 2026-09-02
+Goal: localStorage の light / dark / system それぞれで、JS を止めた初回描画の背景色・主要色と hydration 後の値を比べる spec を標準に入れ、kickoff の質問票に「描画前に決めるべき状態（テーマ・言語など）」を足す。
+Work file: `pp/tests/`（新 spec、SSR の PJ 向け。静的 PJ では宣言 skip）・`seed-docs/pre-implementation-questions.md`・`.claude/skills/fe-kickoff/`
+
+Exit Criteria:
+
+- [ ] JS 無効の初回描画と hydration 後で背景色・主要色を比べる spec があり、テーマ 3 通りを回す
+- [ ] SSR を使わない PJ では `gate-not-applicable.json` で宣言できる
+- [ ] kickoff の質問票に「描画前に決めるべき状態」の項がある
+- [ ] iac-web で「一瞬ライト表示」が赤になり、修正後に緑になる
+
+実例: テーマを onMount で決めるため SSR がライトで出る。gate は data-ready を待ってから撮るので初回描画を見ない。mock は client 描画なので mock 比較でも出ない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
+
+### 本番 smoke が「全ページ 200」で止まっていて、完了条件の標準に無い
+
+起票: user 2026-09-02
+Goal: promote 直後にブラウザで 1 回通す smoke（API 応答の内容・テーマ保存時のリロード・history の往復）を、完了条件（Exit Criteria）の雛形に入れる。
+Work file: `seed-docs/screen-loop.md`（完了条件）・`seed-docs/adoption.md`・`.claude/skills/fe-kickoff/`
+
+Exit Criteria:
+
+- [ ] Exit Criteria の雛形に smoke の 3 項目（API 応答の内容 / テーマ保存とリロード / history 往復）が入っている
+- [ ] smoke の手順が copy-paste で回せる形で文書にある
+
+ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
