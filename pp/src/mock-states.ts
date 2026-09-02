@@ -5,6 +5,7 @@ export interface MockStateLimits {
   maxDepth: number;
   maxEdgesPerState: number;
   maxStates: number;
+  maxSeconds: number;
 }
 
 export type MockStateAction =
@@ -31,7 +32,7 @@ export interface MockStateEdge {
   label: string;
 }
 
-export type MockStateBound = "depth" | "edgesPerState" | "states";
+export type MockStateBound = "depth" | "edgesPerState" | "states" | "time";
 
 export interface MockStateReplayFailure {
   state: string;
@@ -43,6 +44,7 @@ export interface MockStateGraph {
   states: Record<string, MockStateNode>;
   edges: MockStateEdge[];
   unchanged: number;
+  sampled: number;
   boundsHit: MockStateBound[];
   replayFailures: MockStateReplayFailure[];
 }
@@ -59,6 +61,7 @@ interface ExploreStatesOptions {
   limits: MockStateLimits;
   siteFiles: ReadonlySet<string>;
   capture?: (page: Page, stateId: string) => Promise<string>;
+  onProgress?: (line: string) => void;
 }
 
 const SETTLE_MS = 150;
@@ -140,6 +143,7 @@ interface BrowserCandidate {
 interface BrowserActions {
   clicks: BrowserCandidate[];
   fills: BrowserCandidate[];
+  sampled: number;
   dialogSelector: string | null;
   dialogLabel: string;
 }
@@ -184,15 +188,38 @@ const browserActions = (page: Page): Promise<BrowserActions> =>
       );
     });
     const clickableSet = new Set(clickable);
-    const clicks = clickable
-      .filter((element) => {
-        let ancestor = element.parentElement;
-        while (ancestor && ancestor !== document.body) {
-          if (clickableSet.has(ancestor)) return false;
-          ancestor = ancestor.parentElement;
+    const unnestedClicks = clickable.filter((element) => {
+      let ancestor = element.parentElement;
+      while (ancestor && ancestor !== document.body) {
+        if (clickableSet.has(ancestor)) return false;
+        ancestor = ancestor.parentElement;
+      }
+      return true;
+    });
+    const groups = new Map<Element, Map<string, HTMLElement[]>>();
+    for (const element of unnestedClicks) {
+      const parent = element.parentElement;
+      if (!parent) continue;
+      const siblings = groups.get(parent) ?? new Map<string, HTMLElement[]>();
+      groups.set(parent, siblings);
+      const key = JSON.stringify([element.tagName, element.getAttribute("role")]);
+      siblings.set(key, [...(siblings.get(key) ?? []), element]);
+    }
+    const keptClicks = new Set<HTMLElement>();
+    let sampled = 0;
+    for (const siblings of groups.values()) {
+      for (const elements of siblings.values()) {
+        if (elements.length < 4) {
+          for (const element of elements) keptClicks.add(element);
+        } else {
+          keptClicks.add(elements[0]);
+          keptClicks.add(elements[elements.length - 1]);
+          sampled += elements.length - 2;
         }
-        return true;
-      })
+      }
+    }
+    const clicks = unnestedClicks
+      .filter((element) => keptClicks.has(element))
       .map((element) => ({
         selector: selector(element),
         label: label(element),
@@ -225,6 +252,7 @@ const browserActions = (page: Page): Promise<BrowserActions> =>
     return {
       clicks,
       fills,
+      sampled,
       dialogSelector: dialog ? selector(dialog) : null,
       dialogLabel: dialog ? label(dialog) : "",
     };
@@ -261,11 +289,11 @@ const linkedAction = (
   return null;
 };
 
-export async function collectStateActions(
+const collectStateActionResult = async (
   page: Page,
   viewport: "mobile" | "desktop",
   siteFiles: ReadonlySet<string>,
-): Promise<StateActionCandidate[]> {
+): Promise<{ candidates: StateActionCandidate[]; sampled: number }> => {
   const found = await browserActions(page);
   const candidates: StateActionCandidate[] = found.clicks.map((candidate) => ({
     action:
@@ -307,7 +335,15 @@ export async function collectStateActions(
       label: candidate.label,
     })),
   );
-  return candidates;
+  return { candidates, sampled: found.sampled };
+};
+
+export async function collectStateActions(
+  page: Page,
+  viewport: "mobile" | "desktop",
+  siteFiles: ReadonlySet<string>,
+): Promise<StateActionCandidate[]> {
+  return (await collectStateActionResult(page, viewport, siteFiles)).candidates;
 }
 
 const clickBackdrop = async (page: Page): Promise<void> => {
@@ -376,12 +412,21 @@ const settle = async (page: Page): Promise<void> => {
 };
 
 export async function exploreStates(options: ExploreStatesOptions): Promise<MockStateGraph> {
+  const startedAt = Date.now();
   const states: Record<string, MockStateNode> = {};
   const edges: MockStateEdge[] = [];
   const boundsHit: MockStateBound[] = [];
   const replayFailures: MockStateReplayFailure[] = [];
   const fingerprints = new Map<string, string>();
   let unchanged = 0;
+  let sampled = 0;
+  const elapsedSeconds = (): number => Math.floor((Date.now() - startedAt) / 1000);
+  const hitBound = (bound: MockStateBound): void => {
+    if (boundsHit.includes(bound)) return;
+    addBound(boundsHit, bound);
+    options.onProgress?.(`上限 ${bound}`);
+  };
+  const timeExpired = (): boolean => Date.now() - startedAt >= options.limits.maxSeconds * 1000;
   let page = await options.open();
   const rootFingerprint = await fingerprintVisibleDom(page);
   states.root = { depth: 0, path: [], fingerprint: rootFingerprint, screenshot: null };
@@ -390,6 +435,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
   const queue = ["root"];
 
   const openAt = async (stateId: string): Promise<Page | null> => {
+    options.onProgress?.(`再生 ${stateId}（path 長 ${states[stateId]?.path.length ?? 0}）`);
     const opened = await options.open();
     for (const edgeId of states[stateId]?.path ?? []) {
       const edge = edges.find((candidate) => candidate.id === edgeId);
@@ -400,6 +446,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
     const actual = await fingerprintVisibleDom(opened);
     const expected = states[stateId]?.fingerprint ?? "";
     if (actual === expected) return opened;
+    options.onProgress?.(`再生不一致 ${stateId}`);
     if (!replayFailures.some((failure) => failure.state === stateId && failure.actual === actual)) {
       replayFailures.push({ state: stateId, expected, actual });
     }
@@ -407,22 +454,36 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
     return null;
   };
 
-  while (queue.length > 0) {
+  exploration: while (queue.length > 0) {
+    if (timeExpired()) {
+      hitBound("time");
+      break;
+    }
     const stateId = queue.shift();
     if (!stateId) break;
     page = (await openAt(stateId)) as Page;
     if (!page) continue;
-    let candidates = await collectStateActions(page, options.viewport, options.siteFiles);
+    const found = await collectStateActionResult(page, options.viewport, options.siteFiles);
+    let candidates = found.candidates;
+    sampled += found.sampled;
+    options.onProgress?.(
+      `展開 ${stateId}（深さ ${states[stateId].depth}、候補 ${candidates.length}、状態数 ${Object.keys(states).length}、経過 ${elapsedSeconds()} 秒）`,
+    );
     if (states[stateId].depth >= options.limits.maxDepth) {
-      if (candidates.length > 0) addBound(boundsHit, "depth");
+      if (candidates.length > 0) hitBound("depth");
       await page.close();
       continue;
     }
     if (candidates.length > options.limits.maxEdgesPerState) {
-      addBound(boundsHit, "edgesPerState");
+      hitBound("edgesPerState");
       candidates = candidates.slice(0, options.limits.maxEdgesPerState);
     }
     for (const candidate of candidates) {
+      if (timeExpired()) {
+        hitBound("time");
+        await page.close();
+        break exploration;
+      }
       if (candidate.action.kind === "navigate" || candidate.action.kind === "external") {
         edges.push({
           id: `e${edges.length + 1}`,
@@ -443,7 +504,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
       }
       const knownId = fingerprints.get(fingerprint);
       if (!knownId && Object.keys(states).length >= options.limits.maxStates) {
-        addBound(boundsHit, "states");
+        hitBound("states");
       } else {
         const edgeId = `e${edges.length + 1}`;
         const to = knownId ?? `s-${fingerprint.slice(0, 8)}`;
@@ -468,5 +529,5 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
     if (!page.isClosed()) await page.close();
   }
 
-  return { states, edges, unchanged, boundsHit, replayFailures };
+  return { states, edges, unchanged, sampled, boundsHit, replayFailures };
 }

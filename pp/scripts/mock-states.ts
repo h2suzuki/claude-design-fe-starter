@@ -22,6 +22,7 @@ interface FrozenViewport {
   states: Awaited<ReturnType<typeof exploreStates>>["states"];
   edges: Awaited<ReturnType<typeof exploreStates>>["edges"];
   unchanged: number;
+  sampled: number;
   boundsHit: Awaited<ReturnType<typeof exploreStates>>["boundsHit"];
 }
 
@@ -68,17 +69,19 @@ async function main(): Promise<void> {
               writeFileSync(path.join(SCREENSHOTS_DIR, name), await page.screenshot({ type: "png", fullPage: false }));
               return `screenshots/${name}`;
             },
+            onProgress: (line) => console.log(`  ${line}`),
           });
           viewports[viewport] = {
             states: result.states,
             edges: result.edges,
             unchanged: result.unchanged,
+            sampled: result.sampled,
             boundsHit: result.boundsHit,
           };
           const navigate = result.edges.filter((edge) => edge.action.kind === "navigate").length;
           const external = result.edges.filter((edge) => edge.action.kind === "external").length;
           console.log(
-            `${screen} ${viewport}: 状態 ${Object.keys(result.states).length} / 辺 ${result.edges.length} / 反応なし ${result.unchanged} / navigate ${navigate} / external ${external}`,
+            `${screen} ${viewport}: 状態 ${Object.keys(result.states).length} / 辺 ${result.edges.length} / 反応なし ${result.unchanged} / navigate ${navigate} / external ${external} / 代表化 ${result.sampled}`,
           );
           for (const bound of result.boundsHit) notices.push(`${screen} ${viewport}: 探索上限 ${bound}`);
           for (const failure of result.replayFailures) {

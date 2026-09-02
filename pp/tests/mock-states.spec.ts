@@ -8,7 +8,7 @@ import {
   selectorForElement,
 } from "../src/mock-states";
 
-const LIMITS = { maxDepth: 30, maxEdgesPerState: 60, maxStates: 200 };
+const LIMITS = { maxDepth: 30, maxEdgesPerState: 60, maxStates: 200, maxSeconds: 600 };
 
 const fixtureOpener = (
   context: BrowserContext,
@@ -138,5 +138,69 @@ test("探索の副作用が storage に残っても、開き直した root は�
   const result = await exploreStates({ open, viewport: "desktop", limits: LIMITS, siteFiles: new Set() });
   expect(result.replayFailures).toEqual([]);
   expect(Object.keys(result.states)).toHaveLength(2);
+  await context.close();
+});
+
+test("同じ親の同種 click 候補が 4 つ以上なら先頭と末尾に代表化する", async ({ browser }) => {
+  // 同種の反復候補を端の二例に絞りつつ、別 role の少数候補はすべて残す。
+  const context = await browser.newContext();
+  const html = `<main>${Array.from({ length: 6 }, (_, index) => `<button data-index="${index}">${index}</button>`).join("")}</main>
+    <nav><button role="tab">前</button><button role="tab">後</button></nav>
+    <script>document.querySelectorAll('button').forEach((button) => button.onclick=()=>button.parentElement.dataset.state=button.dataset.index ?? button.textContent)</script>`;
+  const page = await fixtureOpener(context, html)();
+  const clicks = (await collectStateActions(page, "desktop", new Set())).filter(
+    (candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action),
+  );
+  expect(clicks.map((candidate) => candidate.label)).toEqual(["0", "5", "前", "後"]);
+  await page.close();
+  const result = await exploreStates({
+    open: fixtureOpener(context, html),
+    viewport: "desktop",
+    limits: { ...LIMITS, maxDepth: 0 },
+    siteFiles: new Set(),
+  });
+  expect(result.sampled).toBe(4);
+  await context.close();
+});
+
+test("同じ親の同種 click 候補が 3 つ以下ならすべて残す", async ({ page }) => {
+  // 少数のタブや月送りを代表化で失わない。
+  await page.setContent(`<main><button>1</button><button>2</button><button>3</button></main>`);
+  const clicks = (await collectStateActions(page, "desktop", new Set())).filter(
+    (candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action),
+  );
+  expect(clicks.map((candidate) => candidate.label)).toEqual(["1", "2", "3"]);
+});
+
+test("時間上限で取得済みの root を残して探索を止める", async ({ browser }) => {
+  // 壁時計の上限は失敗にせず、取得済みのグラフと診断を返す。
+  const context = await browser.newContext();
+  const html = `<button id="append">追加</button><main></main>
+    <script>document.querySelector('#append').onclick=()=>document.querySelector('main').append(document.createElement('span'))</script>`;
+  const result = await exploreStates({
+    open: fixtureOpener(context, html),
+    viewport: "desktop",
+    limits: { ...LIMITS, maxSeconds: 0 },
+    siteFiles: new Set(),
+  });
+  expect(result.boundsHit).toContain("time");
+  expect(Object.keys(result.states)).toContain("root");
+  await context.close();
+});
+
+test("状態の展開を進行 log へ逐次通知する", async ({ browser }) => {
+  // 呼び出し元が root と到達状態の進行を処理中に観測できる。
+  const context = await browser.newContext();
+  const html = `<button id="open">開く</button><dialog id="dialog"><p>内容</p></dialog>
+    <script>document.querySelector('#open').onclick=()=>document.querySelector('#dialog').showModal()</script>`;
+  const lines: string[] = [];
+  await exploreStates({
+    open: fixtureOpener(context, html),
+    viewport: "desktop",
+    limits: LIMITS,
+    siteFiles: new Set(),
+    onProgress: (line) => lines.push(line),
+  });
+  expect(lines).toEqual(expect.arrayContaining([expect.stringMatching(/^展開 root/), expect.stringMatching(/^展開 s-/)]));
   await context.close();
 });
