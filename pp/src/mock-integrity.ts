@@ -1,6 +1,7 @@
 // 凍結前の mock 自身の破れを機械で出す。app ではなく mock を見るので、実装より前に落とせる
 // MOCK201 = 横スクロール / MOCK202 = はみ出した要素 / MOCK203 = 操作要素が覆われている
 // MOCK204 = 画面間で同じものが違う言い方をされている / MOCK205 = dialog が viewport に収まらない
+// MOCK206 = 画面の角丸が design system に無い
 // 凍結を止めるのは 201/202/203/205。実装が mock を写す厳密さを、mock の画面どうしへ当てない
 import type { Page } from "@playwright/test";
 
@@ -11,7 +12,7 @@ export interface Finding {
 }
 
 // 画面ごとの言い方の違いは意匠の判断。揃えると見た目や読みやすさが壊れることがあるので、機械は知らせるだけ
-const ADVISORY_IDS: ReadonlySet<string> = new Set(["MOCK204"]);
+const ADVISORY_IDS: ReadonlySet<string> = new Set(["MOCK204", "MOCK206"]);
 
 export const isAdvisory = (finding: Finding): boolean => ADVISORY_IDS.has(finding.id);
 
@@ -181,6 +182,33 @@ export async function readVocabulary(page: Page): Promise<ScreenVocabulary> {
   }, NAVIGATION_LINK_SELECTOR);
 }
 
+export async function readRadii(page: Page): Promise<Record<string, number>> {
+  return page.evaluate(() => {
+    const radii: Record<string, number> = {};
+    const properties = [
+      "borderTopLeftRadius",
+      "borderTopRightRadius",
+      "borderBottomRightRadius",
+      "borderBottomLeftRadius",
+    ] as const;
+    for (const element of Array.from(document.querySelectorAll("*"))) {
+      // 祖先が display:none でも自分の computed display は none にならないので、描画矩形の有無で見る
+      if (element.getClientRects().length === 0) continue;
+      const style = getComputedStyle(element);
+      const values = new Set<string>();
+      for (const property of properties) {
+        const value = style[property];
+        if (value.endsWith("%") && Number.parseFloat(value) !== 0) values.add(value);
+        else if (value.endsWith("px") && Number.parseFloat(value) !== 0) {
+          values.add(String(Math.round(Number.parseFloat(value))));
+        }
+      }
+      for (const value of values) radii[value] = (radii[value] ?? 0) + 1;
+    }
+    return radii;
+  });
+}
+
 // 同じ幅で何十件も並べても直す順は変わらない。右へ出ている順に上位だけ挙げ、残りは件数で示す
 const NAMED_OVERFLOW_LIMIT = 5;
 
@@ -249,4 +277,58 @@ export function vocabularyFindings(
   // token 名の母体は見本帳。値が画面と割れたら見本側の生成ぶれなので、こちらは比べる
   collect((vocabulary) => vocabulary.tokens, "token", []);
   return findings;
+}
+
+const radiusOrder = (a: string, b: string): number =>
+  Number.parseFloat(a) - Number.parseFloat(b) || a.localeCompare(b);
+
+export function resolveRadiusScale(
+  declaration: string | null,
+  referenceRadii: Record<string, Record<string, number>>,
+): ReadonlySet<string> {
+  if (declaration === null) {
+    return new Set(Object.values(referenceRadii).flatMap((radii) => Object.keys(radii)).sort(radiusOrder));
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(declaration);
+  } catch {
+    throw new Error("pp: design-scale.json は version と radius を持つ JSON で書く");
+  }
+  const scale = parsed as { version?: unknown; radius?: unknown };
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    scale.version !== "1" ||
+    !Array.isArray(scale.radius) ||
+    scale.radius.some(
+      (value) =>
+        !(
+          (typeof value === "number" && Number.isFinite(value)) ||
+          (typeof value === "string" && /^\d+(?:\.\d+)?%$/.test(value))
+        ),
+    )
+  ) {
+    throw new Error("pp: design-scale.json は version \"1\" と number または % の radius 配列で書く");
+  }
+  return new Set(scale.radius.map(String));
+}
+
+export function radiusFindings(
+  radii: Record<string, Record<string, number>>,
+  scale: ReadonlySet<string>,
+  referencePages: readonly string[],
+): Finding[] {
+  return Object.entries(radii).flatMap(([screen, values]) =>
+    referencePages.includes(screen)
+      ? []
+      : Object.entries(values)
+          .filter(([value]) => !scale.has(value))
+          .sort(([a], [b]) => radiusOrder(a, b))
+          .map(([value, count]) => ({
+            id: "MOCK206",
+            screen,
+            detail: `角丸 ${value.endsWith("%") ? value : `${value}px`} が design system に無い（${count} 箇所）`,
+          })),
+  );
 }

@@ -13,7 +13,10 @@ import {
   findCoveredControls,
   findUnfitDialogs,
   measureWidth,
+  radiusFindings,
+  readRadii,
   readVocabulary,
+  resolveRadiusScale,
   vocabularyFindings,
   widthFindings,
 } from "../src/mock-integrity";
@@ -232,5 +235,46 @@ test.describe("mock-integrity — 凍結を止めるのはどれか", () => {
   test("割れだけの mock は通り、壊れが 1 つでも混じれば止まる", () => {
     expect(blockingFindings([finding("MOCK204"), finding("MOCK204")])).toEqual([]);
     expect(blockingFindings([finding("MOCK204"), finding("MOCK201")])).toEqual([finding("MOCK201")]);
+  });
+});
+
+test.describe("mock-integrity — design system の角丸", () => {
+  test("可視要素ごとに 0 以外の角丸を数える", async ({ browser }) => {
+    const context = await browser.newContext(page360);
+    const page = await context.newPage();
+    await open(
+      page,
+      `<div style="border-radius:14px"></div><div style="border-radius:14px"></div>
+      <div style="border-radius:22px"></div><div style="display:none;border-radius:9px"></div>
+      <div style="display:none"><div style="border-radius:11px"></div></div>`,
+    );
+    expect(await readRadii(page)).toEqual({ "14": 2, "22": 1 });
+    await context.close();
+  });
+
+  test("宣言に無い角丸だけを数値順で挙げ、見本 page は対象外にする", () => {
+    const findings = radiusFindings(
+      { index: { "9": 3, "14": 5, "18": 2 }, sample: { "6": 1 } },
+      new Set(["14", "22", "28", "999"]),
+      ["sample"],
+    );
+    expect(findings).toEqual([
+      { id: "MOCK206", screen: "index", detail: "角丸 9px が design system に無い（3 箇所）" },
+      { id: "MOCK206", screen: "index", detail: "角丸 18px が design system に無い（2 箇所）" },
+    ]);
+  });
+
+  test("宣言に無い角丸は凍結を止めない", () => {
+    expect(blockingFindings([{ id: "MOCK206", screen: "index", detail: "角丸 9px" }])).toEqual([]);
+  });
+
+  test("宣言があればその値を使い、無ければ見本 page の使用値を使う", () => {
+    const referenceRadii = { sample: { "14": 2, "22": 1 } };
+    expect([...resolveRadiusScale('{"version":"1","radius":[28,999,"50%"]}', referenceRadii)]).toEqual([
+      "28",
+      "999",
+      "50%",
+    ]);
+    expect([...resolveRadiusScale(null, referenceRadii)]).toEqual(["14", "22"]);
   });
 });

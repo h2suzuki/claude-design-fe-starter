@@ -56,6 +56,9 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    | MOCK203 | 操作要素が他の要素に覆われている | 基準 2 viewport・1 画面ぶんずつ送りながら |
    | MOCK204 | 画面間で値が割れている | nav/header/footer のリンク文言と `:root` の custom property |
    | MOCK205 | dialog が viewport に収まらない | 基準 2 viewport・DOM にある dialog を 1 つずつ現して測る |
+   | MOCK206 | 画面の角丸が design system に無い | 見本 page の使用値か design-scale.json の宣言と突き合わせ。気づき |
+
+   `design-scale.json` は `docs/presentation/ui-mock/design-scale.json` に `{ "version": "1", "radius": [14, 22, 28, 999] }` の形で置く。置かれていない場合は、`reference-pages.json` で宣言した見本 page が実際に使っている角丸と突き合わせる
 
    **検査していないもの**: click で初めて mount する dialog（DOM に無いので測れない）、本文中のリンク文言（文脈で言い方が変わってよい）、意匠そのものの良し悪し。これらは screen-loop ⑧ の人間受入で見る
 7. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する（`bun run --cwd pp mock:screenshots`。引数なしで `export/` の全画面を撮り、資産の 404 と abort があれば落ちる（外部 embed の abort は閉包の外なので落とさない）。`reference-pages.json` の見本 page は画面ではないので撮らない）。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — 同じ viewport・同じ DPR で撮った app 側の画と寸法が揃うので、mock と実装の pixel 差はここから直接取れる（`pp/` の self-baseline は app 自身の過去としか比べないため、mock との一致は見ていない）。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
