@@ -2,7 +2,7 @@
 // 同じ絵が mock と実装で違う markup になっても 1 枚 1 箱に揃うことをここで固定する
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { boxesAgree, collectImageBoxes, describeCoverage, describeExcluded } from "../src/image-boxes";
+import { blurBleed, boxesAgree, collectImageBoxes, describeCoverage, describeExcluded, padBoxes } from "../src/image-boxes";
 
 const PIX = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
@@ -98,5 +98,25 @@ test.describe("describeExcluded", () => {
     expect(scrolled).toBeGreaterThan(0);
     expect(pageBox!.y).toBe(1000);
     expect(viewportBox!.y).toBe(1000 - scrolled);
+  });
+});
+
+// dialog の backdrop-filter は mask の箱の外へ blur 半径ぶん滲むので、その状態では箱を広げないと縁が比較に残る
+test.describe("blur bleed", () => {
+  test("有効な backdrop-filter / filter の最大 blur 半径を返し、無ければ 0", async ({ page }) => {
+    await page.setContent(document_(`<img src="${PIX}" alt="">`));
+    expect(await blurBleed(page)).toBe(0);
+    await page.setContent(
+      document_(
+        `<img src="${PIX}" alt=""><div style="position:fixed;inset:0;backdrop-filter:blur(3px)"></div><div style="filter:blur(5px)">x</div><div hidden style="filter:blur(9px)"></div>`,
+      ),
+    );
+    expect(await blurBleed(page)).toBe(5);
+  });
+
+  test("padBoxes は四方に余白を足し、0 なら箱を変えない", () => {
+    const box = { x: 10, y: 20, width: 30, height: 40, src: "a" };
+    expect(padBoxes([box], 3)).toEqual([{ x: 7, y: 17, width: 36, height: 46, src: "a" }]);
+    expect(padBoxes([box], 0)).toEqual([box]);
   });
 });

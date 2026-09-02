@@ -28,7 +28,7 @@ import { SELECTOR_MAP } from "../src/selector-map";
 import { mapPathToApp, replayOnApp, summarizeFailures } from "../src/state-parity";
 import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { diffPagePngs } from "../src/page-diff";
-import { boxesAgree, collectImageBoxes, describeCoverage, describeExcluded } from "../src/image-boxes";
+import { blurBleed, boxesAgree, collectImageBoxes, describeCoverage, describeExcluded, padBoxes } from "../src/image-boxes";
 import type { PageDiffResult } from "../src/page-diff";
 
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "page-parity");
@@ -140,7 +140,8 @@ for (const [label, contextOptions] of BASES) {
             collectImageBoxes(appPage, { origin: "viewport" }),
           ]);
           const targets = imageTargets(keepImplEntries());
-          const excluded = mockBoxes.filter((box) => targets.some((target) => box.src.includes(target)));
+          const bleed = Math.max(...(await Promise.all([blurBleed(mockPage), blurBleed(appPage)])));
+          const excluded = padBoxes(mockBoxes.filter((box) => targets.some((target) => box.src.includes(target))), bleed);
           const [mockPng, appPng] = await Promise.all([
             mockPage.screenshot({ type: "png", fullPage: false }).then((png) => PNG.sync.read(png)),
             appPage.screenshot({ type: "png", fullPage: false }).then((png) => PNG.sync.read(png)),

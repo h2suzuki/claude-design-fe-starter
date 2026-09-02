@@ -26,6 +26,23 @@ export const collectImageBoxes = async (page: Page, options: { origin?: "page" |
     { selector: IMAGE_BOX_SELECTOR, viewport: options.origin === "viewport" },
   );
 
+// backdrop-filter / filter の blur は要素の縁から半径ぶん滲むので、状態の screenshot ではその幅だけ mask を広げる
+export const blurBleed = async (page: Page): Promise<number> =>
+  page.evaluate(() =>
+    Math.max(
+      0,
+      ...Array.from(document.querySelectorAll("*"))
+        .filter((el) => el.getClientRects().length > 0)
+        .flatMap((el) => {
+          const style = getComputedStyle(el);
+          return [style.backdropFilter, style.filter].map((value) => Number(/blur\((\d+(?:\.\d+)?)px\)/.exec(value)?.[1] ?? 0));
+        }),
+    ),
+  );
+
+export const padBoxes = <T extends Box>(boxes: readonly T[], pad: number): T[] =>
+  boxes.map((box) => ({ ...box, x: box.x - pad, y: box.y - pad, width: box.width + pad * 2, height: box.height + pad * 2 }));
+
 // 1px 未満のずれは縮小時の丸めで出る。ここは「マスクを当ててよいか」の判定なので、寸法の厳密比較は parity に任せる
 export const boxesAgree = (mock: readonly Box[], app: readonly Box[]): boolean =>
   mock.length === app.length &&
