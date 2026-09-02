@@ -6,7 +6,7 @@ export const SCREEN_SUFFIX = ".ui-ast.json";
 
 export interface AstNode {
   binding?: { visualId?: unknown };
-  source?: { nodeRef?: unknown };
+  source?: { nodeRef?: unknown; state?: unknown };
   children?: AstNode[];
 }
 

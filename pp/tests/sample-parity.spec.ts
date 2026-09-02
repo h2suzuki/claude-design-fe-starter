@@ -20,7 +20,7 @@ import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { openMock } from "../src/targets/mock-target";
 import { openApp, openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
-import { ANCHOR_VISUAL_ID, SELECTOR_MAP } from "../src/selector-map";
+import { ANCHOR_VISUAL_ID, SELECTOR_MAP, STATE_ONLY_IDS } from "../src/selector-map";
 import { STYLE_ALLOWLIST } from "../src/style-allowlist";
 import { dumpVisualIds } from "../src/dump";
 import { diffStyles, diffGeometry } from "../src/diff";
@@ -29,6 +29,8 @@ import { writeRunSummary } from "../src/artifact-writer";
 import type { VisualIdReport } from "../src/artifact-writer";
 
 const IDS = Object.keys(SELECTOR_MAP);
+// overlay 配下の id は操作前の DOM に無く、基準幅で突合すると必ず MISS になる
+const BASE_IDS = IDS.filter((id) => !STATE_ONLY_IDS.includes(id));
 const AST_SCREEN = findScreenForMock(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE).match?.screen;
 const AST_NODES = [...(AST_SCREEN?.children ?? []), ...(AST_SCREEN?.overlays ?? [])];
 
@@ -45,7 +47,7 @@ for (const [label, contextOptions] of BASES) {
     test.skip(!APP_CONFIGURED, "PP_APP_URL 未設定 — app の dev server を起動して URL を渡す");
 
     test("all mapped visual ids: style/geometry diff = 0", async ({ browser }) => {
-      const anchor = SELECTOR_MAP[ANCHOR_VISUAL_ID] ?? SELECTOR_MAP[IDS[0] as string];
+      const anchor = SELECTOR_MAP[ANCHOR_VISUAL_ID] ?? SELECTOR_MAP[BASE_IDS[0] as string];
       if (!anchor) throw new Error("pp: SELECTOR_MAP is empty");
       const mockCtx = await browser.newContext(contextOptions);
       const appCtx = await browser.newContext(contextOptions);
@@ -55,20 +57,20 @@ for (const [label, contextOptions] of BASES) {
         const mockPage = await openMock(mockCtx, MOCK_ENTRY_FILE, anchor.mockSel);
         const appPage = await openApp(appCtx, { readySelector: anchor.appSel, path: CURRENT_SCREEN!.entryPath });
 
-        const selMock = Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.mockSel]));
-        const selApp = Object.fromEntries(IDS.map((id) => [id, SELECTOR_MAP[id]!.appSel]));
+        const selMock = Object.fromEntries(BASE_IDS.map((id) => [id, SELECTOR_MAP[id]!.mockSel]));
+        const selApp = Object.fromEntries(BASE_IDS.map((id) => [id, SELECTOR_MAP[id]!.appSel]));
         const [mock, app] = await Promise.all([
           dumpVisualIds(mockPage, selMock, anchor.mockSel, STYLE_ALLOWLIST),
           dumpVisualIds(appPage, selApp, anchor.appSel, STYLE_ALLOWLIST),
         ]);
 
-        const { diffs: allStyleDiffs, missing } = diffStyles(mock, app, IDS, STYLE_ALLOWLIST);
-        const { diffs: allGeometryDiffs } = diffGeometry(mock, app, IDS);
+        const { diffs: allStyleDiffs, missing } = diffStyles(mock, app, BASE_IDS, STYLE_ALLOWLIST);
+        const { diffs: allGeometryDiffs } = diffGeometry(mock, app, BASE_IDS);
         // 台帳が名指しした差分だけ落とさない。名指しに無いものは今までどおり落ちる
         const ledger = keepImplEntries();
         const styleDiffs = withoutDeclaredStyles(allStyleDiffs, styleTargets(ledger));
         const geometryDiffs = withoutDeclaredGeometry(allGeometryDiffs, geometryTargets(ledger));
-        const reports: VisualIdReport[] = IDS.map((visualId) => ({
+        const reports: VisualIdReport[] = BASE_IDS.map((visualId) => ({
           visualId,
           styleDiffs: styleDiffs.filter((d) => d.visualId === visualId),
           geometryDiffs: geometryDiffs.filter((d) => d.visualId === visualId),

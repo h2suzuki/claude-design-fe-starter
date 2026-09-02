@@ -19,6 +19,8 @@ const derived = deriveSelectorMap(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE);
 
 export const SELECTOR_MAP: Record<string, SelectorPair> = { ...derived.pairs, ...MANUAL_PAIRS };
 export const SELECTOR_MAP_ISSUES: readonly string[] = derived.issues;
+// 操作後にしか現れない id。基準幅の突合からは外し、状態突合だけが使う
+export const STATE_ONLY_IDS: readonly string[] = derived.stateOnly.filter((visualId) => !(visualId in MANUAL_PAIRS));
 
 // geometry 比較の座標原点にする visual id（未指定なら SELECTOR_MAP の先頭 entry を使う）
 export const ANCHOR_VISUAL_ID = "";
