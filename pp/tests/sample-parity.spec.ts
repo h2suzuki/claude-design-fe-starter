@@ -18,7 +18,7 @@ import { screenSlug } from "../src/mock-screens";
 import { mapPathToApp, replayOnApp, summarizeFailures } from "../src/state-parity";
 import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { openMock } from "../src/targets/mock-target";
-import { openApp } from "../src/targets/app-target";
+import { openApp, openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
 import { ANCHOR_VISUAL_ID, SELECTOR_MAP } from "../src/selector-map";
 import { STYLE_ALLOWLIST } from "../src/style-allowlist";
@@ -117,7 +117,7 @@ for (const [label, contextOptions] of BASES) {
           }
           const anchorId = stateIds.includes(ANCHOR_VISUAL_ID) ? ANCHOR_VISUAL_ID : stateIds[0]!;
           const anchor = SELECTOR_MAP[anchorId]!;
-          const appPage = await openApp(appCtx, { readySelector: baseAnchor.appSel, path: CURRENT_SCREEN!.entryPath });
+          const appPage = await openScreen(appCtx, CURRENT_SCREEN!);
           try {
             await replayOnApp(appPage, mapped.steps);
           } catch (error) {
