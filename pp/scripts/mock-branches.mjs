@@ -11,7 +11,7 @@ const EXPORT_DIR = path.resolve(SCRIPT_DIR, '../../docs/presentation/ui-mock/exp
 const HTML_RE = /\.html?$/i;
 const SCRIPT_RE = /\.m?js$/i;
 const SCANNED_RE = /\.(?:html?|m?js)$/i;
-const KINDS = ['ternary', 'conditional-text', 'class-switch', 'case', 'fixed-logic'];
+const KINDS = ['ternary', 'conditional-text', 'class-switch', 'case', 'fixed-logic', 'history'];
 
 const INLINE_SCRIPT = /<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
 const TEXT_SINK = /\.(?:textContent|innerText|innerHTML|title|ariaLabel)\s*=\s*/g;
@@ -20,6 +20,10 @@ const CLASS_NAME = /\.(?:className)\s*=\s*/g;
 const DATASET = /\.dataset\s*\.\s*[A-Za-z_$][\w$]*\s*=\s*/g;
 const SET_ATTRIBUTE = /\.setAttribute\s*\(\s*/g;
 const CASE_LABEL = /\bcase\s+/g;
+// URL に状態を持つ mock は「戻る」で画面が変わるので、履歴を触る file を凍結時に一覧できるようにする
+const HISTORY_CALL = /\b(?:pushState|replaceState)\s*\(/g;
+const HISTORY_HASH = /\blocation\s*\.\s*hash\s*=(?!=)/g;
+const HISTORY_EVENTS = new Set(['hashchange', 'popstate', 'pageshow']);
 // 左辺（識別子・呼び出し・添字末尾）と数値定数の比較。sample logic（第 5 木曜・2 木は 3 枠）はここに出る
 const LEFT_OPERAND = '(?:[A-Za-z_$][\\w$]*(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*)*(?:\\s*\\([^()]*\\))?|\\)|\\])';
 const FIXED_LOGIC = new RegExp(`${LEFT_OPERAND}\\s*(?:===|!==|==|!=|>=|<=|>|<|%)\\s*-?\\d+\\b`, 'g');
@@ -171,6 +175,13 @@ export function extractBranches(source, fileName) {
   for (const match of masked.matchAll(CASE_LABEL)) {
     const literal = literalAt(masked, literals, match.index + match[0].length);
     if (literal && isDisplayLiteral(masked, literal)) push(match.index, 'case', literal.value);
+  }
+
+  for (const pattern of [HISTORY_CALL, HISTORY_HASH]) {
+    for (const match of masked.matchAll(pattern)) push(match.index, 'history', match[0].replace(/\s+/g, ''));
+  }
+  for (const literal of literals.values()) {
+    if (HISTORY_EVENTS.has(literal.value)) push(literal.start, 'history', `"${literal.value}"`);
   }
 
   for (const match of masked.matchAll(FIXED_LOGIC)) {

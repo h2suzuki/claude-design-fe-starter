@@ -9,6 +9,7 @@ import type { FrozenStateGraph } from "./state-walk";
 
 export type AppAction =
   | { kind: "click"; appSel: string }
+  | { kind: "back"; appSel: string }
   | { kind: "fill"; appSel: string; value: string }
   | { kind: "backdrop" }
   | { kind: "key"; key: "Escape" }
@@ -80,11 +81,12 @@ const mappedSelectorAction = async (
   candidates: AppSelectorCandidate[],
 ): Promise<AppAction | null> => {
   const action = edge.action;
-  if (action.kind !== "click" && action.kind !== "fill") return null;
+  if (action.kind !== "click" && action.kind !== "fill" && action.kind !== "back") return null;
   if (action.kind === "click" && action.selector === null) return { kind: "backdrop" };
   const appSel = await appSelectorForAction(page, action.selector, candidates);
   if (!appSel) return null;
-  return action.kind === "fill" ? { kind: "fill", appSel, value: action.value } : { kind: "click", appSel };
+  if (action.kind === "fill") return { kind: "fill", appSel, value: action.value };
+  return { kind: action.kind === "back" ? "back" : "click", appSel };
 };
 
 // 探索が書く selector は body からの full path で、失敗一覧では末尾だけあれば要素を特定できる
@@ -109,7 +111,7 @@ export async function mapPathToApp(
     state.path,
     async (edge) => {
       const { action } = edge;
-      if (action.kind === "click" || action.kind === "fill") {
+      if (action.kind === "click" || action.kind === "fill" || action.kind === "back") {
         const mapped = await mappedSelectorAction(mockPage, edge, candidates);
         if (mapped) result.steps.push(mapped);
         else result.unmapped.push({ edgeId: edge.id, reason: `visualId 無し: ${shortSelector(action.selector ?? "")} ${edge.label}` });
@@ -138,6 +140,11 @@ export async function replayOnApp(appPage: Page, steps: AppAction[]): Promise<vo
   for (const step of steps) {
     if (step.kind === "click") {
       await appPage.locator(step.appSel).click();
+    } else if (step.kind === "back") {
+      await appPage.locator(step.appSel).click();
+      await appPage.waitForLoadState("load");
+      await appPage.goBack();
+      await appPage.waitForLoadState("load");
     } else if (step.kind === "backdrop") {
       await performAction(appPage, { kind: "click", selector: null, backdrop: true });
     } else if (step.kind === "key") {

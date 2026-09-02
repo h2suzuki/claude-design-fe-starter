@@ -98,19 +98,31 @@ test("深さ上限で安全に探索を止める", async ({ browser }) => {
 });
 
 test("export 内リンクと外部リンクは遷移せず分類する", async ({ browser }) => {
-  // 別画面と外部サイトへのリンクは click の副作用を起こさず行き先だけを辺に残す。
+  // 別画面と外部サイトへのリンクは行き先だけを辺に残し、往復して戻る back 辺だけが元の状態へ閉じる。
   const context = await browser.newContext();
-  const html = `<base href="http://mock.local/root.html"><a id="site" href="other.html">別画面</a>
-    <a id="external" href="https://example.com/path">外部</a>`;
+  await context.route("http://mock.local/**", (route) =>
+    route.fulfill({
+      contentType: "text/html; charset=utf-8",
+      body: route.request().url().includes("other.html")
+        ? "<main>別画面</main>"
+        : `<a id="site" href="other.html">別画面</a><a id="external" href="https://example.com/path">外部</a>`,
+    }),
+  );
+  const open = async (): Promise<Page> => {
+    const page = await context.newPage();
+    await page.goto("http://mock.local/root.html");
+    return page;
+  };
   const result = await exploreStates({
-    open: fixtureOpener(context, html),
+    open,
     viewport: "desktop",
     limits: LIMITS,
     siteFiles: new Set(["root.html", "other.html"]),
   });
-  expect(result.edges.map((edge) => edge.action)).toEqual([
-    { kind: "navigate", selector: "body > a:nth-child(1)", file: "other.html" },
-    { kind: "external", selector: "body > a:nth-child(2)", url: "https://example.com/path" },
+  expect(result.edges.map((edge) => [edge.action, edge.to])).toEqual([
+    [{ kind: "navigate", selector: "body > a:nth-child(1)", file: "other.html" }, undefined],
+    [{ kind: "back", selector: "body > a:nth-child(1)", file: "other.html" }, "root"],
+    [{ kind: "external", selector: "body > a:nth-child(2)", url: "https://example.com/path" }, undefined],
   ]);
   expect(Object.keys(result.states)).toEqual(["root"]);
   await context.close();
@@ -229,5 +241,58 @@ test("空の可視入力を全部埋める複合辺で filled 状態を作り、
   const sent = result.edges.find((edge) => edge.from === "root+filled" && edge.label === "送信");
   expect(sent?.to).toMatch(/^s-/);
   expect(result.replayFailures).toEqual([]);
+  await context.close();
+});
+
+const backFixture = (context: BrowserContext, restore: boolean): (() => Promise<Page>) => {
+  const body = `<button id="open">開く</button><dialog><a id="go" href="/other.html">会場</a></dialog>
+    <script>
+      const dialog = document.querySelector("dialog");
+      document.querySelector("#open").onclick = () => { dialog.showModal(); location.hash = "#open"; };
+      ${restore ? 'if (location.hash === "#open") dialog.showModal();' : ""}
+    </script>`;
+  return async () => {
+    await context.route("http://fixture.local/**", (route) =>
+      route.fulfill({
+        contentType: "text/html; charset=utf-8",
+        body: route.request().url().includes("other.html") ? "<main>会場</main>" : body,
+      }),
+    );
+    const page = await context.newPage();
+    await page.goto("http://fixture.local/");
+    return page;
+  };
+};
+
+// overlay からリンクで出て戻る経路は、辿って戻らないと辺にならず復元の有無を比べられない
+test("別画面リンクを辿って戻る back 辺を記録し、復元された overlay は元の状態へ畳む", async ({ browser }) => {
+  const context = await browser.newContext();
+  const result = await exploreStates({
+    open: backFixture(context, true),
+    viewport: "desktop",
+    limits: LIMITS,
+    siteFiles: new Set(["other.html"]),
+  });
+  const opened = result.edges.find((edge) => edge.from === "root" && edge.action.kind === "click")?.to;
+  expect(opened).toMatch(/^s-/);
+  const back = result.edges.filter((edge) => edge.action.kind === "back");
+  expect(back).toHaveLength(1);
+  expect([back[0]!.from, back[0]!.to, back[0]!.label]).toEqual([opened, opened, "会場 → 戻る"]);
+  expect(result.edges.filter((edge) => edge.action.kind === "navigate").map((edge) => edge.from)).toEqual([opened]);
+  await context.close();
+});
+
+test("戻っても overlay が復元されない mock では back 辺が root を指す", async ({ browser }) => {
+  const context = await browser.newContext();
+  const result = await exploreStates({
+    open: backFixture(context, false),
+    viewport: "desktop",
+    limits: LIMITS,
+    siteFiles: new Set(["other.html"]),
+  });
+  const opened = result.edges.find((edge) => edge.from === "root" && edge.action.kind === "click")?.to;
+  const back = result.edges.filter((edge) => edge.action.kind === "back");
+  expect(back).toHaveLength(1);
+  expect([back[0]!.from, back[0]!.to]).toEqual([opened, "root"]);
   await context.close();
 });

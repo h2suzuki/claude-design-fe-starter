@@ -64,3 +64,13 @@ test("brace 無しの if は拾い、無条件の代入は拾わない", () => {
   expect(conditional.map((r) => r.kind)).toEqual(["conditional-text"]);
   expect(extractBranches('el.textContent = "常時表示";\n', "a.js")).toHaveLength(0);
 });
+
+// URL に状態を持つ mock は「戻る」で画面が変わる。どの file が履歴を触るかは凍結時に一覧できる必要がある
+test("history 操作と履歴 event を history として拾う", () => {
+  const history = extractBranches('history.pushState({}, "", "#cal1");\naddEventListener("popstate", () => {});\n', "a.js");
+  expect(history.map((r) => [r.kind, r.text])).toEqual([
+    ["history", "pushState("],
+    ["history", '"popstate"'],
+  ]);
+  expect(extractBranches('el.textContent = "常時表示";\n', "a.js").some((r) => r.kind === "history")).toBe(false);
+});

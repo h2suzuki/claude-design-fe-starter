@@ -246,3 +246,48 @@ test("fillAll の辺は入力ごとの fill へ写し、1 つでも写せなけ�
   ]);
   await context.close();
 });
+
+// overlay から別画面へ出て戻る経路は、app 側でも同じ往復を踏まないと復元を突合できない
+test("back 辺を app の click と履歴戻りへ写して再生する", async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.route("http://back.local/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: route.request().url().includes("other.html")
+        ? "<main>会場</main>"
+        : `<a id="go" href="/other.html" data-visual-id="venue-link">会場</a>`,
+    }),
+  );
+  const graph: FrozenStateGraph = {
+    states: {
+      root: { depth: 0, path: [], fingerprint: "root", screenshot: null },
+      restored: { depth: 1, path: ["e-back"], fingerprint: "root", screenshot: null },
+    },
+    edges: [
+      {
+        id: "e-back",
+        from: "root",
+        to: "root",
+        action: { kind: "back", selector: "#go", file: "other.html" },
+        label: "会場 → 戻る",
+      },
+    ],
+  };
+  const nodes: AstNode[] = [{ source: { nodeRef: "#go" }, binding: { visualId: "venue-link" } }];
+  const mockPage = await context.newPage();
+  await mockPage.goto("http://back.local/");
+  expect(await mapPathToApp(mockPage, graph, "restored", nodes)).toEqual({
+    steps: [{ kind: "back", appSel: '[data-visual-id="venue-link"]' }],
+    unmapped: [],
+  });
+  expect(await mapPathToApp(mockPage, graph, "restored", [{ source: { nodeRef: "#go" } }])).toEqual({
+    steps: [],
+    unmapped: [{ edgeId: "e-back", reason: "visualId 無し: #go 会場 → 戻る" }],
+  });
+
+  const appPage = await context.newPage();
+  await appPage.goto("http://back.local/");
+  await replayOnApp(appPage, [{ kind: "back", appSel: '[data-visual-id="venue-link"]' }]);
+  expect(appPage.url()).toBe("http://back.local/");
+  await context.close();
+});

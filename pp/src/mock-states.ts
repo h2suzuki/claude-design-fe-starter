@@ -16,6 +16,7 @@ export type MockStateAction =
   | { kind: "fill"; selector: string; value: string }
   | { kind: "fillAll"; fills: { selector: string; value: string }[] }
   | { kind: "navigate"; selector: string; file: string }
+  | { kind: "back"; selector: string; file: string }
   | { kind: "external"; selector: string; url: string };
 
 export interface MockStateNode {
@@ -296,16 +297,21 @@ export async function collectStateActions(
   siteFiles: ReadonlySet<string>,
 ): Promise<StateActionResult> {
   const found = await browserActions(page);
-  const candidates: StateActionCandidate[] = found.clicks.map((candidate) => ({
-    action:
+  const candidates: StateActionCandidate[] = found.clicks.flatMap((candidate): StateActionCandidate[] => {
+    const action: MockStateAction =
       candidate.href === null
         ? { kind: "click", selector: candidate.selector }
         : linkedAction(page.url(), candidate.href, candidate.selector, siteFiles) ?? {
             kind: "click",
             selector: candidate.selector,
-          },
-    label: candidate.label,
-  }));
+          };
+    // 別画面へ出て戻る往復は overlay の復元有無を分ける（辿らないと復元漏れが辺に現れない）
+    if (action.kind !== "navigate") return [{ action, label: candidate.label }];
+    return [
+      { action, label: candidate.label },
+      { action: { kind: "back" as const, selector: action.selector, file: action.file }, label: `${candidate.label} → 戻る` },
+    ];
+  });
   if (found.dialogSelector) {
     candidates.push({ action: { kind: "click", selector: null, backdrop: true }, label: "backdrop" });
     candidates.push({ action: { kind: "key", key: "Escape" }, label: found.dialogLabel });
@@ -391,6 +397,11 @@ export const performAction = async (page: Page, action: MockStateAction): Promis
     await page.keyboard.press(action.key);
   } else if (action.kind === "swipe") {
     await swipe(page, action.direction, action.selector);
+  } else if (action.kind === "back") {
+    await page.locator(action.selector).click();
+    await page.waitForLoadState("load");
+    await page.goBack();
+    await page.waitForLoadState("load");
   } else if (action.kind === "fillAll") {
     for (const fill of action.fills) await fillField(page, fill.selector, fill.value);
   } else {
@@ -511,7 +522,9 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
       const observableChanged = (await domHash(page)) !== before;
       // 埋めても形が変わらない filled 状態は、親と同じ fingerprint のまま別 id で持つ（submit の出発点になる）
       const filled = candidate.action.kind === "fillAll" && fingerprint === states[stateId].fingerprint;
-      if (!filled && fingerprint === states[stateId].fingerprint && !observableChanged) {
+      // 往復して同じ形に戻ったこと自体が「復元された」という所見なので、back の辺は落とさない
+      const back = candidate.action.kind === "back";
+      if (!filled && !back && fingerprint === states[stateId].fingerprint && !observableChanged) {
         unchanged += 1;
         continue;
       }
