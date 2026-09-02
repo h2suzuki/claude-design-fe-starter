@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
 import type { AstNode } from "../src/ast-screen";
-import { mapPathToApp, replayOnApp } from "../src/state-parity";
-import { summarizeFailures } from "../src/state-parity";
+import { mapPathToApp, replayOnApp, shortSelector, summarizeFailures } from "../src/state-parity";
 import type { FrozenStateGraph } from "../src/state-walk";
 
 const GRAPH: FrozenStateGraph = {
@@ -127,4 +126,12 @@ test("失敗一覧は到達不能を理由ごとにまとめ、行数に上限�
   const many = Array.from({ length: 50 }, (_, i) => `state s-${i}: style ${i} / f.json`);
   expect(summarizeFailures(many).split("\n").length).toBe(21);
   expect(summarizeFailures(many)).toContain("他 30 件");
+});
+
+// 到達不能の行は同じ深さの前置きが 35 行並ぶと読めない。末尾だけ残せば要素は特定できる
+test("shortSelector は CSS path の末尾 3 段だけ残す", () => {
+  expect(shortSelector("body > div:nth-child(1) > main > form > div:nth-child(3) > .dp-grid > button:nth-child(2)")).toBe(
+    "… > div:nth-child(3) > .dp-grid > button:nth-child(2)",
+  );
+  expect(shortSelector("#tab")).toBe("#tab");
 });

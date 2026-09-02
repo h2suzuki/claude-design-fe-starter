@@ -63,6 +63,12 @@ const mappedSelectorAction = async (
   return action.kind === "fill" ? { kind: "fill", appSel, value: action.value } : { kind: "click", appSel };
 };
 
+// 探索が書く selector は body からの full path で、失敗一覧では末尾だけあれば要素を特定できる
+export const shortSelector = (selector: string, keep = 3): string => {
+  const parts = selector.split(" > ");
+  return parts.length <= keep ? selector : `… > ${parts.slice(-keep).join(" > ")}`;
+};
+
 export async function mapPathToApp(
   mockPage: Page,
   graph: FrozenStateGraph,
@@ -79,7 +85,7 @@ export async function mapPathToApp(
     if (action.kind === "click" || action.kind === "fill") {
       const mapped = await mappedSelectorAction(mockPage, edge, nodes);
       if (mapped) result.steps.push(mapped);
-      else result.unmapped.push({ edgeId, reason: `visualId 無し: ${action.selector} ${edge.label}` });
+      else result.unmapped.push({ edgeId, reason: `visualId 無し: ${shortSelector(action.selector ?? "")} ${edge.label}` });
     } else if (action.kind === "key") {
       result.steps.push({ kind: "key", key: action.key });
     } else if (action.kind === "swipe") {
