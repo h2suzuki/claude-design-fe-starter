@@ -18,7 +18,8 @@ export interface MappedPath {
   unmapped: { edgeId: string; reason: string }[];
 }
 
-const visualIdForAction = async (page: Page, selector: string, nodes: AstNode[]): Promise<string | null> =>
+// day cell のような index 指定の兄弟は 1 node = 1 visualId に収まらないので、最寄り祖先からの相対 path で指す
+const appSelectorForAction = async (page: Page, selector: string, nodes: AstNode[]): Promise<string | null> =>
   page.evaluate(
     ({ selector: mockSelector, candidates }) => {
       let element: Element | null = null;
@@ -28,14 +29,26 @@ const visualIdForAction = async (page: Page, selector: string, nodes: AstNode[])
         return null;
       }
       if (!element) return null;
-      for (const candidate of candidates) {
-        try {
-          if (element.matches(candidate.nodeRef) || document.querySelector(candidate.nodeRef) === element) {
-            return candidate.visualId;
+      const idFor = (target: Element): string | null => {
+        for (const candidate of candidates) {
+          try {
+            if (candidate.visualId && (target.matches(candidate.nodeRef) || document.querySelector(candidate.nodeRef) === target)) {
+              return candidate.visualId;
+            }
+          } catch {
+            continue;
           }
-        } catch {
-          continue;
         }
+        return null;
+      };
+      const own = idFor(element);
+      if (own) return `[data-visual-id=${JSON.stringify(own)}]`;
+      const segments: string[] = [];
+      for (let node: Element = element; node.parentElement; node = node.parentElement) {
+        const parent = node.parentElement;
+        segments.unshift(` > ${node.tagName.toLowerCase()}:nth-child(${[...parent.children].indexOf(node) + 1})`);
+        const ancestor = idFor(parent);
+        if (ancestor) return `[data-visual-id=${JSON.stringify(ancestor)}]${segments.join("")}`;
       }
       return null;
     },
@@ -57,9 +70,8 @@ const mappedSelectorAction = async (
   const action = edge.action;
   if (action.kind !== "click" && action.kind !== "fill") return null;
   if (action.kind === "click" && action.selector === null) return { kind: "backdrop" };
-  const visualId = await visualIdForAction(page, action.selector, nodes);
-  if (!visualId) return null;
-  const appSel = `[data-visual-id=${JSON.stringify(visualId)}]`;
+  const appSel = await appSelectorForAction(page, action.selector, nodes);
+  if (!appSel) return null;
   return action.kind === "fill" ? { kind: "fill", appSel, value: action.value } : { kind: "click", appSel };
 };
 

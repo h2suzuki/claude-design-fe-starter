@@ -135,3 +135,74 @@ test("shortSelector は CSS path の末尾 3 段だけ残す", () => {
   );
   expect(shortSelector("#tab")).toBe("#tab");
 });
+
+const GRID_GRAPH: FrozenStateGraph = {
+  states: {
+    root: { depth: 0, path: [], fingerprint: "root", screenshot: null },
+    day: { depth: 1, path: ["e-day"], fingerprint: "day", screenshot: null },
+    deep: { depth: 1, path: ["e-deep"], fingerprint: "deep", screenshot: null },
+  },
+  edges: [
+    { id: "e-day", from: "root", to: "day", action: { kind: "click", selector: "#grid > button:nth-child(2)" }, label: "2 日" },
+    {
+      id: "e-deep",
+      from: "root",
+      to: "deep",
+      action: { kind: "click", selector: "#week > div:nth-child(1) > button:nth-child(3)" },
+      label: "水曜",
+    },
+  ],
+};
+
+const GRID_NODES: AstNode[] = [
+  { source: { nodeRef: "#grid" }, binding: { visualId: "day-grid" } },
+  { source: { nodeRef: "#week" }, binding: { visualId: "week-grid" } },
+];
+
+const routeGridFixture = async (context: BrowserContext, app = false): Promise<Page> => {
+  await context.route("http://grid.local/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<div id="grid" ${app ? 'data-visual-id="day-grid"' : ""}><button>1</button><button>2</button><button>3</button></div>
+        <div id="week" ${app ? 'data-visual-id="week-grid"' : ""}><div><button>月</button><button>火</button><button>水</button></div></div>
+        <script>
+          document.body.onclick = (event) => { if (event.target.tagName === "BUTTON") document.body.dataset.picked = event.target.textContent; };
+        </script>`,
+    }),
+  );
+  const page = await context.newPage();
+  await page.goto("http://grid.local/");
+  return page;
+};
+
+test("visual id を持つ最寄り祖先からの nth-child path で兄弟を指す", async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await routeGridFixture(context);
+
+  expect(await mapPathToApp(page, GRID_GRAPH, "day", GRID_NODES)).toEqual({
+    steps: [{ kind: "click", appSel: '[data-visual-id="day-grid"] > button:nth-child(2)' }],
+    unmapped: [],
+  });
+  await context.close();
+});
+
+test("祖先までの段数だけ nth-child を連ねる", async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await routeGridFixture(context);
+
+  expect(await mapPathToApp(page, GRID_GRAPH, "deep", GRID_NODES)).toEqual({
+    steps: [{ kind: "click", appSel: '[data-visual-id="week-grid"] > div:nth-child(1) > button:nth-child(3)' }],
+    unmapped: [],
+  });
+  await context.close();
+});
+
+test("祖先起点の app selector をそのまま app 側で click できる", async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await routeGridFixture(context, true);
+
+  await replayOnApp(page, [{ kind: "click", appSel: '[data-visual-id="day-grid"] > button:nth-child(2)' }]);
+
+  await expect(page.locator('body[data-picked="2"]')).toHaveCount(1);
+  await context.close();
+});
