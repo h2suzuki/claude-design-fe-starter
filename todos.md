@@ -68,6 +68,7 @@ Exit Criteria:
 - [ ] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する
 - [ ] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない
 - [ ] 第 2 段: 深さ 2 以上の状態（dialog の中のタブ切替など）も同じ経路で突合され、iac-web の会場写真 lightbox のタブ 2 枚がその実例として通る
+- [ ] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る
 - [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` に書く
 - [ ] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる
 
@@ -93,7 +94,7 @@ Exit Criteria:
 - [x] 見本 page が「スケール」を文で宣言している場合に備え、PJ が `docs/presentation/ui-mock/design-scale.json` で宣言値を書けば、見本 page の使用値でなく宣言値と突き合わせる（宣言が無ければ使用値）— `776b959`、`resolveRadiusScale`
 - [x] 出力の末尾に、`lint:mock` の MOCK104 と同じ「そのまま貼れる質問文」（宣言に無い値の一覧と「どちらが正か」）が出る — `776b959`
 - [x] test にその case（宣言外の値が気づきになる / 宣言内は出ない / 宣言 file があればそちらが優先）がある — `776b959`、4 case
-- [ ] iac-web の index / trial で、報告済みの宣言外 8 値（6 9 10 11 12 13 16 18 20 24 のうち画面にあるもの）が気づきとして出る
+- [x] iac-web の index / trial で、報告済みの宣言外 8 値（6 9 10 11 12 13 16 18 20 24 のうち画面にあるもの）が気づきとして出る — iac-web 実測 2026-09-02（seed `776b959`、design-scale.json = 14/22/28/999）: 7 画面で 12 件、index 10px・20px / trial 24px など初期状態にある値は全部出て、質問文も印字された。rc=0。picker の中の 6 / 11 / 12 / 13 / 16 は初期状態に無いので出ない（overlay block の第 2 段で状態ごとに集める）
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「design system に不備があるようなら、fe-starter の最初の mock 凍結時に検知して、Claude Design 側に質問すべきです。後になったものがあれば、理由を考えてください。」
 
