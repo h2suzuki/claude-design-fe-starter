@@ -165,3 +165,20 @@ export async function replayOnApp(appPage: Page, steps: AppAction[]): Promise<vo
     await settle(appPage);
   }
 }
+
+// 到達不能は数十状態が同じ trigger を指すので理由ごとに束ね、expect の message が文字列上限を超えないよう行数も切る
+export function summarizeFailures(failures: readonly string[], limit = 20): string {
+  const unreachable = new Map<string, number>();
+  const rest: string[] = [];
+  for (const line of failures) {
+    const match = /^state \S+: 到達不能 \S+ (.*?)(?: \/ (?:summary|artifacts) なし)?$/.exec(line);
+    if (match) unreachable.set(match[1]!, (unreachable.get(match[1]!) ?? 0) + 1);
+    else rest.push(line);
+  }
+  const lines = [
+    ...[...unreachable.entries()].map(([reason, count]) => `到達不能 ${count} 状態: ${reason.slice(0, 200)}`),
+    ...rest,
+  ];
+  if (lines.length <= limit) return lines.join("\n");
+  return [...lines.slice(0, limit), `…他 ${lines.length - limit} 件`].join("\n");
+}

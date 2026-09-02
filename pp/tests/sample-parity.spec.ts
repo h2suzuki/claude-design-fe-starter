@@ -15,7 +15,7 @@ import { installNetworkGuard } from "../src/net-block";
 import { UI_AST_SCREENS_DIR } from "../src/mock-server";
 import { isolateStorage } from "../src/mock-states";
 import { screenSlug } from "../src/mock-screens";
-import { mapPathToApp, replayOnApp } from "../src/state-parity";
+import { mapPathToApp, replayOnApp, summarizeFailures } from "../src/state-parity";
 import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { openMock } from "../src/targets/mock-target";
 import { openApp } from "../src/targets/app-target";
@@ -149,7 +149,7 @@ for (const [label, contextOptions] of BASES) {
           await appCtx.close();
         }
       }
-      expect(failures, failures.join("\n")).toEqual([]);
+      expect(summarizeFailures(failures)).toBe("");
     });
   });
 }

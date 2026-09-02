@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
 import type { AstNode } from "../src/ast-screen";
 import { mapPathToApp, replayOnApp } from "../src/state-parity";
+import { summarizeFailures } from "../src/state-parity";
 import type { FrozenStateGraph } from "../src/state-walk";
 
 const GRAPH: FrozenStateGraph = {
@@ -112,4 +113,18 @@ test("app 操作を一辺ずつ再生して dialog 内の状態へ到達する",
   await expect(page.locator("dialog[open]")).toHaveCount(1);
   await expect(page.locator('dialog[data-state="tab-b"]')).toHaveCount(1);
   await context.close();
+});
+
+test("失敗一覧は到達不能を理由ごとにまとめ、行数に上限を置く", () => {
+  // 78 状態 × 数本の full CSS path をそのまま並べると expect の message が文字列上限を超える
+  const unreachable = Array.from({ length: 30 }, (_, i) => `state s-${i}: 到達不能 e${i} visualId 無し: body > div:nth-child(1) > button:nth-child(2) 前月 / summary なし`);
+  const summary = summarizeFailures([...unreachable, "state s-x: style 4 / a.json", "state s-y: pixel 12px / b.png"]);
+  const lines = summary.split("\n");
+  expect(lines[0]).toBe("到達不能 30 状態: visualId 無し: body > div:nth-child(1) > button:nth-child(2) 前月");
+  expect(lines).toContain("state s-x: style 4 / a.json");
+  expect(lines.length).toBe(3);
+  expect(summarizeFailures([])).toBe("");
+  const many = Array.from({ length: 50 }, (_, i) => `state s-${i}: style ${i} / f.json`);
+  expect(summarizeFailures(many).split("\n").length).toBe(21);
+  expect(summarizeFailures(many)).toContain("他 30 件");
 });

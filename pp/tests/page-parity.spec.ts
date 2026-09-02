@@ -25,7 +25,7 @@ import { openMock } from "../src/targets/mock-target";
 import { openScreen } from "../src/targets/app-target";
 import { CURRENT_SCREEN } from "../src/screen-registry";
 import { SELECTOR_MAP } from "../src/selector-map";
-import { mapPathToApp, replayOnApp } from "../src/state-parity";
+import { mapPathToApp, replayOnApp, summarizeFailures } from "../src/state-parity";
 import { loadStateGraph, STATES_DIR, statesInOrder } from "../src/state-walk";
 import { diffPagePngs } from "../src/page-diff";
 import { boxesAgree, collectImageBoxes, describeCoverage, describeExcluded } from "../src/image-boxes";
@@ -154,7 +154,7 @@ for (const [label, contextOptions] of BASES) {
           await appCtx.close();
         }
       }
-      expect(failures, failures.join("\n")).toEqual([]);
+      expect(summarizeFailures(failures)).toBe("");
     });
   });
 }
