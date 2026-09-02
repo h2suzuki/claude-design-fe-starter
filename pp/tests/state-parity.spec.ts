@@ -206,3 +206,43 @@ test("祖先起点の app selector をそのまま app 側で click できる", 
   await expect(page.locator('body[data-picked="2"]')).toHaveCount(1);
   await context.close();
 });
+
+test("fillAll の辺は入力ごとの fill へ写し、1 つでも写せなければ到達不能にする", async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.route("http://form.local/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: `<input id="name"><input id="mail">` }),
+  );
+  const page = await context.newPage();
+  await page.goto("http://form.local/");
+  const graph: FrozenStateGraph = {
+    states: {
+      root: { depth: 0, path: [], fingerprint: "root", screenshot: null },
+      "root+filled": { depth: 1, path: ["e-fill"], fingerprint: "root", screenshot: null },
+    },
+    edges: [
+      {
+        id: "e-fill",
+        from: "root",
+        to: "root+filled",
+        action: { kind: "fillAll", fills: [{ selector: "#name", value: "テスト" }, { selector: "#mail", value: "a@b" }] },
+        label: "入力を埋める",
+      },
+    ],
+  };
+  const both: AstNode[] = [
+    { source: { nodeRef: "#name" }, binding: { visualId: "name" } },
+    { source: { nodeRef: "#mail" }, binding: { visualId: "mail" } },
+  ];
+  expect(await mapPathToApp(page, graph, "root+filled", both)).toEqual({
+    steps: [
+      { kind: "fill", appSel: '[data-visual-id="name"]', value: "テスト" },
+      { kind: "fill", appSel: '[data-visual-id="mail"]', value: "a@b" },
+    ],
+    unmapped: [],
+  });
+  await page.goto("http://form.local/");
+  expect((await mapPathToApp(page, graph, "root+filled", [both[0]!])).unmapped).toEqual([
+    { edgeId: "e-fill", reason: "visualId 無し: #mail 入力を埋める" },
+  ]);
+  await context.close();
+});

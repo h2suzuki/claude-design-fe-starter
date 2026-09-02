@@ -63,7 +63,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    **検査していないもの**: click で初めて mount する dialog（DOM に無いので測れない）、本文中のリンク文言（文脈で言い方が変わってよい）、意匠そのものの良し悪し。これらは screen-loop ⑧ の人間受入で見る
 7. 基準 viewport ごとの参照スクリーンショットを `screenshots/` へ保存する（`bun run --cwd pp mock:screenshots`。引数なしで `export/` の全画面を撮り、資産の 404 と abort があれば落ちる（外部 embed の abort は閉包の外なので落とさない）。`reference-pages.json` の見本 page は画面ではないので撮らない）。**`export/` の全画面分**を撮る — 実装する画面だけでは、AST の region が指す画も、後から他画面を実装するときの参照も欠ける。**fullPage・DPR 1** で撮る — 同じ viewport・同じ DPR で撮った app 側の画と寸法が揃うので、mock と実装の pixel 差はここから直接取れる（`pp/` の self-baseline は app 自身の過去としか比べないため、mock との一致は見ていない）。DPR を上げると mobile の縦長 fullPage が MB 級になり、repo を圧迫するだけで判断の役には立たない
 
-7b. 状態グラフを探索する（`bun run --cwd pp mock:states`。overlay など click で現れる状態と辺を凍結する。同じ親の同種候補が 4 つ以上なら先頭と末尾に代表化し、画面 × viewport の時間上限を適用する。上限到達は気づき、再生の非決定は直すもの）
+7b. 状態グラフを探索する（`bun run --cwd pp mock:states`。overlay など click で現れる状態と辺を凍結する。同じ親の同種候補が 4 つ以上なら先頭と末尾に代表化し、画面 × viewport の時間上限を適用する。空の入力は「全部埋める」1 本の辺で `<state>+filled` 状態にし、そこから送信の経路を探索する。上限到達は気づき、再生の非決定は直すもの）
 
 8. sha256 台帳を更新する（.gitkeep 除外・空白名安全）:
 

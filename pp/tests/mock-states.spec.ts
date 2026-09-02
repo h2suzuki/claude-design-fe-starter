@@ -207,3 +207,27 @@ test("文字の無い icon button は aria-label か title を辺の label に�
   const clicks = await clickCandidates(page);
   expect(clicks.map((candidate) => candidate.label)).toEqual(["前月", "翌月", "次へ"]);
 });
+
+// fill は DOM の形を変えないので単独では状態にならず、埋めてから submit する経路が探索されなかった
+test("空の可視入力を全部埋める複合辺で filled 状態を作り、そこから submit へ進む", async ({ browser }) => {
+  const context = await browser.newContext();
+  const html = `<form><input id="name"><input id="mail" type="email"><button type="button" id="send">送信</button></form><main></main>
+    <script>
+      document.querySelector("#send").onclick = () => {
+        const main = document.querySelector("main");
+        if (document.querySelector("#name").value && document.querySelector("#mail").value && !main.querySelector("p")) {
+          main.append(Object.assign(document.createElement("p"), { textContent: "完了" }));
+        }
+      };
+    </script>`;
+  const result = await exploreStates({ open: fixtureOpener(context, html), viewport: "desktop", limits: LIMITS, siteFiles: new Set() });
+  const fillAll = result.edges.filter((edge) => edge.action.kind === "fillAll");
+  expect(fillAll).toHaveLength(1);
+  expect(fillAll[0]!.from).toBe("root");
+  expect(fillAll[0]!.to).toBe("root+filled");
+  expect(fillAll[0]!.action.kind === "fillAll" ? fillAll[0]!.action.fills.map((fill) => fill.value) : []).toEqual(["テスト", "test@example.com"]);
+  const sent = result.edges.find((edge) => edge.from === "root+filled" && edge.label === "送信");
+  expect(sent?.to).toMatch(/^s-/);
+  expect(result.replayFailures).toEqual([]);
+  await context.close();
+});

@@ -14,6 +14,7 @@ export type MockStateAction =
   | { kind: "key"; key: "Escape" }
   | { kind: "swipe"; selector: string; direction: "left" | "right" }
   | { kind: "fill"; selector: string; value: string }
+  | { kind: "fillAll"; fills: { selector: string; value: string }[] }
   | { kind: "navigate"; selector: string; file: string }
   | { kind: "external"; selector: string; url: string };
 
@@ -81,7 +82,7 @@ interface BrowserCandidate {
   selector: string;
   label: string;
   href: string | null;
-  fill: { tag: "input" | "textarea" | "select"; type: string; value: string | null } | null;
+  fill: { tag: "input" | "textarea" | "select"; type: string; value: string | null; empty: boolean } | null;
 }
 
 interface BrowserActions {
@@ -220,11 +221,11 @@ const inPage = (page: Page, mode: "shape" | "actions"): Promise<string | Browser
         let fill: BrowserCandidate["fill"];
         if (element instanceof HTMLSelectElement) {
           if (element.options.length < 2) return [];
-          fill = { tag: "select", type: "select", value: element.options[1]?.value ?? "" };
+          fill = { tag: "select", type: "select", value: element.options[1]?.value ?? "", empty: element.selectedIndex <= 0 };
         } else if (element instanceof HTMLTextAreaElement) {
-          fill = { tag: "textarea", type: "textarea", value: null };
+          fill = { tag: "textarea", type: "textarea", value: null, empty: element.value === "" };
         } else if (element instanceof HTMLInputElement) {
-          fill = { tag: "input", type: element.type, value: null };
+          fill = { tag: "input", type: element.type, value: null, empty: element.value === "" };
         } else {
           return [];
         }
@@ -321,6 +322,14 @@ export async function collectStateActions(
       label: candidate.label,
     })),
   );
+  // fill 単独では形が変わらず状態にならないので、空の入力を全部埋めてから続ける経路を 1 本足す
+  const empty = found.fills.filter((candidate) => candidate.fill?.empty);
+  if (empty.length > 0) {
+    candidates.push({
+      action: { kind: "fillAll", fills: empty.map((candidate) => ({ selector: candidate.selector, value: representativeValue(candidate) })) },
+      label: "入力を埋める",
+    });
+  }
   return { candidates, sampled: found.sampled };
 }
 
@@ -382,11 +391,17 @@ export const performAction = async (page: Page, action: MockStateAction): Promis
     await page.keyboard.press(action.key);
   } else if (action.kind === "swipe") {
     await swipe(page, action.direction, action.selector);
-  } else if (await page.locator(action.selector).evaluate((element) => element instanceof HTMLSelectElement)) {
-    await page.locator(action.selector).selectOption(action.value);
+  } else if (action.kind === "fillAll") {
+    for (const fill of action.fills) await fillField(page, fill.selector, fill.value);
   } else {
-    await page.locator(action.selector).fill(action.value);
+    await fillField(page, action.selector, action.value);
   }
+};
+
+const fillField = async (page: Page, selector: string, value: string): Promise<void> => {
+  const field = page.locator(selector);
+  if (await field.evaluate((element) => element instanceof HTMLSelectElement)) await field.selectOption(value);
+  else await field.fill(value);
 };
 
 export const settle = async (page: Page): Promise<void> => {
@@ -494,18 +509,20 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
       await settle(page);
       const fingerprint = await fingerprintVisibleDom(page);
       const observableChanged = (await domHash(page)) !== before;
-      if (fingerprint === states[stateId].fingerprint && !observableChanged) {
+      // 埋めても形が変わらない filled 状態は、親と同じ fingerprint のまま別 id で持つ（submit の出発点になる）
+      const filled = candidate.action.kind === "fillAll" && fingerprint === states[stateId].fingerprint;
+      if (!filled && fingerprint === states[stateId].fingerprint && !observableChanged) {
         unchanged += 1;
         continue;
       }
-      const knownId = fingerprints.get(fingerprint);
+      const knownId = filled ? undefined : fingerprints.get(fingerprint);
       if (!knownId && Object.keys(states).length >= options.limits.maxStates) {
         hitBound("states");
       } else {
         const edgeId = `e${edges.length + 1}`;
-        const to = knownId ?? `s-${fingerprint.slice(0, 8)}`;
+        const to = knownId ?? (filled ? `${stateId}+filled` : `s-${fingerprint.slice(0, 8)}`);
         edges.push({ id: edgeId, from: stateId, action: candidate.action, to, label: candidate.label });
-        if (!knownId) {
+        if (!knownId && !states[to]) {
           const screenshot = options.capture ? await options.capture(page, to) : null;
           states[to] = {
             depth: states[stateId].depth + 1,
@@ -513,7 +530,7 @@ export async function exploreStates(options: ExploreStatesOptions): Promise<Mock
             fingerprint,
             screenshot,
           };
-          fingerprints.set(fingerprint, to);
+          if (!filled) fingerprints.set(fingerprint, to);
           queue.push(to);
         }
       }

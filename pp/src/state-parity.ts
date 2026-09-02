@@ -113,6 +113,14 @@ export async function mapPathToApp(
         const mapped = await mappedSelectorAction(mockPage, edge, candidates);
         if (mapped) result.steps.push(mapped);
         else result.unmapped.push({ edgeId: edge.id, reason: `visualId 無し: ${shortSelector(action.selector ?? "")} ${edge.label}` });
+      } else if (action.kind === "fillAll") {
+        const steps: AppAction[] = [];
+        for (const fill of action.fills) {
+          const appSel = await appSelectorForAction(mockPage, fill.selector, candidates);
+          if (appSel) steps.push({ kind: "fill", appSel, value: fill.value });
+          else result.unmapped.push({ edgeId: edge.id, reason: `visualId 無し: ${shortSelector(fill.selector)} ${edge.label}` });
+        }
+        if (steps.length === action.fills.length) result.steps.push(...steps);
       } else if (action.kind === "key") {
         result.steps.push({ kind: "key", key: action.key });
       } else if (action.kind === "swipe") {
