@@ -97,7 +97,7 @@ Work file: `seed-docs/screen-loop.md`（工程の位置）・`seed-docs/pre-impl
 
 Exit Criteria:
 
-- [ ] 工程書に phase の位置（凍結直後、AST 更新の前）と成果物（分岐 × BE 経路の表、分類、裁定）が書かれている
+- [x] 工程書に phase の位置（凍結直後、AST 更新の前）と成果物（分岐 × BE 経路の表、分類、裁定）が書かれている — `1d9a4ab`（screen-loop ②′、質問票「表示分岐と BE 経路」の表と実例 4 行）
 - [ ] mock の JS から表示分岐の候補（文字列リテラルの出し分け・class の切替）を機械で列挙する道具か、無理なら人手の手順がある
 - [x] iac-web で今日手で実施した内容（満席 / 当日枠 / 祝日チップ）が表の実例として載る — `drafts/be-path-table-example.md`（13 分岐、経路あり 8 / BE のバグ 1 / FE の欠落 2 / 到達不能パス 1 / 台帳外差分 1）。seed の文書へ写すのは工程書を書くとき
 
