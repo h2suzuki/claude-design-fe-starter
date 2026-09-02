@@ -204,3 +204,12 @@ test("状態の展開を進行 log へ逐次通知する", async ({ browser }) =
   expect(lines).toEqual(expect.arrayContaining([expect.stringMatching(/^展開 root/), expect.stringMatching(/^展開 s-/)]));
   await context.close();
 });
+
+test("文字の無い icon button は aria-label か title を辺の label にする", async ({ page }) => {
+  // 月送りのような icon だけの button でも、人が辺を読めるように名前を残す。
+  await page.setContent(`<button aria-label="前月"><svg></svg></button><button title="翌月"><svg></svg></button><button>次へ</button>`);
+  const clicks = (await collectStateActions(page, "desktop", new Set())).filter(
+    (candidate) => candidate.action.kind === "click" && !("backdrop" in candidate.action),
+  );
+  expect(clicks.map((candidate) => candidate.label)).toEqual(["前月", "翌月", "次へ"]);
+});

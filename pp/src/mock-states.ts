@@ -171,8 +171,16 @@ const browserActions = (page: Page): Promise<BrowserActions> =>
       }
       return parts.length === 0 ? "body" : `body > ${parts.join(" > ")}`;
     };
+    // icon だけの button は文字が無いので、人が辺を読める名前を aria-label / title から取る
     const label = (element: HTMLElement): string =>
-      [...(element.innerText ?? element.textContent ?? "").trim().replace(/\s+/g, " ")].slice(0, 40).join("");
+      [
+        ...(element.innerText ?? element.textContent ?? "").trim().replace(/\s+/g, " ") ||
+          element.getAttribute("aria-label") ||
+          element.getAttribute("title") ||
+          "",
+      ]
+        .slice(0, 40)
+        .join("");
     const dialogs = [...document.querySelectorAll<HTMLElement>('[role="dialog"], dialog[open]')].filter(isVisible);
     const dialog = dialogs[0] ?? null;
     const all = [...document.body.querySelectorAll<HTMLElement>("*")];
