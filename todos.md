@@ -53,6 +53,23 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
+### overlay（click で開く dialog）が AST の実測と parity 検査の外にある
+
+起票: user 2026-09-02
+Goal: mock が click で初めて DOM に出す overlay（dialog / lightbox / picker）を、開いた状態で AST の `source.region` に測り、pp の structural / pixel 突合の対象に含める。
+Work file: `pp/scripts/ast-refresh.ts`（`screen.children` しか測らない）・`pp/src/screen-registry.ts`（`modals[].run` に開く操作が既にある）・`pp/tests/sample-parity.spec.ts`・`pp/tests/page-parity.spec.ts`・`.claude/skills/ast-extract/40-reconcile-pass.md`（「overlay は省いてよい」を改める）
+
+Exit Criteria:
+
+- [ ] `ast:refresh` が `screen.overlays` の node を、その overlay を開いてから測る。開く操作の出所（mock 側は `triggerNodeIds` の trigger を click / app 側は `modals[].run`）を 1 つに決めて文書に書く
+- [ ] sample-parity / page-parity に「overlay を開いた状態」の突合があり、overlay 配下の `binding.visualId` は base 状態では MISS にならず、開いた状態でだけ突合される
+- [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` か README に書く
+- [ ] iac-web の trial / index / schedule / access の overlay で実測し、overlay の部品が structural / pixel の判定に入ることを確かめる
+
+ユーザー裁定 2026-09-02（iac-web セッション経由）: 「overlay が正しく扱えない問題は、fe-starter に改善を依頼してください。挙動については、mock で十分に作り込まれています。overlay も pp 対象に含めるべきです。」
+
+iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず、11 node とも region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので、overlay 配下に `visualId` を付けると必ず MISS。既存の calendar-dialog / photo-dialog も同じ理由で突合されていない。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
