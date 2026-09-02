@@ -65,10 +65,10 @@ Exit Criteria:
 - [x] 第 1 段: 探索の上限（深さ・1 状態あたりの辺数・総状態数）は `pp/src/config.ts` の定数で持ち、到達したら「気づき」として出して先へ進む（落とさない）— `d193368`、`MOCK_STATE_LIMITS`。初期値は仮置き（comment に明記）
 - [x] 上限の初期値の根拠を iac-web の実測（最大深さ・状態数・辺数）で決め、定数の comment に残す — iac-web 実測 2026-09-02（7 画面 × 2 viewport、最大 深さ 5 / 状態 22 / 辺 162、上限到達 0、合計 14.7 分）→ 12 / 100 / 100 に設定、`pp/src/config.ts`
 - [x] 第 1 段: 凍結手順（README・mock-freeze SKILL）に `mock:states` を足す。単体 test（fingerprint・辺の列挙・上限）がある — `d193368`、手順 7b・`pp/tests/mock-states.spec.ts` 6 case
-- [ ] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する
+- [x] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する — `eb2cd91`（`state-walk.ts` の replay、overlay は現れる最初の状態で測り `source.state` と状態の画を記録。Codex 実装を受け入れ、spec 55 pass・typecheck・CLI を発注側で再実行。iac-web の実測は次の criterion で確かめる）
 - [ ] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない
 - [ ] 第 2 段: 深さ 2 以上の状態（dialog の中のタブ切替など）も同じ経路で突合され、iac-web の会場写真 lightbox のタブ 2 枚がその実例として通る
-- [ ] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る
+- [ ] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る（seed 側は `eb2cd91` で全状態の合算まで実装済み。iac-web の実測待ち）
 - [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` に書く
 - [ ] 第 2 段が入った後、今日 pp/ に足した code（`mock-states` / `state-walk` / MOCK206 / `mock-screenshots` / `mock-lint`）を seed 側で `/simplify` し、spec と typecheck が緑のまま整理されている（install.sh が上書きする file は seed 側で簡素化する、という裁定）
 - [ ] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる
