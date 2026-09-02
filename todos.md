@@ -98,7 +98,7 @@ Work file: `seed-docs/screen-loop.md`（工程の位置）・`seed-docs/pre-impl
 Exit Criteria:
 
 - [x] 工程書に phase の位置（凍結直後、AST 更新の前）と成果物（分岐 × BE 経路の表、分類、裁定）が書かれている — `1d9a4ab`（screen-loop ②′、質問票「表示分岐と BE 経路」の表と実例 4 行）
-- [ ] mock の JS から表示分岐の候補（文字列リテラルの出し分け・class の切替）を機械で列挙する道具か、無理なら人手の手順がある
+- [x] mock の JS から表示分岐の候補（文字列リテラルの出し分け・class の切替）を機械で列挙する道具か、無理なら人手の手順がある — `15bfbb6`（`bun run --cwd pp mock:branches`: 三項演算 / 条件付き textContent / class 切替 / case / 固定値比較の 5 種を Markdown 表で出す。spec 8 pass、一時 fixture で 7 候補を確認）
 - [x] iac-web で今日手で実施した内容（満席 / 当日枠 / 祝日チップ）が表の実例として載る — `drafts/be-path-table-example.md`（13 分岐、経路あり 8 / BE のバグ 1 / FE の欠落 2 / 到達不能パス 1 / 台帳外差分 1）。seed の文書へ写すのは工程書を書くとき
 
 ユーザー指示 2026-09-02（iac-web セッション経由）: 「mock 上の表示を実現する BE 経路の特定をするフェーズを入れること。BE 経路がなければ、バグか、FE の到達不能パス」。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
