@@ -67,12 +67,15 @@ Exit Criteria:
 - [x] 第 1 段: 凍結手順（README・mock-freeze SKILL）に `mock:states` を足す。単体 test（fingerprint・辺の列挙・上限）がある — `d193368`、手順 7b・`pp/tests/mock-states.spec.ts` 6 case
 - [ ] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する
 - [ ] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない
+- [ ] 第 2 段: 深さ 2 以上の状態（dialog の中のタブ切替など）も同じ経路で突合され、iac-web の会場写真 lightbox のタブ 2 枚がその実例として通る
 - [ ] 検査時間の増分を計測して `docs/ui-quality-policy.md` に書く
 - [ ] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる
 
 ユーザー裁定 2026-09-02（iac-web セッション経由）: 「overlay が正しく扱えない問題は、fe-starter に改善を依頼してください。挙動については、mock で十分に作り込まれています。overlay も pp 対象に含めるべきです。」
 
 ユーザー裁定 2026-09-02: 土台は「mock の clickable を全部 click して状態の tree を先に作り、同じ状態に戻ればループ、押すものが無ければ葉として記録し、AST 構築前に行う」。操作は click だけでなく swipe 等も含める。探索深度には上限を設け、到達したらユーザーに情報だけ出して先に進む。上限の値（30 と仮に言った）は根拠のある値として扱わない。
+
+ユーザー裁定 2026-09-02（iac-web セッション経由）: 「クリックしてモーダルがでる画面、モーダル上にさらにタブがある画面は、よくある画面なので、正しく扱えないのは大きな制約に感じます。」dialog 内のタブは探索が clickable として拾う前提で、第 2 段の突合対象に含める。
 
 iac-web の実測 2026-09-02: trial の picker dialog を overlay 11 node として起こしたが `ast:refresh` は `collectNodes(ast.screen.children)` しか測らず region 無し。sample-parity は初期状態で `SELECTOR_MAP` 全 id を突合するので overlay 配下の `visualId` は必ず MISS。modal-geometry-sweep と poststate-sweep は `modals[].run` で開けている。
 
