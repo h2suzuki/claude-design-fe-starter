@@ -88,6 +88,21 @@ Exit Criteria:
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」 追補 3 同日 11:08（verbatim）: 「あなた自分で決めたことから逸脱すると思うなら、メカニカルチェックによる強制が必要です。また、モデル・エフォートは時々見直しも必要です。現実にそぐわなければ、意味がありません。バグを作り込みすぎたり、トークンの消費が過剰だったり。」iac-web の実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本。
 
+### page-parity の状態 test が worker heap 4 GB で OOM になる
+
+起票: user 2026-09-03
+Goal: 状態ごとの parity test（page-parity / sample-parity）が trial のような L 画面でも既定 heap で完走する（`NODE_OPTIONS=--max-old-space-size` の回避は採らない）。
+Work file: `last-session-handoff.md`（同名 section）・`pp/tests/page-parity.spec.ts`・`pp/src/state-parity.ts`・`pp/playwright.config.ts`（`trace: "retain-on-failure"`）
+
+Exit Criteria:
+
+- [x] `3f40238` 状態 line に `heap <MB> MB`（`process.memoryUsage().heapUsed`）が出て、状態ごとの増分を実測できる
+- [ ] iac-web の trial で状態ごとの heap 実測（増分が出る状態と、`test.use({ trace: "off" })` を top-level に置いた時の差）を受け取る
+- [ ] 保持の原因（trace の context 記録 / 実 page の replay / PNG decode のどれか）が 1 文で言え、seed の修正が main に入る
+- [ ] iac-web の trial が既定 heap で完走し、`rounds/2.json` に所要と heap 最大が残る
+
+ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「heap 4095 MB の OOM は、バグですね。」seed 側の再現実験（25 状態 × DPR 3 の screenshot + decode + diff、trace retain-on-failure）では heap 66〜76 MB で増えず、単純 loop では再現しない。
+
 ### 巡ごとの主要統計を session 後も残す規則が無い
 
 起票: user 2026-09-03
