@@ -79,7 +79,7 @@ Exit Criteria:
 
 - [x] `fe5db76` 対応表（step × S/M/L → model / effort、備考に根拠）と横断規則（実装した agent は自分を審査しない / 審査側は実装側と同 tier 以上 / effort は難易度、model は判定の種類で決める）が `seed-docs/llm-steps.md` にある
 - [x] 難易度 S/M/L の判定材料（状態数・BE route 数・overlay の有無）と出所（mock:states の json、②′ の表）が同じ doc にある — `fe5db76`
-- [ ] seed が実行 skill として配る step（⑧ screen-review / ⑦ 赤の診断 / 完了主張の独立検証）の frontmatter の model / effort が表と一致する
+- [x] seed が実行 skill として配る step（⑧ screen-review / ⑦ 赤の診断 / 完了主張の独立検証）の frontmatter の model / effort が表と一致する — `fe5db76` / `bba2e66`（3 skill とも opus / high / context: fork。表の L 列 = 上限）
 - [ ] 難易度 S / M / L は人や LLM が選ばず script が出す: `bun run --cwd pp difficulty` が状態数（states json の viewport 最大）・BE route 数（screens.ts の fixture 登録）・history の有無（mock:branches）から画面ごとの段と根拠を `pp/artifacts/difficulty.json` に書く。上げ下げは日付付き理由が要る
 - [ ] 表どおりの model / effort で実行されたかを機械で確かめる: ⑧ の記録と独立検証の報告に `agentId` を必須にし、`bun run --cwd pp agent-audit` が session transcript からその agent の model / effort を引いて表と突合し、親 session の model で書かれた成果物（subagent の呼び忘れ）を赤、表より上位を警告にする
 - [ ] iac-web が表どおりに ⑧ と独立検証を走らせ、token・所要・指摘数の実測で表を直した報告を受ける
