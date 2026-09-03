@@ -69,6 +69,20 @@ MSG
 fi
 
 read -r STEP SLUG <<<"$DECL"
+
+# screen-loop の外の仕事（handoff の readback 等）は表に無い。親 model の暗黙継承だけを止める
+if [[ $STEP == off-loop ]]; then
+  [[ -n $MODEL ]] && exit 0
+  cat >&2 <<MSG
+$PROG: denied this Agent call. "llm-step: off-loop $SLUG" says the work is
+outside the screen-loop table, which is fine, but "model" is still unset and
+would silently inherit the parent session's model. Pass model explicitly
+(sonnet for drafting / reading back, opus for judgment). This hook never
+modifies any file.
+MSG
+  exit 2
+fi
+
 if ! EXPECT=$(node "$TABLE" --expect "$STEP" "$SLUG" --json 2>&1); then
   cat >&2 <<MSG
 $PROG: denied this Agent call because the step table could not answer for

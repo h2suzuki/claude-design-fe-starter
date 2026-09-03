@@ -57,7 +57,7 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 
 起票: user 2026-09-03
 Goal: レビュー結果を機械で確認できる記録にし、記録が無い・screenshot と合わない・未裁定の指摘があるときは promote 前の検査と hook が止める。レビューに使う model / effort を agent 定義と選定理由で規定する。
-Work file: `pp/scripts/review-check.mjs`・`docs/presentation/ui-review/<slug>.json`（記録）・`.claude/agents/screen-review.md`・`.claude/hooks/block-promote-without-review.sh`・`pp/promote-commands.json`・`docs/ui-quality-policy.md`・`seed-docs/screen-loop.md` ⑧・`seed-docs/adoption.md` §10
+Work file: `last-session-handoff.md`（同名 section）・`pp/scripts/review-check.mjs`・`docs/presentation/ui-review/<slug>.json`（記録）・`.claude/agents/screen-review.md`・`.claude/hooks/block-promote-without-review.sh`・`pp/promote-commands.json`・`docs/ui-quality-policy.md`・`seed-docs/screen-loop.md` ⑧・`seed-docs/adoption.md` §10
 
 Exit Criteria:
 
@@ -73,7 +73,7 @@ Exit Criteria:
 
 起票: user 2026-09-03
 Goal: LLM に任せる step ごとに使う model と effort を、画面の難易度（S / M / L）で幅を持たせて事前に定義し、seed が配る skill の frontmatter と 1 対 1 に対応させる。
-Work file: `seed-docs/llm-steps.md`（対応表と横断規則）・`.claude/skills/screen-review/SKILL.md`・`.claude/skills/gate-diagnose/SKILL.md`・`.claude/skills/verify-claims/SKILL.md`・`docs/ui-quality-policy.md`「レビューに使う LLM の model と effort」
+Work file: `last-session-handoff.md`（同名 section）・`seed-docs/llm-steps.md`（対応表と横断規則）・`.claude/skills/screen-review/SKILL.md`・`.claude/skills/gate-diagnose/SKILL.md`・`.claude/skills/verify-claims/SKILL.md`・`docs/ui-quality-policy.md`「レビューに使う LLM の model と effort」
 
 Exit Criteria:
 
@@ -92,7 +92,7 @@ Exit Criteria:
 
 起票: user 2026-09-03
 Goal: 凍結・gate・mock:states・LLM step・本番 smoke の実測値を巡ごとに追跡 file へ残す形式と規則を seed で決め、凍結と promote の手順に組み込む。
-Work file: `docs/presentation/ui-mock/rounds/<n>.md` と `<n>.json`（案）・`pp/scripts/round-record`（案）・`seed-docs/screen-loop.md`・`.claude/skills/mock-freeze/SKILL.md`・`seed-docs/adoption.md` §10
+Work file: `last-session-handoff.md`（同名 section）・`docs/presentation/ui-mock/rounds/<n>.md` と `<n>.json`・`pp/scripts/round-record.mjs`・`seed-docs/round-record.md`・`seed-docs/screen-loop.md`・`.claude/skills/mock-freeze/SKILL.md`・`seed-docs/adoption.md` §10
 
 Exit Criteria:
 
