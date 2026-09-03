@@ -82,7 +82,8 @@ export function resolveAgent(artefact, lines) {
     groups.set(line.agentId, group);
   }
   const candidates = [...groups.entries()].filter(([, side]) => {
-    if (!side.some((line) => line?.attributionSkill === artefact.step)) return false;
+    // tier 別 skill（screen-review-s 等）は step 名に -s が付くだけ
+    if (!side.some((line) => String(line?.attributionSkill ?? '').replace(/-s$/, '') === artefact.step)) return false;
     const stamps = side.map((line) => Date.parse(line?.timestamp ?? '')).filter((stamp) => Number.isFinite(stamp));
     return stamps.length > 0 && at >= Math.min(...stamps) - 5 * 60_000 && at <= Math.max(...stamps) + 5 * 60_000;
   });

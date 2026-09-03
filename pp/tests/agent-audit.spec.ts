@@ -90,6 +90,13 @@ test("不正な agentId でも skill と時刻で transcript の agentId に帰�
   expect(result.rows[0].line).toContain("agentId（transcript から: subagent-1）");
 });
 
+test("tier 別 skill（-s 付き）の束も同じ step として帰属する", () => {
+  const at = "2026-09-03T10:00:00.000Z";
+  const result = auditArtefacts([review("", "S", at)], [attributedSidechain("small", at, "screen-review-s", "trial")]);
+  expect(result.rows[0]).toMatchObject({ agentId: "small" });
+  expect(result.rows[0].line).not.toContain("該当する subagent が transcript に無い");
+});
+
 test("skill が合っても時刻の範囲外なら赤になる", () => {
   const result = auditArtefacts(
     [review("wrong", "L", "2026-09-03T10:06:00.000Z")],
