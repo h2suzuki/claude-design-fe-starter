@@ -37,7 +37,7 @@ Exit Criteria:
 - [x] `ast:refresh` で region と provenance が追従した — iac-web `a224ffb`（凍結直後に 7 画面）と `94c32f4`（overlay の visualId 追加後に 4 画面再 refresh、trial overlays 12/16）。`COPY_REVIEW` は 3.1 版の差分が角丸 CSS のみで文言差 0 のため追従対象なし（2026-09-03）
 - [x] 更新後の画面で gate が skip ゼロで緑になった — iac-web 2026-09-03、seed `5f04a44`: 7 画面すべて rc 0 / require-no-skips rc 0、trial は 294 passed（13.4 分、状態 parity 178 件・到達不能 0・diff 0・許容 4、heap 最大 320 MB、既定 heap）。KEEP_IMPL の画像除外は page-parity の状態 test で効いている（`describeExcluded` の行）
 - [x] 手順どおりに回らなかった箇所を seed 側で直し、2 回目の実測として記録した — 2026-09-03 に seed で直した 9 件: 画像 mask の座標 / blur の余白と許容（`483552f` で 4） / 状態限定 visualId と祖先 + nth-child / mobile 専用 overlay の実測 / fillAll 辺 / back 辺の ERR_ABORTED / 送信後 smooth scroll の capture race（`3a22aab`） / fake clock 下の timer 掃き（`5f04a44`） / OOM（再現不能、trace と screenshot は off）。実測は iac-web の `rounds/2.json`
-- [ ] 依存の bump（vite 8.2.2 ほか）を **mock 更新より先に単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）— 2 巡目では bump 無し（mode-watcher 1.1.0 の追加は theme 置換と同じ commit `85700c9` で単独 land の検証にならない）。候補の列挙は cache dir を `$TMPDIR` 配下に向ければ sandbox でも動く（adoption §7「候補の列挙」。iac-web 2026-09-03 の実測: pp は tsx 4.23.13 / @types/node 26.4.1、frontend は svelte 5.57.0 / @types/node 26.4.1 が wanted 内。typescript 7 / vite 8 は major、@playwright/test は完全固定で別枠）。次の巡で tsx か svelte を単独 commit で land して前後の gate を比べる
+- [x] 依存の bump を **単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）— iac-web が 3 本を単独 commit で land した（`263d931` tsx 4.23.13 は `pp/package-lock.json` の 1 file、`7ff635b` svelte 5.57.0 と @types/node 26.4.1、`5d7eb0c` vite 8.2.2 はどちらも `frontend/package.json` + `bun.lock` の 2 file で、実装の変更を含まない）。前後の gate は `8e585e1`（bump 後の trial 再走）と `3ec8090`（vite 8 の gate run、`rounds/2.md`）に記録。vite 8 は issue #1 → branch → PR #2 → local CI 全緑 → ff-merge の経路も通した（2026-09-04 に seed 側で commit を確認）
 - [x] app 配信をしない PJ で「既定に入れる」手当てが無害だと確かめた — iac-web が `serviceWorkers: "block"` を SHARED に入れ、service worker の登録が無い app で schedule-and-pricing の gate は rc 0（303 passed / 1 declared、4.9 分）のまま。verify-claims の fork の独立再実行も rc 0（2026-09-03）
 
 ユーザー裁定 2026-08-28: 「iac-web を使った実証実験１回目は、完了とします。もう一回、mock のアップデートと反映の流れをやりますので、そのときに再確認しましょう。」
@@ -100,7 +100,7 @@ Exit Criteria:
 - [x] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される — `bun run --cwd pp mock:closure`。引数なしで `export/` 全画面、`pp/artifacts/mock-closure.json` に閉包・外部 embed・取りこぼしを分けて書く
 - [x] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る（`bun run --cwd pp mock:screenshots`。引数なしで `export/` 全画面、撮影中の 404 と abort を数えて 1 件でもあれば落ちる）
 - [x] `/mock-freeze` skill に閉包（`mock:closure`）と破れ検査（`mock:integrity`）の段を入れ、`docs/presentation/ui-mock/README.md` の凍結手順と同じ 9 step に揃える — H.S. の許可（2026-08-28）を得て Edit tool で反映。Bash からは read-only のままだが、dedicated tool は通った
-- [ ] 適用先の再凍結で 2 つの tool を実際に通す — 実証 2 回目で行う
+- [x] 適用先の再凍結で 2 つの tool を実際に通す — iac-web の 3.1 版凍結 `71c6050`（commit message に「Closure 26 files / 0 missing」）。`pp/artifacts/mock-closure.json` は screens 8 / closure 26 / embeds 1 / misses 0、参照スクショは `rounds/2.md` に screenshot 数 177（2026-09-04 に seed 側で確認）
 
 適用先が一周の凍結時に自作した（`pp/scripts/collect-mock-closure.ts` / `pp/scripts/mock-screenshot.ts`、いずれも config の viewport・net-block・mock-server を使うだけで PJ 非依存との報告）。判定則を README に書いた時点で道具は付けていないので、次の PJ も同じ自作をする。
 
@@ -120,7 +120,7 @@ Exit Criteria:
 - [x] `app.html` に `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` の link が入り、生成物と一致する — `sizes="16x16 32x32 48x48"` は script の `ICO_SIZES` と一致
 - [x] manifest を置くかどうかを規約が決める — **置かない**。512×512 の生成もやめ、形の一覧から外した。PWA を名乗る要件が出た時点で足す
 - [x] 元が不透過（写真 JPEG など）だったときの救済手順を書く — `--round` として実装し規約にも書いた。実測で 16px の角 alpha が 255 → 0、中央は 255 のまま
-- [ ] 生成から配線までを適用先で 1 回通す — **受け皿は次の適用先**。iac-web は自前実装（`pp/scripts/build-images.mjs`）を H.S. の確認済みで持っており、seed 版へ寄せない判断（2026-08-30）
+- [x] 生成から配線までを適用先で 1 回通す — iac-web に seed 版と byte 一致の `frontend/scripts/make-favicons.mjs` が入り、`frontend/static/` に `favicon.ico` と `apple-touch-icon.png` が生成され、`frontend/src/app.html:7,8` の `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` が両方を指している（2026-09-04 に seed 側で確認。自前実装 `pp/scripts/build-images.mjs` は mock 資産用として別に残っている）
 
 現状は**要求と形の一覧まで**しかない。`seed-docs/design-order-template.md:40` が「正方形・余白込み・単色背景の元画像を渡す（透過 PNG または SVG）」と発注側へ求め、`seed-docs/pre-implementation-questions.md:29` が必要な形（`.ico` 16/32/48 の多重 + PNG 180×180 + 512×512）を挙げるが、元画像からその形を作って HTML へ繋ぐ側が無い。
 
