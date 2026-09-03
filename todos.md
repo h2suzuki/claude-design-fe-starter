@@ -57,6 +57,20 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
+### 依存更新 PR を local CI で処理する流れが seed に無い
+
+起票: fable-5 2026-09-03（iac-web session 経由の依頼。ユーザー承認 2026-09-03 逐語: 「OSS自動更新の対応は、Github action で回す必要はありません。PR が来たら、この場所でCIを回して、処理するフローが確立してればよい。…自動化は、セッションを開いた時に、origin をチェックして、PR が来ていたら CI を回す、といった処置を自動提案。私が Go 出したら走り出す。ぐらいで大丈夫。」/ 置き場について「fe-starter に依頼してください。」）
+Goal: dependabot 想定の依存更新 PR を、GitHub Actions でなく作業 checkout の local CI（型検査 → unit → pp typecheck → 全画面 gate → build）で検証し、ユーザーの Go の後に ff-merge / push / branch 削除まで進める流れを、提案 hook・deny hook・手順 skill・CI script として seed に載せる。
+Work file: `drafts/dep-pr-ci-order.md`（codex 発注書）
+
+Exit Criteria:
+
+- [ ] SessionStart hook が origin の open PR を列挙して「CI をここで回すか」を提案し、CI は実行しない（`tools/pr-check.sh`）
+- [ ] PreToolUse hook が、台帳 `pp/land-commands.json` に載る merge / push を、対象 sha の緑記録 `drafts/gate-logs/ci-green.<sha>` が無ければ止める（spec で deny → 通過を固定）
+- [ ] `tools/ci.sh` が gate を含む full CI を clean な tree で通したときだけ緑記録を書く
+- [ ] skill `dependency-pr` に手順（PR 検知 → checkout → ci.sh → Go 待ち → ff-merge → push → branch 削除 → round:record、赤なら PR に comment）と依存方針（playwright 固定 / major 単独 / peer 確認 / patch・minor 1 件ずつ）が書かれている
+- [ ] iac-web が取り込んで PR 1 本を流し、hook の deny → 緑記録で通過を実測した
+
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
