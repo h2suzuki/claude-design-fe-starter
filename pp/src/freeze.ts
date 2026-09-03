@@ -1,4 +1,4 @@
-// CSS animation と全 timer を止めてから capture する。止めないと computed-style/canvas が run 間で揺れる
+// CSS animation・smooth scroll と全 timer を止めてから capture する。止めないと computed-style/canvas や scrollY が run 間で揺れる
 import type { Page } from "@playwright/test";
 
 const FREEZE_STYLE_ID = "pp-freeze-style";
@@ -9,7 +9,7 @@ export async function freezePage(page: Page): Promise<void> {
     if (!document.getElementById(styleId)) {
       const style = document.createElement("style");
       style.id = styleId;
-      style.textContent = "*{animation:none!important;transition:none!important}";
+      style.textContent = "*{animation:none!important;transition:none!important;scroll-behavior:auto!important}";
       document.head.appendChild(style);
     }
     // timer id は setInterval/setTimeout 共有の単調カウンタ — 新規 1 個の id から下って一括 clear する

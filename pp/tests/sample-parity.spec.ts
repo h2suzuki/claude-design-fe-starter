@@ -135,7 +135,7 @@ for (const [label, contextOptions] of BASES) {
           add("MISS", missing.length);
           add("style", styleDiffs.length);
           add("geometry", geometryDiffs.length);
-          console.log(`state ${stateId}: ids ${stateIds.length} / diff MISS ${missing.length} style ${styleDiffs.length} geometry ${geometryDiffs.length}`);
+          console.log(`state ${stateId}: ids ${stateIds.length} / diff MISS ${missing.length} style ${styleDiffs.length} geometry ${geometryDiffs.length} / heap ${Math.round(process.memoryUsage().heapUsed / 1e6)} MB`);
           return found;
         },
       );

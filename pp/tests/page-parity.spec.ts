@@ -156,7 +156,7 @@ for (const [label, contextOptions] of BASES) {
               `state ${stateId}: pixel ${describeFailure(result)}（KEEP_IMPL で除外: ${describeExcluded(targets, mockBoxes)}）/ ${artifact}`,
             );
           }
-          console.log(`state ${stateId}: ids ${idCount} / diff ${failed ? "あり" : "0"} / 許容 ±${tolerance} / ${describeCoverage(mockBoxes, targets)}`);
+          console.log(`state ${stateId}: ids ${idCount} / diff ${failed ? "あり" : "0"} / 許容 ±${tolerance} / heap ${Math.round(process.memoryUsage().heapUsed / 1e6)} MB / ${describeCoverage(mockBoxes, targets)}`);
           return found;
         },
       );
