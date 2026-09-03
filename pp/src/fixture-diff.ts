@@ -1,6 +1,8 @@
 // fixture にあって BE 出力に無い値を列挙する。BE 側にだけある key は app が無視できるので差分にしない
 // （逆向きを混ぜると、内部用の項目が毎回ノイズになって「本番で欠ける値」が埋もれる）
 
+export type FixtureDiffResult = { red: string[]; advice: string[] };
+
 const kindOf = (value: unknown): string =>
   value === null ? "null" : Array.isArray(value) ? "array" : typeof value;
 
@@ -12,30 +14,101 @@ const trim = (value: unknown): string => {
   return json.length <= 80 ? json : `${json.slice(0, 80)}…`;
 };
 
-export const fixtureDiff = (fixture: unknown, backend: unknown, path = "$"): string[] => {
-  const [fixtureKind, backendKind] = [kindOf(fixture), kindOf(backend)];
-  if (fixtureKind !== backendKind) return [`${path}: 型が違う — fixture ${fixtureKind} / BE ${backendKind}`];
+const ISO_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/;
 
-  if (fixtureKind === "array") {
-    const backendItems = backend as unknown[];
-    return (fixture as unknown[]).flatMap((item, index) => {
-      if (backendItems.some((candidate) => deepEqual(item, candidate))) return [];
-      // 同順の相手がいれば中身の差を指す。いなければ「BE が返さない要素」そのもの
-      if (index < backendItems.length) return fixtureDiff(item, backendItems[index], `${path}[${index}]`);
-      return [`${path}[${index}]: BE の配列に同じ要素が無い — ${trim(item)}`];
-    });
+// 同じ瞬間を "+09:00" と "Z" で書いた fixture / BE を差分にしないための正規化
+const instantOf = (value: string): number | null => {
+  const text = value.trim();
+  if (!ISO_RE.test(text)) return null;
+  const ms = Date.parse(text);
+  return Number.isNaN(ms) ? null : ms;
+};
+
+const normalize = (value: unknown): unknown => {
+  if (typeof value !== "string") return value;
+  const ms = instantOf(value);
+  return ms === null ? value.trim() : `@instant:${ms}`;
+};
+
+// path に載せる key 値。ISO は正規化後の姿（UTC）で書き、fixture / BE のどちらから見ても同じ行になる
+const keyLabel = (value: unknown): string => {
+  if (typeof value !== "string") return String(value);
+  const ms = instantOf(value);
+  return ms === null ? value.trim() : new Date(ms).toISOString();
+};
+
+const KEY_CANDIDATES = ["id", "key", "start", "date", "slug", "name"];
+const ADVICE_LIMIT = 10;
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => kindOf(value) === "object";
+
+// 両配列の全要素が持つ最初の候補名。index 一致に頼ると件数が違うだけで全件が差分に化ける
+const matchKeyOf = (fixture: unknown[], backend: unknown[]): string | null => {
+  const all = [...fixture, ...backend];
+  if (all.length === 0 || !all.every(isPlainObject)) return null;
+  return KEY_CANDIDATES.find((key) => all.every((item) => key in (item as Record<string, unknown>))) ?? null;
+};
+
+const empty = (): FixtureDiffResult => ({ red: [], advice: [] });
+
+const merge = (parts: FixtureDiffResult[]): FixtureDiffResult => ({
+  red: parts.flatMap((part) => part.red),
+  advice: parts.flatMap((part) => part.advice),
+});
+
+// BE に無い要素は赤ではなく気づき。件数差だけで gate が落ちると、値違いの 1 件が埋もれる
+const capAdvice = (lines: string[]): string[] =>
+  lines.length <= ADVICE_LIMIT ? lines : [...lines.slice(0, ADVICE_LIMIT), `…他 ${lines.length - ADVICE_LIMIT} 件`];
+
+const diffArray = (fixture: unknown[], backend: unknown[], path: string): FixtureDiffResult => {
+  const key = matchKeyOf(fixture, backend);
+  if (key === null) {
+    const missing: string[] = [];
+    for (const [index, item] of fixture.entries()) {
+      if (!backend.some((candidate) => deepEqual(item, candidate))) {
+        missing.push(`${path}[${index}]: BE 出力に無い（気づき） — ${trim(item)}`);
+      }
+    }
+    return { red: [], advice: capAdvice(missing) };
   }
+
+  const byKey = new Map(
+    backend.map((item) => [String(normalize((item as Record<string, unknown>)[key])), item] as const),
+  );
+  const parts: FixtureDiffResult[] = [];
+  const missing: string[] = [];
+  for (const item of fixture) {
+    const raw = (item as Record<string, unknown>)[key];
+    const label = `${path}[${key}=${keyLabel(raw)}]`;
+    const counterpart = byKey.get(String(normalize(raw)));
+    if (counterpart === undefined) missing.push(`${label}: BE 出力に無い（気づき）`);
+    else parts.push(fixtureDiff(item, counterpart, label));
+  }
+  const merged = merge(parts);
+  return { red: merged.red, advice: [...merged.advice, ...capAdvice(missing)] };
+};
+
+export const fixtureDiff = (fixture: unknown, backend: unknown, path = "$"): FixtureDiffResult => {
+  const [fixtureKind, backendKind] = [kindOf(fixture), kindOf(backend)];
+  if (fixtureKind !== backendKind) {
+    return { red: [`${path}: 型が違う — fixture ${fixtureKind} / BE ${backendKind}`], advice: [] };
+  }
+
+  if (fixtureKind === "array") return diffArray(fixture as unknown[], backend as unknown[], path);
 
   if (fixtureKind === "object") {
     const backendObject = backend as Record<string, unknown>;
-    return Object.entries(fixture as Record<string, unknown>).flatMap(([key, value]) =>
-      key in backendObject
-        ? fixtureDiff(value, backendObject[key], `${path}.${key}`)
-        : [`${path}.${key}: fixture にあって BE に無い`],
+    return merge(
+      Object.entries(fixture as Record<string, unknown>).map(([key, value]) =>
+        key in backendObject
+          ? fixtureDiff(value, backendObject[key], `${path}.${key}`)
+          : { red: [`${path}.${key}: fixture にあって BE に無い`], advice: [] },
+      ),
     );
   }
 
-  return [];
+  if (normalize(fixture) === normalize(backend)) return empty();
+  return { red: [`${path}: fixture ${String(fixture)} / BE ${String(backend)}`], advice: [] };
 };
 
 // docs/design-sync.md 2.3 の命名規約。BE の test 側と割れると diff が「BE 出力なし」に化ける

@@ -11,7 +11,7 @@ const EXPORT_DIR = path.resolve(SCRIPT_DIR, '../../docs/presentation/ui-mock/exp
 const HTML_RE = /\.html?$/i;
 const SCRIPT_RE = /\.m?js$/i;
 const SCANNED_RE = /\.(?:html?|m?js)$/i;
-const KINDS = ['ternary', 'conditional-text', 'class-switch', 'case', 'fixed-logic', 'history'];
+const KINDS = ['ternary', 'conditional-text', 'template-text', 'class-switch', 'case', 'comparison', 'fixed-logic', 'history'];
 
 const INLINE_SCRIPT = /<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
 const TEXT_SINK = /\.(?:textContent|innerText|innerHTML|title|ariaLabel)\s*=\s*/g;
@@ -27,6 +27,17 @@ const HISTORY_EVENTS = new Set(['hashchange', 'popstate', 'pageshow']);
 // 左辺（識別子・呼び出し・添字末尾）と数値定数の比較。sample logic（第 5 木曜・2 木は 3 枠）はここに出る
 const LEFT_OPERAND = '(?:[A-Za-z_$][\\w$]*(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*)*(?:\\s*\\([^()]*\\))?|\\)|\\])';
 const FIXED_LOGIC = new RegExp(`${LEFT_OPERAND}\\s*(?:===|!==|==|!=|>=|<=|>|<|%)\\s*-?\\d+\\b`, 'g');
+
+// 変数どうしの比較（`d > today`）は定数比較 regex に掛からない。keyword を operand と誤認しないよう除く
+const OPERAND =
+  '(?:new\\s+)?(?!(?:if|while|for|switch|return|typeof|delete|void|else|case|do|in|of)\\b)' +
+  '[A-Za-z_$][\\w$]*(?:\\s*\\([^()]*\\))?(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*(?:\\s*\\([^()]*\\))?)*';
+const COMPARISON = new RegExp(`(?:${OPERAND})\\s*(?:===|!==|==|!=|<=|>=|<|>)\\s*(?:${OPERAND})`, 'g');
+// 代入・条件・論理演算の中だけを表示分岐と見なす。ループ境界は今までどおり落とす
+const COMPARISON_CONTEXT = /\bif\s*\(|\bwhile\s*\(|&&|\|\||\?|(?:^|[^=!<>])=(?!=)|\b(?:const|let|var)\b/;
+const NON_ASCII = /[^\x00-\x7F]/;
+const REGION_START = new Set(['=', ':', '(', ',', '?', ';', '{', '}', '[', '&', '|', '\n']);
+const REGION_END = new Set([';', ',', ')', '}', ']', ':', '\n']);
 
 // 取得先・selector・event 名・storage key として書かれたリテラルは画面文言ではない
 const NON_DISPLAY_VALUE = /^(?:https?:|mailto:|tel:|data:|blob:|\/\/|\.{0,2}\/)|:\/\//;
@@ -71,7 +82,7 @@ function maskSource(source, fileName) {
       j += 1;
     }
     const end = Math.min(j, chars.length - 1);
-    literals.set(i, { start: i, end, value: source.slice(i + 1, end) });
+    literals.set(i, { start: i, end, quote: c, value: source.slice(i + 1, end) });
     for (let k = i + 1; k < end; k += 1) if (chars[k] !== '\n') chars[k] = ' ';
     i = end;
   }
@@ -116,6 +127,66 @@ function isConditional(masked, index) {
   return /\b(?:if|else\s+if)\s*\([\s\S]*\)\s*$/.test(previous.trimEnd()) || /\belse\s*$/.test(previous.trimEnd());
 }
 
+// `) % 3` だけでは何の剰余か読めない。囲みの式まで戻して backend 経路と突き合わせられる形にする
+function fixedLogicText(source, masked, start, end) {
+  const lineStart = masked.lastIndexOf('\n', start) + 1;
+  const open = [];
+  for (let i = lineStart; i < start; i += 1) {
+    if (masked[i] === '(') open.push(i);
+    else if (masked[i] === ')') open.pop();
+  }
+  const paren = open.at(-1);
+  // 制御構文・呼び出しの '(' は式の外側だが、grouping の '(' は式の一部なので括弧ごと残す
+  let from = lineStart;
+  if (paren !== undefined) {
+    from = /(?:\bif|\bwhile|\bfor|\bswitch|[\w$])\s*$/.test(masked.slice(lineStart, paren)) ? paren + 1 : paren;
+  }
+  let boundary = from;
+  for (let i = from; i < start; i += 1) {
+    const c = masked[i];
+    if (';{},?:'.includes(c)) boundary = i + 1;
+    else if (c === '=' && !'=!<>'.includes(masked[i - 1]) && masked[i + 1] !== '=') boundary = i + 1;
+    else if ((c === '&' || c === '|') && masked[i + 1] === c) boundary = i + 2;
+  }
+  const tail = masked.slice(end).match(/^\s*(?:===|!==|==|!=|>=|<=|>|<)\s*(?:-?\d+|[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)/);
+  return source.slice(boundary, end + (tail ? tail[0].length : 0)).trim().slice(0, 80);
+}
+
+// 補間・連結で組み立てた文言は、変数部分を … に潰した 1 行にして棚卸しに載せる
+function valueRegion(masked, literal) {
+  let start = literal.start;
+  while (start > 0 && !REGION_START.has(masked[start - 1])) start -= 1;
+  let end = literal.end + 1;
+  while (end < masked.length && !REGION_END.has(masked[end])) end += 1;
+  return { start, end };
+}
+
+function literalText(literal) {
+  return literal.quote === '`' ? literal.value.replace(/\$\{[^}]*\}/g, '${…}') : literal.value;
+}
+
+function regionText(masked, literals, start, end) {
+  const parts = [];
+  let pending = '';
+  const flush = () => {
+    if (pending.trim() !== '') parts.push('…');
+    pending = '';
+  };
+  for (let i = start; i < end; i += 1) {
+    const literal = literals.get(i);
+    if (literal) {
+      flush();
+      parts.push(literalText(literal));
+      i = literal.end;
+      continue;
+    }
+    if (masked[i] === '+') flush();
+    else pending += masked[i];
+  }
+  flush();
+  return parts.filter((part, i) => !(part === '…' && parts[i - 1] === '…')).join('');
+}
+
 function callArguments(masked, literals, openParen) {
   const close = masked.indexOf(')', openParen);
   const out = [];
@@ -140,6 +211,18 @@ export function extractBranches(source, fileName) {
     const arms = [...literals.values()].filter((l) => l.start > i && l.start < end && isDisplayLiteral(masked, l));
     if (arms.length) push(i, 'ternary', arms.map((l) => l.value).join(' | '));
     i = end;
+  }
+
+  // 補間つき template literal と、非 ASCII リテラルを含む連結
+  const seenRegions = new Set();
+  for (const literal of literals.values()) {
+    if (!NON_ASCII.test(literal.value)) continue;
+    const { start, end } = valueRegion(masked, literal);
+    const isTemplate = literal.quote === '`' && literal.value.includes('${');
+    if (!isTemplate && !masked.slice(start, end).includes('+')) continue;
+    if (seenRegions.has(start)) continue;
+    seenRegions.add(start);
+    push(start, 'template-text', regionText(masked, literals, start, end).trim().slice(0, 80));
   }
 
   for (const match of masked.matchAll(TEXT_SINK)) {
@@ -187,7 +270,15 @@ export function extractBranches(source, fileName) {
   for (const match of masked.matchAll(FIXED_LOGIC)) {
     const lineStart = masked.lastIndexOf('\n', match.index) + 1;
     if (/\bfor\s*\(/.test(masked.slice(lineStart, match.index))) continue; // ループ境界は表示分岐ではない
-    push(match.index, 'fixed-logic', source.slice(match.index, match.index + match[0].length).trim().slice(0, 80));
+    push(match.index, 'fixed-logic', fixedLogicText(source, masked, match.index, match.index + match[0].length));
+  }
+
+  for (const match of masked.matchAll(COMPARISON)) {
+    const lineStart = masked.lastIndexOf('\n', match.index) + 1;
+    const lineEnd = masked.indexOf('\n', match.index) === -1 ? masked.length : masked.indexOf('\n', match.index);
+    const line = masked.slice(lineStart, lineEnd);
+    if (/\bfor\s*\(/.test(line) || !COMPARISON_CONTEXT.test(line)) continue;
+    push(match.index, 'comparison', source.slice(match.index, match.index + match[0].length).trim().slice(0, 80));
   }
 
   return rows.sort((a, b) => a.line - b.line || KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind));

@@ -74,3 +74,39 @@ test("history 操作と履歴 event を history として拾う", () => {
   ]);
   expect(extractBranches('el.textContent = "常時表示";\n', "a.js").some((r) => r.kind === "history")).toBe(false);
 });
+
+// 変数どうしの比較は定数比較 regex に掛からず、実測で 13 分岐中 4 件を取り落とした
+test("変数どうしの比較を comparison として拾う", () => {
+  const rows = extractBranches("const future = new Date(y, m, d).getTime() > cutoff;\n", "a.js");
+  expect(rows.map((r) => r.kind)).toEqual(["comparison"]);
+  expect(rows[0].text).toBe("new Date(y, m, d).getTime() > cutoff");
+});
+
+test("ループ境界の比較は comparison にしない", () => {
+  const rows = extractBranches("for (let i = 0; i < n; i++) { paint(i); }\n", "a.js");
+  expect(rows.some((r) => r.kind === "comparison")).toBe(false);
+});
+
+test("補間つき template literal を template-text として拾う", () => {
+  const rows = extractBranches("const msg = `${name}のためお休み`;\n", "a.js");
+  expect(rows.map((r) => [r.kind, r.text])).toEqual([["template-text", "${…}のためお休み"]]);
+});
+
+test("object property の文字列連結も template-text として拾う", () => {
+  const rows = extractBranches("const o = { closedLabel: hol + 'のためお休み' };\n", "a.js");
+  expect(rows.map((r) => [r.kind, r.text])).toEqual([["template-text", "…のためお休み"]]);
+});
+
+test("selector と URL は連結でも template-text にしない", () => {
+  const rows = extractBranches("const e = document.querySelector('#x');\nconst u = base + '/api/slots';\n", "a.js");
+  expect(rows.some((r) => r.kind === "template-text")).toBe(false);
+});
+
+// `) % 3` だけでは何の剰余か読めず、backend 経路との突き合わせに使えない
+test("fixed-logic は囲みの式まで広げて出す", () => {
+  const rows = extractBranches("const bucket = _hash(key) % 3;\nif ((hash(d) + i) % 3 === 0) { paint(); }\n", "a.js");
+  expect(rows.filter((r) => r.kind === "fixed-logic").map((r) => r.text)).toEqual([
+    "_hash(key) % 3",
+    "(hash(d) + i) % 3 === 0",
+  ]);
+});

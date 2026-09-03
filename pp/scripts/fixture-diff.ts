@@ -30,6 +30,7 @@ const main = (): void => {
     return;
   }
   let differences = 0;
+  let advices = 0;
   let missing = 0;
   for (const [route, responder] of [...responders].sort(([a], [b]) => a.localeCompare(b))) {
     const file = beFileName(route);
@@ -39,16 +40,19 @@ const main = (): void => {
       console.log(`${route}: BE 出力なし（pp/fixtures/be/${file} を BE の test から書き出す、または responder の隣に手書きの理由を書く）`);
       continue;
     }
-    const lines = fixtureDiff(responder(), JSON.parse(fs.readFileSync(beFile, "utf8")));
-    if (lines.length === 0) {
+    const { red, advice } = fixtureDiff(responder(), JSON.parse(fs.readFileSync(beFile, "utf8")));
+    if (red.length === 0 && advice.length === 0) {
       console.log(`${route}: 差なし`);
       continue;
     }
-    differences += lines.length;
+    differences += red.length;
+    advices += advice.length;
     console.log(`${route}:`);
-    for (const line of lines) console.log(`  ${line}`);
+    for (const line of red) console.log(`  ${line}`);
+    // 気づきは exit code を動かさない。深い字下げで「直さなくても落ちない行」だと見分けられるようにする
+    for (const line of advice) console.log(`    ${line}`);
   }
-  console.log(`fixture-diff: ${responders.size} route / 差分 ${differences} 件 / BE 出力なし ${missing} 件`);
+  console.log(`fixture-diff: ${responders.size} route / 差分 ${differences} 件 / 気づき ${advices} 件 / BE 出力なし ${missing} 件`);
   if (differences > 0) process.exitCode = 1;
 };
 

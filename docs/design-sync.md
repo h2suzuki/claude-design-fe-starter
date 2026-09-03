@@ -172,7 +172,13 @@ mock は Claude Design 上で外部 fetch できないため、実装をその�
 2. `bun run --cwd pp fixture:diff` が、`pp/src/fixtures/` の responder が返す値と 1 の JSON を突き合わせ、
    **fixture にあって BE 出力に無い key / 配列要素** を route ごとに出す。差があれば fixture を BE 出力に
    寄せるか、BE を直す（screen-loop ②′ の「BE のバグ」）。手書きのまま残す fixture は、responder の
-   隣に「生成できない理由」を 1 行書く（1 の JSON が無い route は diff が「BE 出力なし」として列挙する）
+   隣に「生成できない理由」を 1 行書く（1 の JSON が無い route は diff が「BE 出力なし」として列挙する）。
+   オブジェクトの配列は index ではなく key（`id` `key` `start` `date` `slug` `name` の順で両側の全要素が
+   持つ最初のもの）で対応づけ、対応づいた要素の key 欠落・型違い・値違いだけが差分として exit 1 を出す。
+   ISO 日時は瞬間が同じなら offset 表記が違っても差分にせず、文字列は前後の空白を無視して比べる。
+   fixture 側にしか無い要素は落とさず、`BE 出力に無い（気づき）` として字下げして列挙する（1 配列 10 件
+   まで、残りは件数で畳む）。fixture の枠数が BE の test 出力より多いだけで全件が赤くなる状態を避け、
+   「BE が返さない満席枠」のような 1 件を読み取れるようにするための区別である
 
 ### 2.4 pixel-perfect 化
 
