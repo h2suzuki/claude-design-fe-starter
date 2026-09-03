@@ -234,6 +234,7 @@ gate 自体は正しく赤を出していたので、**壊れるのは gate で�
 
 §9 の完了判定と §2 の突合が済み、**旧実装を捨てるというユーザーの日付付き裁定**が出てから始める。順序は「本番で確かめてから branch を入れ替える」であり、逆にしない — branch を先に入れ替えると、確認で問題が出たときに戻す先が動いている。
 
+0. **`bun run --cwd pp review:check` が rc 0 であることを確かめる**。screen-loop ⑧ の記録が無い・古い・未裁定の画面があれば promote しない。promote 系 command を `pp/promote-commands.json` に列挙しておくと、hook が rc 0 でない promote を止める
 1. **deploy 先を切り替える**。本番アドレスを新実装の deploy へ promote する。preview URL で確認して終わりにしない
 2. **本番アドレスで確かめる**。全 route が 200 を返すか、実データが旧実装と同じ値で出るか（件数・日付まで見る）、API の異常系が期待どおりか、favicon など画面に出ない資産が 200 か。ここは fixture が効かない唯一の場所なので、§2 の突合表をそのまま実行する
    - 続けて `seed-docs/screen-loop.md` ⑩ の smoke 3 項目（API 応答の内容 / 保存する状態のリロード / history の往復）を通す。200 だけを見て promote を終えた PJ で、満席枠の欠落・「戻る」で overlay が戻らない・reload の一瞬の既定テーマ表示の 3 件が本番で見つかった

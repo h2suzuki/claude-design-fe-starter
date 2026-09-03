@@ -69,6 +69,23 @@ Exit Criteria:
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「必須手順を飛ばせないようなメカニカルチェックが必要です。それから、LLMによるチェックは、どのモデルでどのeffortかは、どうやって選ぶのですか。」背景: 2 巡目で ⑧ を飛ばして promote し、本番で 3 件見つかった。
 
+### screen-loop の LLM step ごとの model / effort が事前に決まっていない
+
+起票: user 2026-09-03
+Goal: LLM に任せる step ごとに使う model と effort を、画面の難易度（S / M / L）で幅を持たせて事前に定義し、seed が配る skill の frontmatter と 1 対 1 に対応させる。
+Work file: `seed-docs/llm-steps.md`（対応表と横断規則）・`.claude/skills/screen-review/SKILL.md`・`.claude/skills/gate-diagnose/SKILL.md`・`.claude/skills/verify-claims/SKILL.md`・`docs/ui-quality-policy.md`「レビューに使う LLM の model と effort」
+
+Exit Criteria:
+
+- [ ] 対応表（step × S/M/L → model / effort、備考に根拠）と横断規則（実装した agent は自分を審査しない / 審査側は実装側と同 tier 以上 / effort は難易度、model は判定の種類で決める）が `seed-docs/llm-steps.md` にある
+- [ ] 難易度 S/M/L の判定材料（状態数・BE route 数・overlay の有無）と出所（mock:states の json、②′ の表）が同じ doc にある
+- [ ] seed が実行 skill として配る step（⑧ screen-review / ⑦ 赤の診断 / 完了主張の独立検証）の frontmatter の model / effort が表と一致する
+- [ ] 難易度 S / M / L は人や LLM が選ばず script が出す: `bun run --cwd pp difficulty` が状態数（states json の viewport 最大）・BE route 数（screens.ts の fixture 登録）・history の有無（mock:branches）から画面ごとの段と根拠を `pp/artifacts/difficulty.json` に書く。上げ下げは日付付き理由が要る
+- [ ] 表どおりの model / effort で実行されたかを機械で確かめる: ⑧ の記録と独立検証の報告に `agentId` を必須にし、`bun run --cwd pp agent-audit` が session transcript からその agent の model / effort を引いて表と突合し、親 session の model で書かれた成果物（subagent の呼び忘れ）を赤、表より上位を警告にする
+- [ ] iac-web が表どおりに ⑧ と独立検証を走らせ、token・所要・指摘数の実測で表を直した報告を受ける
+
+ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」
+
 ### pp の fixture が BE の契約から乖離しても検知されない
 
 起票: user 2026-09-02

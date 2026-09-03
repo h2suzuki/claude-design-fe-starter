@@ -52,6 +52,14 @@ mock-first を運転するときの役割分担・作業場・検分手順を定
 - 完成条件（DoD）は 3 分類で判定する: **基準幅 = structural pixel 一致** / **中間幅 = invariant（崩れ・衝突・欠落・横スクロール無し）** / **状態 = 挙動一致**。
 - CSS 規約: page shell は `@media`（viewport 基準）、部品は `@container`（置かれた幅基準）、内容は intrinsic sizing で書く。breakpoint の急変点は境界 ±1px のスイープで検証する。
 
+## レビューに使う LLM の model と effort
+
+- **判断を要する検査**（値の整合・表示の意味・迷わないか、`screen-review` の 3 観点）は、その時点で使える**最上位の model と高い effort**で行う。理由: 判断の質は model の推論力にほぼ比例し、レビュー 1 回の費用は本番で見逃した 1 件の費用より桁で小さい。seed の既定は `screen-review` skill の frontmatter（`model: opus` / `effort: high`）で、PJ が変えるときはそこを変えて理由を DESIGN-POLICY.md に残す
+- **決定的に判定できる検査**（pixel・寸法・token・sha256・skip の有無）は LLM に投げない。pp と hook が rc で判定する。LLM に頼むと同じ入力で結果が揺れ、gate にならない
+- **レビューが飛ばされていないこと自体も機械で確かめる**: 記録（`docs/presentation/ui-review/<slug>.json`）の有無・sha256・処置を `review:check` が判定し、promote 系 command は hook が止める。人の「やった」申告を gate にしない
+- step ごとの model / effort と画面の難易度（S / M / L）の対応表は `seed-docs/llm-steps.md`。表と skill の frontmatter は同じ commit で変える
+- model / effort を記録に残す（`model` / `effort` 欄）。後から「どの推論力で見た結果か」を追えないレビューは、再レビューの要否を判断できない
+
 ## ユーザーへのレビュー依頼（前 PJ で確立）
 
 - 依頼 message の冒頭に、未クローズ指摘の全件対応状況表を置く（対応済み ✓ / 未対応 + 理由 + 対応予定）。
