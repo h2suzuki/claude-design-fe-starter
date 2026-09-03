@@ -222,6 +222,7 @@ test("--template の出力に判断を書き足すと緑になる", () => {
   expect(template.model).toBe("");
   expect(template.effort).toBe("");
   expect(template.reviewedAt).toBe("");
+  expect(template.agentId).toBe("");
   expect(template.findings).toEqual([]);
   expect((template.screenshots as { file: string }[]).map((s) => s.file)).toEqual([
     "trial.desktop.state-open.png",

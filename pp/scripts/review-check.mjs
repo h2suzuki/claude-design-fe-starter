@@ -149,6 +149,7 @@ export function reviewTemplate({ screenshotsDir, slug }) {
     reviewedAt: '',
     model: '',
     effort: '',
+    agentId: '',
     screenshots: shotsOf(screenshotsDir, slug).map((file) => ({ file, sha256: sha256(path.join(screenshotsDir, file)) })),
     findings: [],
   };

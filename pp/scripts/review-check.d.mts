@@ -14,6 +14,7 @@ export function reviewTemplate(options: { screenshotsDir: string; slug: string }
   reviewedAt: string;
   model: string;
   effort: string;
+  agentId: string;
   screenshots: { file: string; sha256: string }[];
   findings: { text: string; disposition: string }[];
 };
