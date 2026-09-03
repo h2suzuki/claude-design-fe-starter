@@ -41,11 +41,54 @@ Exit Criteria:
 
 適用先からの報告（2026-08-24）。`first-prompts.md:28` は「実装から生成した preview HTML を書き戻す」としか書いておらず、BE 呼び出しの扱いが無い。そのまま書き戻すと Claude Design 上で外部 fetch できず動かない。受け皿の概念（`design-sync.md:14,107` の共有 fixture module）は既にあるので、欠けているのは変換の位置づけ。`design-sync.md` は mock → 実装の読解と pp での pin を定めるが、既に BE と結合した実装へ戻す調整は扱っていない。新規実装では出ず、旧実装と BE を持つ repo でだけ出る。
 
+### Capacitor / PWA は opt-in — 発注規約に追補が無い
+
+起票: user 2026-08-31
+Goal: 既定の発注（普通の Web サイト）は 18 項目のまま変えず、app 配信を選んだ PJ だけが足せる追補として PWA / Capacitor の要件を持つ。
+Work file: `seed-docs/design-order-template.md`（項目 14 と追補）・`.claude/skills/design-order/SKILL.md`（追補を差し込む条件）
+
+着手条件: iac-web をカスタムドメインで公開した後（H.S. 2026-09-04:「app 配信は、iac-web をカスタムドメインで公開後に着手します」）
+区分: 【常時】= app 配信を選ばない PJ にも効くので先に入れられる / 【app 時】= app 配信を選んだ PJ にだけ効く
+
+Exit Criteria:
+
+- [ ] 追補を発注規約の本体と分けて置き、`/design-order` が app 配信を選んだときだけ差し込む。選ばない PJ の発注文に追補が混ざらない
+- [ ] 【常時】項目 14 の元画像を、後から app 化しても撮り直しが要らない形にする — 透過で受け取り、不透過が要る用途では背景色を焼く（`make-favicons.mjs` は apple-touch で既にそうしている）
+- [ ] 【app 時】safe-area（notch とホームバー）の避け。背景は端まで・操作は内側という切り分けと、inset を design system の変数として持たせる形を要求する
+- [ ] 【app 時】app icon の maskable 安全域（内接円 80%）とストア用 1024×1024
+- [ ] 【app 時】起動画面。既定は単色背景 + app icon で足りる（Android 12+ は system が自動で出す）ので、作り込む場合だけ 2732×2732 の元画像とダーク用を要求する
+- [ ] 【app 時】オフライン時の表示を、部品の状態一式（項目 2）へ足す
+- [ ] 【app 時】画面の向き（縦固定か回転対応か）。回転対応なら横向きのレイアウトが発注対象になる
+- [ ] 【app 時】画面内の戻る導線 — app にはブラウザの戻るボタンが無い
+- [ ] 【app 時】manifest の `theme_color` / `background_color` と iOS のステータスバー表示に、どの意味色を充てるか
+
+### Capacitor / PWA は opt-in — 実装と gate の受け皿が無い
+
+起票: user 2026-08-31
+Goal: 既定は普通の Web サイトのままで、後から app 配信へ移る道を塞がない。app 配信を選んだ PJ だけが opt-in で足す。
+Work file: `frontend/svelte.config.js`・`pp/src/config.ts`・`docs/ui-quality-policy.md`（land 前の検証）・`docs/stack.md`
+
+着手条件: iac-web をカスタムドメインで公開した後（H.S. 2026-09-04:「app 配信は、iac-web をカスタムドメインで公開後に着手します」）
+区分: 【常時】= app 配信を選ばない PJ にも効くので先に入れられる / 【app 時】= app 配信を選んだ PJ にだけ効く
+
+Exit Criteria:
+
+- [ ] 【常時】service worker が入っても gate が決定的であることを、選択に関わらず担保する — Playwright の context option `serviceWorkers: "block"` を `pp/src/config.ts` の共有 option へ足す。SW を持たない PJ では挙動が変わらない
+- [ ] 【常時】app 化を塞ぐ書き方を避ける — server 側の処理を足すと静的出力にできなくなることを `docs/stack.md` に注記する（現在 server 側の処理は 0 件）
+- [ ] 【app 時】web（Vercel）と app（静的）の 2 出力を持つ adapter 分岐を用意し、切り替え方を `docs/stack.md` に書く。選ばない PJ は `adapter-auto` のまま
+- [ ] 【app 時】safe-area の崩れが gate に現れない死角を、`docs/ui-quality-policy.md` の「land 前の検証」へ実機確認の段として足す — 普通のブラウザでは `env(safe-area-inset-*)` が 0 に解決されるので、gate は緑のまま実機だけ崩れる
+- [ ] native build（Xcode / Android Studio）を seed の範囲に含めるかを決め、範囲外とするなら `docs/stack.md` にその線を書く
+
+Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
+
+## Low
+
 ### 既存 repo 適用の出口が未定義 — 旧実装との regression 段と main への land 手順
 
 起票: opus-5 2026-08-24
 Goal: 既存実装のある repo で一周を終えた後、旧実装との突合と main への land を、文書化された手順で完了できるようにする。
 Work file: `seed-docs/adoption.md`（§2 と §9）・`seed-docs/screen-loop.md`（⑦）
+着手条件: 次に seed を使う既存サイトが現れたとき。H.S. 2026-09-04:「旧サイトからの移行は、当面予定がないから、優先度は low かそれ以下」
 
 Exit Criteria:
 
@@ -56,37 +99,3 @@ Exit Criteria:
 適用先からの報告（2026-08-24）で 2 件とも確認済み。screen-loop ⑧ の判定基準は mock と意味論で、旧実装と比べる段が無い。adoption.md §1 は main を凍結すると書くが、凍結を解いて作り替えた側を main にする手順が無く、§9「完了の判定」も gate が緑になるところで止まっている。いずれも新規 repo では出ない、既存 repo 適用固有の不足。
 
 2026-08-28 に §2 の突合表と §10 の land 手順を書いた。出典は適用先が実際に通した land（本番アドレスへ promote → 7 route 200・稽古予定 4 回とカレンダー 11 件と祝日 1067 件が旧サイトと同じ実データ・申込み API が不正 method に 405・favicon 200 を本番で確認 → 旧 URL の転送は不要と裁定して転送 commit を revert → 旧 main を `old-main` として残し作業 branch を main へ fast-forward → worktree 削除）。
-
-### Capacitor / PWA は opt-in — 発注規約に追補が無い
-
-起票: user 2026-08-31
-Goal: 既定の発注（普通の Web サイト）は 18 項目のまま変えず、app 配信を選んだ PJ だけが足せる追補として PWA / Capacitor の要件を持つ。
-Work file: `seed-docs/design-order-template.md`（項目 14 と追補）・`.claude/skills/design-order/SKILL.md`（追補を差し込む条件）
-
-Exit Criteria:
-
-- [ ] 追補を発注規約の本体と分けて置き、`/design-order` が app 配信を選んだときだけ差し込む。選ばない PJ の発注文に追補が混ざらない
-- [ ] 【既定】項目 14 の元画像を、後から app 化しても撮り直しが要らない形にする — 透過で受け取り、不透過が要る用途では背景色を焼く（`make-favicons.mjs` は apple-touch で既にそうしている）
-- [ ] 【追補】safe-area（notch とホームバー）の避け。背景は端まで・操作は内側という切り分けと、inset を design system の変数として持たせる形を要求する
-- [ ] 【追補】app icon の maskable 安全域（内接円 80%）とストア用 1024×1024
-- [ ] 【追補】起動画面。既定は単色背景 + app icon で足りる（Android 12+ は system が自動で出す）ので、作り込む場合だけ 2732×2732 の元画像とダーク用を要求する
-- [ ] 【追補】オフライン時の表示を、部品の状態一式（項目 2）へ足す
-- [ ] 【追補】画面の向き（縦固定か回転対応か）。回転対応なら横向きのレイアウトが発注対象になる
-- [ ] 【追補】画面内の戻る導線 — app にはブラウザの戻るボタンが無い
-- [ ] 【追補】manifest の `theme_color` / `background_color` と iOS のステータスバー表示に、どの意味色を充てるか
-
-### Capacitor / PWA は opt-in — 実装と gate の受け皿が無い
-
-起票: user 2026-08-31
-Goal: 既定は普通の Web サイトのままで、後から app 配信へ移る道を塞がない。app 配信を選んだ PJ だけが opt-in で足す。
-Work file: `frontend/svelte.config.js`・`pp/src/config.ts`・`docs/ui-quality-policy.md`（land 前の検証）・`docs/stack.md`
-
-Exit Criteria:
-
-- [ ] 【既定】service worker が入っても gate が決定的であることを、選択に関わらず担保する — Playwright の context option `serviceWorkers: "block"` を `pp/src/config.ts` の共有 option へ足す。SW を持たない PJ では挙動が変わらない
-- [ ] 【既定】app 化を塞ぐ書き方を避ける — server 側の処理を足すと静的出力にできなくなることを `docs/stack.md` に注記する（現在 server 側の処理は 0 件）
-- [ ] 【追補】web（Vercel）と app（静的）の 2 出力を持つ adapter 分岐を用意し、切り替え方を `docs/stack.md` に書く。選ばない PJ は `adapter-auto` のまま
-- [ ] 【追補】safe-area の崩れが gate に現れない死角を、`docs/ui-quality-policy.md` の「land 前の検証」へ実機確認の段として足す — 普通のブラウザでは `env(safe-area-inset-*)` が 0 に解決されるので、gate は緑のまま実機だけ崩れる
-- [ ] native build（Xcode / Android Studio）を seed の範囲に含めるかを決め、範囲外とするなら `docs/stack.md` にその線を書く
-
-Note: dsa 側の作業は、起動中の dsa セッションへ cross-session (ListAgents → SendMessage) で直接依頼してよい (ユーザー許可 2026-08-22)。2026-08-22 に daily-stock-analyzer-25 へ差分と出典 (d7a2863) を送信済み — 実施判断は dsa 側 owner と本人の間で進む。当 session は不介入で、質問への回答のみ行う。
