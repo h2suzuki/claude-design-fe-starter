@@ -25,38 +25,6 @@ H.S. 2026-09-03 14:58（iac-web セッション経由、verbatim）:「adviceと
 
 H.S. 2026-08-29:「デザインとコードを一緒にするな。コードは１文字違えば動作しない。デザインは人間が分かりやすいことが１番重要。そうじゃなかったら、1px 光学補正なんて存在しなかったろう？」
 
-### 実証 2 回目 — mock を更新して反映する流れ
-
-起票: opus-5 2026-08-28
-Goal: 既に実装済みの画面について、mock 更新 → 再凍結 → AST 追従 → 実装反映 → gate 緑 までの往復を通し、1 回目で整えた手順が実際に回ることを確かめる。
-Work file: `last-session-handoff.md`（この checkout 限り。`.gitignore` 対象なので、失われたら本 block から起こし直す）
-
-Exit Criteria:
-
-- [x] 適用先で mock を 1 回更新し、`/mock-freeze` の再凍結手順を通した — iac-web `71c6050`（第 3.1 版: 閉包 26 / 取りこぼし 0、integrity 0、screenshots・states・台帳・lint・provenance。export と台帳と design-scale と状態 screenshot を同じ commit に。2026-09-03）
-- [x] `ast:refresh` で region と provenance が追従した — iac-web `a224ffb`（凍結直後に 7 画面）と `94c32f4`（overlay の visualId 追加後に 4 画面再 refresh、trial overlays 12/16）。`COPY_REVIEW` は 3.1 版の差分が角丸 CSS のみで文言差 0 のため追従対象なし（2026-09-03）
-- [x] 更新後の画面で gate が skip ゼロで緑になった — iac-web 2026-09-03、seed `5f04a44`: 7 画面すべて rc 0 / require-no-skips rc 0、trial は 294 passed（13.4 分、状態 parity 178 件・到達不能 0・diff 0・許容 4、heap 最大 320 MB、既定 heap）。KEEP_IMPL の画像除外は page-parity の状態 test で効いている（`describeExcluded` の行）
-- [x] 手順どおりに回らなかった箇所を seed 側で直し、2 回目の実測として記録した — 2026-09-03 に seed で直した 9 件: 画像 mask の座標 / blur の余白と許容（`483552f` で 4） / 状態限定 visualId と祖先 + nth-child / mobile 専用 overlay の実測 / fillAll 辺 / back 辺の ERR_ABORTED / 送信後 smooth scroll の capture race（`3a22aab`） / fake clock 下の timer 掃き（`5f04a44`） / OOM（再現不能、trace と screenshot は off）。実測は iac-web の `rounds/2.json`
-- [x] 依存の bump を **単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）— iac-web が 3 本を単独 commit で land した（`263d931` tsx 4.23.13 は `pp/package-lock.json` の 1 file、`7ff635b` svelte 5.57.0 と @types/node 26.4.1、`5d7eb0c` vite 8.2.2 はどちらも `frontend/package.json` + `bun.lock` の 2 file で、実装の変更を含まない）。前後の gate は `8e585e1`（bump 後の trial 再走）と `3ec8090`（vite 8 の gate run、`rounds/2.md`）に記録。vite 8 は issue #1 → branch → PR #2 → local CI 全緑 → ff-merge の経路も通した（2026-09-04 に seed 側で commit を確認）
-- [x] app 配信をしない PJ で「既定に入れる」手当てが無害だと確かめた — iac-web が `serviceWorkers: "block"` を SHARED に入れ、service worker の登録が無い app で schedule-and-pricing の gate は rc 0（303 passed / 1 declared、4.9 分）のまま。verify-claims の fork の独立再実行も rc 0（2026-09-03）
-
-ユーザー裁定 2026-08-28: 「iac-web を使った実証実験１回目は、完了とします。もう一回、mock のアップデートと反映の流れをやりますので、そのときに再確認しましょう。」
-
-ユーザー裁定 2026-08-29: mock 更新の向きは **branch + worktree + PR merge + branch 削除** を基本とする。FE 更新を mock へ反映する逆向きは branch を作らなくてよい。実証 2 回目は前者なので branch を切って進める。
-
-2026-08-30 の実測（iac-web）: seed `8bbfb95` を install し、据え置き 12 file を手で移して 7 画面すべて gate 緑（画面ごとに `npm test` rc=0 / `require-no-skips` rc=0、132–134 passed・skip は台帳の宣言分のみ・0 failed）。install.sh が seed の変更を届けられない spec 7 件と、対象列が散文で gate が読めない台帳 3 entry は、これで解消（台帳は 17 行の `img:` 形式）。`mock:integrity` は直すもの 35 件 / 気づき 0 件で、35 件は design system page の横スクロールだけ。残るのは mock 更新の向き。
-
-seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使うもの:
-
-| 何 | どこ | 二巡目での役割 |
-| --- | --- | --- |
-| `bun run --cwd pp mock:closure` | `pp/scripts/mock-closure.ts` | 再凍結で `export/` に入れる集合を実測で決める（凍結手順 4） |
-| `bun run --cwd pp mock:integrity` | `pp/scripts/mock-integrity.ts` | 再凍結の前に mock 自身の破れを出す（凍結手順 6）。適用先の現行 mock では design system page が 360/390 で横スクロールする |
-| §6 の取り込み経路 | `seed-docs/adoption.md` | merge 据え置き。差し替え点で衝突したら作業 branch 側を採る |
-| BE 往復の調整段 | `docs/design-sync.md` 2.3 | mock 更新を BE 結合済み FE へ戻すときの 3 か所（mock fixture・pp fixture・実 BE） |
-| 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
-| スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
-
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
@@ -88,54 +56,6 @@ Exit Criteria:
 適用先からの報告（2026-08-24）で 2 件とも確認済み。screen-loop ⑧ の判定基準は mock と意味論で、旧実装と比べる段が無い。adoption.md §1 は main を凍結すると書くが、凍結を解いて作り替えた側を main にする手順が無く、§9「完了の判定」も gate が緑になるところで止まっている。いずれも新規 repo では出ない、既存 repo 適用固有の不足。
 
 2026-08-28 に §2 の突合表と §10 の land 手順を書いた。出典は適用先が実際に通した land（本番アドレスへ promote → 7 route 200・稽古予定 4 回とカレンダー 11 件と祝日 1067 件が旧サイトと同じ実データ・申込み API が不正 method に 405・favicon 200 を本番で確認 → 旧 URL の転送は不要と裁定して転送 commit を revert → 旧 main を `old-main` として残し作業 branch を main へ fast-forward → worktree 削除）。
-
-### 凍結の手順はあるが道具が無い — 閉包収集と参照スクショ
-
-起票: opus-5 2026-08-27
-Goal: `docs/presentation/ui-mock/README.md` が定める凍結の判定則を、手作業でなく seed 同梱の tool で実行できるようにする。
-Work file: `docs/presentation/ui-mock/README.md`・`pp/scripts/`
-
-Exit Criteria:
-
-- [x] 閉包収集（net-block 下で実描画し、404 と abort が 0 になる file 集合を出す）を行う tool が pp に入り、README の判定則から参照される — `bun run --cwd pp mock:closure`。引数なしで `export/` 全画面、`pp/artifacts/mock-closure.json` に閉包・外部 embed・取りこぼしを分けて書く
-- [x] 参照スクショを fullPage・DPR 1 で基準 viewport ごとに撮る tool が pp に入る（`bun run --cwd pp mock:screenshots`。引数なしで `export/` 全画面、撮影中の 404 と abort を数えて 1 件でもあれば落ちる）
-- [x] `/mock-freeze` skill に閉包（`mock:closure`）と破れ検査（`mock:integrity`）の段を入れ、`docs/presentation/ui-mock/README.md` の凍結手順と同じ 9 step に揃える — H.S. の許可（2026-08-28）を得て Edit tool で反映。Bash からは read-only のままだが、dedicated tool は通った
-- [x] 適用先の再凍結で 2 つの tool を実際に通す — iac-web の 3.1 版凍結 `71c6050`（commit message に「Closure 26 files / 0 missing」）。`pp/artifacts/mock-closure.json` は screens 8 / closure 26 / embeds 1 / misses 0、参照スクショは `rounds/2.md` に screenshot 数 177（2026-09-04 に seed 側で確認）
-
-適用先が一周の凍結時に自作した（`pp/scripts/collect-mock-closure.ts` / `pp/scripts/mock-screenshot.ts`、いずれも config の viewport・net-block・mock-server を使うだけで PJ 非依存との報告）。判定則を README に書いた時点で道具は付けていないので、次の PJ も同じ自作をする。
-
-2026-08-27 に参照スクショ側だけ先に入れた（当初は一周の完了を待つ方針だった）。適用先が実際に撮り漏れを踏み（design system page の撮り忘れ）、原因が「seed が道具を配らないので消費側が自作し、その自作が引数必須になる」ことだと判明したため。
-
-2026-08-28 に閉包収集を入れ、適用先の凍結 mock（7 画面 + design system page）を `PP_REPO_ROOT` で指して実測した。vendor 未登録では取りこぼし 64 件で exit 1、vendor を登録すると取りこぼし 0 件・閉包 26 file で、適用先が凍結した 26 file と一致した。Google Maps の子 frame は取りこぼしでなく外部 embed として分けて挙がる。
-
-### favicon の規約が元画像の要求で止まっていて、生成と配線が無い
-
-起票: opus-5 2026-08-29
-Goal: 元画像 1 枚を渡されたら、必要な形（多重 `.ico`・apple-touch・manifest 用）を seed の道具で生成し、HTML へ配線するところまでを規約が持つ。
-Work file: `seed-docs/design-order-template.md`（項目 14）・`seed-docs/pre-implementation-questions.md`（favicon と app icon）・`frontend/src/app.html`・生成 script の置き場（未定）
-
-Exit Criteria:
-
-- [x] 元画像 1 枚から 16/32/48 を含む多重 `.ico` と apple-touch 用 PNG 180×180 を生成する script が seed に入る。出力先も決める — `frontend/scripts/make-favicons.mjs`、出力は `frontend/static/`、呼び口は `bun run --cwd frontend favicons`。sharp は frontend の devDependency（出力が frontend の配信資産のため）
-- [x] `app.html` に `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` の link が入り、生成物と一致する — `sizes="16x16 32x32 48x48"` は script の `ICO_SIZES` と一致
-- [x] manifest を置くかどうかを規約が決める — **置かない**。512×512 の生成もやめ、形の一覧から外した。PWA を名乗る要件が出た時点で足す
-- [x] 元が不透過（写真 JPEG など）だったときの救済手順を書く — `--round` として実装し規約にも書いた。実測で 16px の角 alpha が 255 → 0、中央は 255 のまま
-- [x] 生成から配線までを適用先で 1 回通す — iac-web に seed 版と byte 一致の `frontend/scripts/make-favicons.mjs` が入り、`frontend/static/` に `favicon.ico` と `apple-touch-icon.png` が生成され、`frontend/src/app.html:7,8` の `rel="icon"`（sizes 併記）と `rel="apple-touch-icon"` が両方を指している（2026-09-04 に seed 側で確認。自前実装 `pp/scripts/build-images.mjs` は mock 資産用として別に残っている）
-
-現状は**要求と形の一覧まで**しかない。`seed-docs/design-order-template.md:40` が「正方形・余白込み・単色背景の元画像を渡す（透過 PNG または SVG）」と発注側へ求め、`seed-docs/pre-implementation-questions.md:29` が必要な形（`.ico` 16/32/48 の多重 + PNG 180×180 + 512×512）を挙げるが、元画像からその形を作って HTML へ繋ぐ側が無い。
-
-iac-web からの依頼（2026-08-29）。H.S. 裁定の verbatim（出所: iac-web session 経由の伝聞、2026-08-29）:「favicon は、普段は元ネタしか渡せないので、適切なサイズのファイルに変換して配備するルールにしてほしい。fe-starter の仕事なら、そうしてもらって」。**承認 scope は規約をその向きへ改めることまで**で、着手時期は未定 — H.S.（2026-08-29、当 session へ直接）「また後で考えます」。
-
-還流できる実装が iac-web 側にある（commit f631cf4 / 427b85f、そのまま持ち込めるとの報告）:
-
-| 何 | 中身 |
-| --- | --- |
-| 生成 | sharp で 16/32/48 の PNG を作り、ICO container を自前で詰める。sharp は `.ico` を書けないが、ICO は PNG をそのまま格納できる（6 byte header + 16 byte/枚 の directory + PNG 本体）ので 20 行程度 |
-| 配線 | `<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">` と `<link rel="apple-touch-icon" href="/apple-touch-icon.png">` |
-| 不透過の救済 | 円形ロゴなら円マスクを縮小前に alpha へ焼くと角の白が落ちる。縮小後にマスクすると縁に白が残る。JPEG のにじみを噛まないよう半径は 2px 内側 |
-| manifest | 512 は `manifest.json` が無いと未参照。iac-web は未参照なので生成をやめた |
-
-置き場は `tools/` が第 1 候補。iac-web が `pp/scripts/build-images.mjs` へ置いたのは **sharp を pp の devDependency に入れた都合**であって、pp が道具置き場だからではない（2026-08-29 の申し送り）。seed の `tools/` は既に node script を持つ（`ast-tree` / `ast-viewer` が `#!/usr/bin/env node`）ので言語は合う。ただし **`tools/` に package.json が無く**、npm の家は `frontend/` と `pp/` の 2 つだけなので、sharp をどちらの devDependency へ入れるかは取り込み時に決める（出力は frontend の配信資産）。
 
 ### Capacitor / PWA は opt-in — 発注規約に追補が無い
 
