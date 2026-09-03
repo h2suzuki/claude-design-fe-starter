@@ -16,9 +16,17 @@ export async function freezePage(page: Page): Promise<void> {
     // fake clock 下では id が 1e12 始まりのため 0 まで下らず bound する（10 万超の生存 timer は現実に無い）
     const topId = window.setInterval(() => {}, 1 << 30);
     const lowerBound = Math.max(0, topId - 100_000);
+    // fake clock は種別違いの clear（rAF の id を clearInterval）で throw するので、1 件ごとに握って掃きを止めない
+    const clear = (fn: (id: number) => void, id: number): void => {
+      try {
+        fn(id);
+      } catch {
+        /* 種別違い */
+      }
+    };
     for (let id = topId; id > lowerBound; id--) {
-      window.clearInterval(id);
-      window.clearTimeout(id);
+      clear(window.clearInterval, id);
+      clear(window.clearTimeout, id);
     }
   }, FREEZE_STYLE_ID);
 }
