@@ -33,8 +33,8 @@ Work file: `last-session-handoff.md`（この checkout 限り。`.gitignore` 対
 
 Exit Criteria:
 
-- [ ] 適用先で mock を 1 回更新し、`/mock-freeze` の再凍結手順（前版との棚卸し → 参照スクショ → 台帳）を通す
-- [ ] `ast:refresh` で region と provenance が追従し、`COPY_REVIEW` の指摘が実際の文言変更と対応することを確認する
+- [x] 適用先で mock を 1 回更新し、`/mock-freeze` の再凍結手順を通した — iac-web `71c6050`（第 3.1 版: 閉包 26 / 取りこぼし 0、integrity 0、screenshots・states・台帳・lint・provenance。export と台帳と design-scale と状態 screenshot を同じ commit に。2026-09-03）
+- [x] `ast:refresh` で region と provenance が追従した — iac-web `a224ffb`（凍結直後に 7 画面）と `94c32f4`（overlay の visualId 追加後に 4 画面再 refresh、trial overlays 12/16）。`COPY_REVIEW` は 3.1 版の差分が角丸 CSS のみで文言差 0 のため追従対象なし（2026-09-03）
 - [x] 更新後の画面で gate が skip ゼロで緑になった — iac-web 2026-09-03、seed `5f04a44`: 7 画面すべて rc 0 / require-no-skips rc 0、trial は 294 passed（13.4 分、状態 parity 178 件・到達不能 0・diff 0・許容 4、heap 最大 320 MB、既定 heap）。KEEP_IMPL の画像除外は page-parity の状態 test で効いている（`describeExcluded` の行）
 - [x] 手順どおりに回らなかった箇所を seed 側で直し、2 回目の実測として記録した — 2026-09-03 に seed で直した 9 件: 画像 mask の座標 / blur の余白と許容（`483552f` で 4） / 状態限定 visualId と祖先 + nth-child / mobile 専用 overlay の実測 / fillAll 辺 / back 辺の ERR_ABORTED / 送信後 smooth scroll の capture race（`3a22aab`） / fake clock 下の timer 掃き（`5f04a44`） / OOM（再現不能、trace と screenshot は off）。実測は iac-web の `rounds/2.json`
 - [ ] 依存の bump（vite 8.2.2 ほか）を **mock 更新より先に単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）
@@ -86,7 +86,7 @@ Exit Criteria:
 
 - [x] fixture の出所（BE の test 出力）と生成手順が文書にあり、手書き fixture は「生成できない理由」つきの例外になる — `c2a608e`（design-sync 2.3 の 2 段の規約、adoption §5 の置き場 `pp/fixtures/be/`）
 - [x] 生成物と手書きの差（fixture にあって BE に無い key / 値）を機械で出す道具がある — `7f31994`（`bun run --cwd pp fixture:diff`: responder の値と `pp/fixtures/be/*.json` を突合し、fixture にだけある key / 配列要素と BE 出力なしを route ごとに出す。満席枠の実例を unit test で固定。iac-web 実測 2026-09-03 で index 順の突合が 23 件の無意味な差を出したので `30de35a` で key 突合 + 正規化 + 値差の赤 / fixture のみの要素は気づき、に変更）
-- [ ] iac-web の /api/schedule（満席枠が応答から落ちていた実例）で検知できることを確かめる
+- [x] iac-web の /api/schedule で `fixture:diff` を回した — `30de35a` の key 突合で「差分 2 件 / 気づき 11 件 / BE 出力なし 3 件」。差分 2 件は BE test の稽古データと生成 fixture の値の違い（BE の欠落ではない）で、fixture の隣に 1 行注記して運用。満席枠そのものは BE 修正後で再現不能、seed の unit test（`pp/tests/fixture-diff.spec.ts`）が固定（2026-09-03）
 
 実例: iac-web の pp fixture には満席枠があったので gate は緑、BE は満席枠を落としていた。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
 
