@@ -59,8 +59,9 @@ if [[ -z $DECL ]]; then
   cat >&2 <<MSG
 $PROG: denied this Agent call because the prompt does not declare its step.
 Add one line to the prompt:  llm-step: <step> <screen slug>
-(steps: screen-review / gate-diagnose / verify-claims / be-routes / ast-extract /
-implement / hearing / ruling / smoke). Then set "model" to what
+(steps: branch-route / ast-extract / pre-implementation-questions / implement /
+gate-diagnose / screen-review / keep-impl-draft / production-smoke /
+verify-claims). Then set "model" to what
   bun run --cwd pp llm-step -- --expect <step> <slug>
 prints. The table is seed-docs/llm-steps.md. This hook never modifies any file.
 MSG
