@@ -1,0 +1,51 @@
+export type StateParity = {
+  checked: number;
+  unreachable: number;
+  diff: number;
+  tolerance: number | null;
+  heapMaxMB: number | null;
+  limitHit: boolean;
+};
+export type RoundGate = {
+  at: string;
+  durationSeconds: number;
+  expected: number;
+  unexpected: number;
+  flaky: number;
+  skipped: number;
+  declared: number;
+  rc: 0 | 1;
+  specs: Record<string, { status: string; durationMs: number }>;
+  stateParity: StateParity | null;
+};
+export type RoundRecord = {
+  version: string;
+  round: number;
+  recordedAt: string;
+  freeze: Record<string, unknown> | null;
+  screens: Record<string, Record<string, unknown> & { gate?: RoundGate }>;
+  notes: unknown[];
+};
+export type RoundOptions = {
+  round?: number;
+  n?: number;
+  roundsDir?: string;
+  report?: string;
+  statesDir?: string;
+  screenshotsDir?: string;
+  baseline?: string;
+  integrity?: string;
+  agentLog?: string;
+  difficulty?: string;
+  reviewDir?: string;
+  exportDir?: string;
+  referencePages?: string;
+  declarations?: string;
+  now?: string;
+  env?: NodeJS.ProcessEnv;
+};
+export function screenOfReport(report: unknown, env?: NodeJS.ProcessEnv): string;
+export function parseStateLines(lines: string[]): StateParity | null;
+export function renderMarkdown(record: RoundRecord, previous?: RoundRecord | null): string;
+export function recordRound(options?: RoundOptions): RoundRecord;
+export function checkRound(options?: RoundOptions): { ok: boolean; problems: string[] };
