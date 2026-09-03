@@ -33,6 +33,9 @@ import type { PageDiffResult } from "../src/page-diff";
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "page-parity");
 // 失敗した状態ごとに画を 3 枚書くと数十状態で worker の heap が尽きる。診断には先頭の数件で足りる
 const STATE_ARTIFACT_LIMIT = 5;
+// 状態 test は自前で artifacts を書く。Playwright の page ごとの screenshot 保持と trace は数百 page ぶん無駄になる
+test.use({ trace: "off", screenshot: "off" });
+
 const IDS = Object.keys(SELECTOR_MAP);
 const AST_SCREEN = findScreenForMock(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE).match?.screen;
 const AST_NODES = [...(AST_SCREEN?.children ?? []), ...(AST_SCREEN?.overlays ?? [])];

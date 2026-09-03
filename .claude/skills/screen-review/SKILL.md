@@ -23,7 +23,7 @@ screen-loop ⑧ の LLM 一次レビュー。凍結 screenshot を「発注ど�
    - 意味: 文言と状態が噛み合っているか（受付終了なのに押せそうに見える等）
    - 迷わないか: 次に何をすればよいかが一目で分かるか、閉じる手段があるか
 4. 指摘ごとに処置を付ける: `fixed`（app か mock を直した。直した commit を text に添える）/ `keep-impl:<DESIGN-POLICY.md の entry 文字列>`（日付付き裁定として台帳に載せた）/ `open`（未裁定。残すと review:check が赤のまま）
-5. `model` / `effort` / `reviewedAt` を埋め、`docs/presentation/ui-review/<slug>.json` に Write する
+5. `model` / `effort` / `reviewedAt`（Write する時点の ISO 時刻。`date -u +%Y-%m-%dT%H:%M:%SZ` の値）を埋め、`docs/presentation/ui-review/<slug>.json` に Write する。`agentId` は空文字のままでよい — fork は自分の id を知れないので、`agent-audit` が transcript の `attributionSkill` と `reviewedAt` の時刻で帰属を引く
 6. `bun run --cwd pp review:check` を回し、その画面の行が緑になったことを確かめて終える
 
 ## Rules

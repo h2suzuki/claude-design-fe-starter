@@ -19,7 +19,7 @@ allowed-tools: Read, Bash, Glob, Grep, Write
 1. 報告から主張を列挙する（「test が緑」「N 画面で到達不能 0」「commit X に含まれる」等）。1 主張 1 行
 2. 主張ごとに反証を試みる: test は自分で再実行して pass 数を取る、commit は `git show --stat` で中身を見る、数値は artifacts か log を Read する。報告の文面を証拠にしない
 3. 判定は PASS / FAIL / 未確認 の 3 値。FAIL には「実際は何だったか」の 1 文と証拠の path を付ける
-4. 記録を書く: `{ "version": "1", "name": "<name>", "verifiedAt": "<ISO>", "model": "opus", "effort": "high", "agentId": "<呼び出し元が渡した id>", "claims": [{ "text": "…", "verdict": "PASS|FAIL|未確認", "evidence": "…" }] }`
+4. 記録を書く: `{ "version": "1", "name": "<name>", "verifiedAt": "<ISO>", "model": "opus", "effort": "high", "agentId": "", "claims": [{ "text": "…", "verdict": "PASS|FAIL|未確認", "evidence": "…" }] }`
 5. 呼び出し元に FAIL と未確認だけを返す（PASS の羅列は返さない）
 
 ## Rules

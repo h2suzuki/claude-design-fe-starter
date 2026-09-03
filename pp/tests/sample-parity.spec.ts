@@ -27,6 +27,9 @@ import { geometryTargets, keepImplEntries, styleTargets, withoutDeclaredGeometry
 import { writeRunSummary } from "../src/artifact-writer";
 import type { VisualIdReport } from "../src/artifact-writer";
 
+// 状態 test は自前で artifacts を書く。Playwright の page ごとの screenshot 保持と trace は数百 page ぶん無駄になる
+test.use({ trace: "off", screenshot: "off" });
+
 const IDS = Object.keys(SELECTOR_MAP);
 // overlay 配下の id は操作前の DOM に無く、基準幅で突合すると必ず MISS になる
 const BASE_IDS = IDS.filter((id) => !STATE_ONLY_IDS.includes(id));

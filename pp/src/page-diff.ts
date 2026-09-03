@@ -44,8 +44,8 @@ function maskBitmap(width: number, height: number, masks: readonly Box[]): Uint8
   return bitmap;
 }
 
-// backdrop-filter の blur 下では角丸の輪郭が run ごとに 1〜3/255 揺れる（実測: 1024000 px 中 6〜46 px、位置は arc の縁だけ）
-export const BLUR_CHANNEL_TOLERANCE = 3;
+// backdrop-filter の blur 下では輪郭が run ごとに揺れる（実測: 178 状態で ±1〜3 が 1023 px、4 が 1 px。位置は縁だけ）
+export const BLUR_CHANNEL_TOLERANCE = 4;
 
 const withinTolerance = (mock: Buffer, app: Buffer, i: number, tolerance: number): boolean =>
   Math.abs(mock[i]! - app[i]!) <= tolerance &&

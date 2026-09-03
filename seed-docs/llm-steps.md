@@ -57,7 +57,7 @@ model は判定の種類（vision / judgment / 起草）で決め、effort は�
 基準を文章で持っていても逸脱する（実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本）。止めるのは 3 か所。
 
 1. **発注時点**: subagent を出す `Agent` tool の呼び出しは、prompt に `llm-step: <step> <slug>` の 1 行を含め、`model` を `bun run --cwd pp llm-step -- --expect <step> <slug>` が印字した値にする。PreToolUse hook（`.claude/hooks/block-agent-off-table.sh`）が宣言の無い呼び出し・表と違う model・codex 指定の step を Claude subagent に出す呼び出しを deny する。skill 経由（`screen-review` / `gate-diagnose` / `verify-claims`）は frontmatter が model / effort を固定するので宣言は不要。screen-loop の外の仕事（handoff の readback、seed の保守）は `llm-step: off-loop <用途>` と書く — 表は引かないが `model` の明示は要る（親 session の model を黙って継ぐのが止めたい逸脱だから）
-2. **成果物**: `bun run --cwd pp agent-audit` が review 記録と検証記録の `agentId` を session transcript で引き、表と違う model / effort（上位も下位も）と親 session が自分で書いた成果物（呼び忘れ）を赤にする。`review:check` と同じく promote 前の hook が見る
+2. **成果物**: `bun run --cwd pp agent-audit` が review 記録と検証記録を session transcript の subagent 行（`attributionSkill` と `reviewedAt` / `verifiedAt` の時刻で帰属。fork は自分の agentId を知れないので記録の `agentId` は空でよい）で引き、表と違う model / effort（上位も下位も）と親 session が自分で書いた成果物（呼び忘れ）を赤にする。`review:check` と同じく promote 前の hook が見る
 3. **実装 commit**: 委譲境界を超える実装の commit は trailer `Codex-Job: <id>`（codex）か `Agent: <定義名> <agentId>`（fallback）を持つ。agent-audit が commit range に対して欠落を赤にする
 
 ## 見直し（実績で直す）
