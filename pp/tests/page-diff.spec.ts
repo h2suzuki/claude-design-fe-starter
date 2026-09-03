@@ -84,4 +84,14 @@ test.describe("page-diff — judge self-check", () => {
     expect(result.matched).toBe(false);
     expect(result.error).toContain("page dimension mismatch");
   });
+
+  // blur の下の角丸の輪郭は run ごとに 1〜3/255 揺れる。許容は呼び手が明示したときだけ効き、既定は完全一致のまま
+  test("per-channel tolerance forgives sub-LSB noise only when asked", () => {
+    const base = makePng(40, 30, gradient);
+    const off3 = makePng(40, 30, (x, y) => (x === 20 && y === 15 ? [gradient(x, y)[0], gradient(x, y)[1], 63] : gradient(x, y)));
+    const off4 = makePng(40, 30, (x, y) => (x === 20 && y === 15 ? [gradient(x, y)[0], gradient(x, y)[1], 64] : gradient(x, y)));
+    expect(diffPagePngs(base, off3).matched).toBe(false);
+    expect(diffPagePngs(base, off3, [], { tolerance: 3 }).matched).toBe(true);
+    expect(diffPagePngs(base, off4, [], { tolerance: 3 }).matched).toBe(false);
+  });
 });

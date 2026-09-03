@@ -44,9 +44,25 @@ function maskBitmap(width: number, height: number, masks: readonly Box[]): Uint8
   return bitmap;
 }
 
+// backdrop-filter の blur 下では角丸の輪郭が run ごとに 1〜3/255 揺れる（実測: 1024000 px 中 6〜46 px、位置は arc の縁だけ）
+export const BLUR_CHANNEL_TOLERANCE = 3;
+
+const withinTolerance = (mock: Buffer, app: Buffer, i: number, tolerance: number): boolean =>
+  Math.abs(mock[i]! - app[i]!) <= tolerance &&
+  Math.abs(mock[i + 1]! - app[i + 1]!) <= tolerance &&
+  Math.abs(mock[i + 2]! - app[i + 2]!) <= tolerance &&
+  Math.abs(mock[i + 3]! - app[i + 3]!) <= tolerance;
+
 // canvas-diff と違い寸法差を吸収しない。page の高さの違いは bbox の丸めでなくレイアウトの差
 // masks に渡した領域は比較しない（画像は軽量化してよいので、中身の差を数えると規約に従った実装が落ちる）
-export function diffPagePngs(mock: PNG, app: PNG, masks: readonly Box[] = []): PageDiffResult {
+// tolerance は channel ごとの絶対差の許容で、既定 0 は完全一致。blur の効く状態でだけ呼び手が緩める
+export function diffPagePngs(
+  mock: PNG,
+  app: PNG,
+  masks: readonly Box[] = [],
+  options: { tolerance?: number } = {},
+): PageDiffResult {
+  const tolerance = options.tolerance ?? 0;
   const totalPixels = mock.width * mock.height;
   if (mock.width !== app.width || mock.height !== app.height) {
     return {
@@ -66,7 +82,8 @@ export function diffPagePngs(mock: PNG, app: PNG, masks: readonly Box[] = []): P
     for (let x = 0; x < width; x += 1) {
       if (skip?.[y * width + x]) continue;
       const i = (width * y + x) << 2;
-      if (mock.data.readUInt32BE(i) !== app.data.readUInt32BE(i)) {
+      const same = tolerance === 0 ? mock.data.readUInt32BE(i) === app.data.readUInt32BE(i) : withinTolerance(mock.data, app.data, i, tolerance);
+      if (!same) {
         dirtyPerRow[y] += 1;
         diffPixels += 1;
       }

@@ -26,11 +26,13 @@ import { CURRENT_SCREEN } from "../src/screen-registry";
 import { SELECTOR_MAP } from "../src/selector-map";
 import { forEachFrozenState, formatStateFailure, summarizeFailures } from "../src/state-parity";
 import { loadStateGraph, STATES_DIR } from "../src/state-walk";
-import { diffPagePngs } from "../src/page-diff";
+import { BLUR_CHANNEL_TOLERANCE, diffPagePngs } from "../src/page-diff";
 import { blurBleed, boxesAgree, collectImageBoxes, describeCoverage, describeExcluded, padBoxes } from "../src/image-boxes";
 import type { PageDiffResult } from "../src/page-diff";
 
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts", "page-parity");
+// 失敗した状態ごとに画を 3 枚書くと数十状態で worker の heap が尽きる。診断には先頭の数件で足りる
+const STATE_ARTIFACT_LIMIT = 5;
 const IDS = Object.keys(SELECTOR_MAP);
 const AST_SCREEN = findScreenForMock(UI_AST_SCREENS_DIR, MOCK_ENTRY_FILE).match?.screen;
 const AST_NODES = [...(AST_SCREEN?.children ?? []), ...(AST_SCREEN?.overlays ?? [])];
@@ -102,6 +104,7 @@ for (const [label, contextOptions] of BASES) {
       test.skip(graph === null, "状態グラフ無し — bun run --cwd pp mock:states で凍結すると有効化される");
       test.setTimeout(15 * 60_000);
       if (!graph) return;
+      let artifactsWritten = 0;
       const failures = await forEachFrozenState<number>(
         {
           browser,
@@ -132,10 +135,15 @@ for (const [label, contextOptions] of BASES) {
             mockPage.screenshot({ type: "png", fullPage: false }).then((png) => PNG.sync.read(png)),
             appPage.screenshot({ type: "png", fullPage: false }).then((png) => PNG.sync.read(png)),
           ]);
-          const result = diffPagePngs(mockPng, appPng, excluded);
+          const tolerance = bleed > 0 ? BLUR_CHANNEL_TOLERANCE : 0;
+          const result = diffPagePngs(mockPng, appPng, excluded, { tolerance });
           const boxesMatch = boxesAgree(mockBoxes, appBoxes);
           const failed = !boxesMatch || !result.matched;
-          const artifact = failed ? writeArtifacts(`${label}-${stateId}`, mockPng, appPng, result) : "";
+          const artifact = !failed
+            ? ""
+            : artifactsWritten < STATE_ARTIFACT_LIMIT
+              ? (artifactsWritten += 1, writeArtifacts(`${label}-${stateId}`, mockPng, appPng, result))
+              : `artifacts は先頭 ${STATE_ARTIFACT_LIMIT} 状態のみ`;
           const found: string[] = [];
           if (!boxesMatch) {
             found.push(
@@ -148,7 +156,7 @@ for (const [label, contextOptions] of BASES) {
               `state ${stateId}: pixel ${describeFailure(result)}（KEEP_IMPL で除外: ${describeExcluded(targets, mockBoxes)}）/ ${artifact}`,
             );
           }
-          console.log(`state ${stateId}: ids ${idCount} / diff ${failed ? "あり" : "0"} / ${describeCoverage(mockBoxes, targets)}`);
+          console.log(`state ${stateId}: ids ${idCount} / diff ${failed ? "あり" : "0"} / 許容 ±${tolerance} / ${describeCoverage(mockBoxes, targets)}`);
           return found;
         },
       );
