@@ -1,10 +1,10 @@
 ---
-name: screen-review
-description: Reviews the frozen screenshots of one screen for value consistency, meaning and navigability, and writes the machine-checkable review record that review:check reads.
-when_to_use: TRIGGER when screen-loop step 8 "LLM スクショ一次レビュー" is due for a screen, when "/screen-review <slug>" is invoked, or when review:check reports a screen as "記録なし" / "再レビュー". SKIP for pixel or structural comparison (that is pp's job) and for screens whose review record is green in review:check.
+name: screen-review-s
+description: Difficulty-S variant of screen-review (medium effort); reviews the frozen screenshots of one simple screen and writes the machine-checkable review record that review:check reads.
+when_to_use: TRIGGER when screen-loop step 8 "LLM スクショ一次レビュー" is due for a screen whose difficulty is S in pp/artifacts/difficulty.json, or when "/screen-review-s <slug>" is invoked. SKIP for M / L screens (use screen-review), for pixel or structural comparison (that is pp's job) and for screens whose review record is green in review:check.
 argument-hint: <screen slug>
 model: opus
-effort: high
+effort: medium
 context: fork
 agent: general-purpose
 allowed-tools: Read, Bash, Write, Glob, Grep

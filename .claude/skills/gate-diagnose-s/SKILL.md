@@ -1,10 +1,10 @@
 ---
-name: gate-diagnose
-description: Diagnoses a red pp gate from its artifacts (style, geometry and pixel diffs, unreachable states) in a fresh context and reports the root cause with the evidence line for each finding.
-when_to_use: TRIGGER when a pp gate (sample-parity, page-parity, width-sweep, poststate-sweep, self-baseline) is red and the cause is not obvious from the failure line, when "gate の赤を診断" or "/gate-diagnose <slug>" is requested. SKIP when the failure line already names a missing visual id or a missing registration (fix directly), and for green gates.
+name: gate-diagnose-s
+description: Difficulty-S variant of gate-diagnose (medium effort); diagnoses a red pp gate of one simple screen from its artifacts in a fresh context and reports the root cause with the evidence line for each finding.
+when_to_use: TRIGGER when a pp gate is red for a screen whose difficulty is S in pp/artifacts/difficulty.json and the cause is not obvious from the failure line, or when "/gate-diagnose-s <slug>" is requested. SKIP for M / L screens (use gate-diagnose), when the failure line already names a missing visual id or a missing registration (fix directly), and for green gates.
 argument-hint: <screen slug> [<spec name>]
 model: opus
-effort: high
+effort: medium
 context: fork
 agent: general-purpose
 allowed-tools: Read, Bash, Glob, Grep

@@ -36,8 +36,8 @@ model は判定の種類（vision / judgment / 起草）で決め、effort は�
 | ③ AST 抽出（macro / leaf / reconcile） | 構造の分類、nodeRef の一意化、uncertainNodes の判定 | Opus medium | Opus high | Opus xhigh | L では nodeRef の二重一致や状態限定 id が要り、reconcile の見落としは後で「到達不能」として出る |
 | ④ 実装前ヒアリング | 質問票の起草（判断はユーザー） | Sonnet medium | Sonnet medium | Opus medium | 起草なので軽い |
 | ⑤ 部品実装 / ⑥ page composition（境界超えは codex、これは fallback の列） | 発注書に沿った実装 + TDD | Opus medium | Opus high | Opus xhigh | L（picker・calendar dialog・history）は Opus high でも fix round 2 回。発注書に「定番 library を検索してから」を書かないと model に関係なく自前実装に行く |
-| ⑦ 機械 gate の赤の診断 | parity artifacts（style / geometry / pixel）の読み解きと原因特定 | Opus medium | Opus high | Opus xhigh | ±1/255 の差の切り分けは Opus high で 4 run 要した。fresh context の subagent に出す（`gate-diagnose` skill） |
-| ⑧ LLM スクショ一次レビュー | 全状態のスクショを「値の整合・意味・迷わないか」で判定 | Opus medium | Opus high | Opus high（状態 10 枚ずつに分割） | vision の判定なので Haiku / Sonnet は使わない。実装した agent とは別の fresh context（`screen-review` skill） |
+| ⑦ 機械 gate の赤の診断 | parity artifacts（style / geometry / pixel）の読み解きと原因特定 | Opus medium（`gate-diagnose-s`） | Opus high（`gate-diagnose`） | Opus high（`gate-diagnose`） | ±1/255 の差の切り分けは Opus high で 4 run 要した。fresh context の subagent に出す。L の xhigh は skill の effort が 2 段しか持てないので落とした（2 回目の赤は codex の cross-model review へ） |
+| ⑧ LLM スクショ一次レビュー | 全状態のスクショを「値の整合・意味・迷わないか」で判定 | Opus medium（`screen-review-s`） | Opus high（`screen-review`） | Opus high（`screen-review`、状態 10 枚ずつに分割） | vision の判定なので Haiku / Sonnet は使わない。実装した agent とは別の fresh context |
 | ⑨ 裁定文の起草 | KEEP_IMPL entry の文面 | Sonnet medium | Sonnet medium | Sonnet medium | fork 編集 skill は追記を落とすので、起草だけさせて diff は発注側が読む |
 | ⑩ 本番 smoke | 本番 URL を browser 自動化で読み、API の値と表示・動線を突き合わせる | Sonnet medium | Opus medium | Opus high | L は動線（dialog → 別 page → 戻る、テーマ保存 → reload）を歩く |
 | 完了主張の独立検証 | 完了報告の主張 N 件を証跡で refute する | Opus high | Opus high | Opus high | 実績: 11 主張中 1 件 FAIL を検出。実装 agent と別の fresh context（`verify-claims` skill） |
@@ -48,7 +48,7 @@ model は判定の種類（vision / judgment / 起草）で決め、effort は�
 1. **実装した agent は自分の成果を審査しない。** ⑧ と独立検証は fresh context の別 agent で行う
 2. **審査側の model は実装側と同 tier 以上。** 下位 model の審査は見逃しが増えるだけで費用は大して減らない
 3. **effort は難易度で上げ、model は判定の種類で決める。** vision と judgment は Opus、起草は Sonnet でよい
-4. **seed が配る実行 skill の frontmatter と表を 1 対 1 にする。** `screen-review`（⑧）・`gate-diagnose`（⑦ の赤）・`verify-claims`（独立検証）は表の L 列（上限）を frontmatter に持つ。S / M で下げるときは呼び出し側が `effort` を落とし、記録（review record 等）にその値を書く
+4. **seed が配る実行 skill の frontmatter と表を 1 対 1 にする。** skill の effort は frontmatter で固定され、Agent tool にも effort 引数は無いので、段を分けるには skill を分けるしかない。S は `screen-review-s` / `gate-diagnose-s`（medium）、M / L は `screen-review` / `gate-diagnose`（high）、独立検証は `verify-claims`（全段 high）。`-s` と無印は frontmatter 以外の本文が同一で、`pp/tests/skills.spec.ts` が同一性と表との一致を固定する。呼ぶ側は `bun run --cwd pp difficulty` の段で skill を選ぶ
 5. **境界を超える実装は codex に出す。** 呼び忘れ（Claude 本体が 3 file 以上を書いた）は agent-audit が commit の trailer（`Agent:` / `Codex-Job:`）の欠落として警告する
 6. **難易度は script の出力から読む。** 状態数は `states/<slug>.json`、BE route 数は ②′ の表。目視の印象で S にしない
 
@@ -69,6 +69,7 @@ model は判定の種類（vision / judgment / 起草）で決め、effort は�
 ### 表の変更履歴
 
 - 2026-09-03: 初版。iac-web の 1 session（subagent 18 本）の実績から起こした
+- 2026-09-03: S 画面の screen-review が skill の high 固定で必ず「表より上」の赤になった（消費 PJ の agent-audit 7 件中 3 件）。tier 別 skill（`-s` = medium）を追加し、⑦ の L は xhigh → high（skill は 2 段まで）
 - 2026-09-03: 発注 hook に `off-loop` 宣言を追加（screen-loop 外の subagent は表を引かず、model の明示だけを要求）。handoff の readback が hook で止まったため
 
 ## 実測で直す

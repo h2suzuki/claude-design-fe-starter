@@ -18,7 +18,7 @@ export const STEP_TABLE = {
   'ast-extract': { S: claude('opus', 'medium'), M: claude('opus', 'high'), L: claude('opus', 'xhigh') },
   'pre-implementation-questions': { S: claude('sonnet', 'medium'), M: claude('sonnet', 'medium'), L: claude('opus', 'medium') },
   implement: { S: codex('gpt-5.6-luna', 'default'), M: codex('gpt-5.6-terra', 'default'), L: codex('gpt-5.6-sol', 'high') },
-  'gate-diagnose': { S: claude('opus', 'medium'), M: claude('opus', 'high'), L: claude('opus', 'xhigh') },
+  'gate-diagnose': { S: claude('opus', 'medium'), M: claude('opus', 'high'), L: claude('opus', 'high') },
   'screen-review': { S: claude('opus', 'medium'), M: claude('opus', 'high'), L: claude('opus', 'high') },
   'keep-impl-draft': { S: claude('sonnet', 'medium'), M: claude('sonnet', 'medium'), L: claude('sonnet', 'medium') },
   'production-smoke': { S: claude('sonnet', 'medium'), M: claude('opus', 'medium'), L: claude('opus', 'high') },
