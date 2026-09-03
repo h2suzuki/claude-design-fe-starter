@@ -10,17 +10,33 @@ NO_GATE=0
 STEPS=()
 
 usage() {
-  printf 'Usage: %s [--no-gate]\n' "$PROG"
+  printf 'Usage: %s [--no-gate] [--plan]\n' "$PROG"
 }
 
-case ${1:-} in
-  '') ;;
-  --no-gate) NO_GATE=1 ;;
-  *) usage >&2; exit 64 ;;
-esac
-if [[ $# -gt 1 ]]; then
-  usage >&2
-  exit 64
+PLAN=0
+for arg in "$@"; do
+  case $arg in
+    --no-gate) NO_GATE=1 ;;
+    --plan) PLAN=1 ;;
+    *) usage >&2; exit 64 ;;
+  esac
+done
+
+# bun test と同じ集合で unit の有無を決める（frontend/ 配下、node_modules 除く）
+unit_test_file() {
+  [[ -d $ROOT/frontend ]] || return 0
+  find "$ROOT/frontend" -path '*/node_modules' -prune -o -type f \
+    \( -name '*.test.*' -o -name '*.spec.*' -o -name '*_test.*' -o -name '*_spec.*' \) -print -quit
+}
+UNIT_FILE=$(unit_test_file)
+UNIT_PLAN=run
+[[ -n $UNIT_FILE ]] || UNIT_PLAN='skip (no unit tests)'
+GATE_PLAN=run
+[[ $NO_GATE -eq 0 ]] || GATE_PLAN='skip (--no-gate)'
+
+if [[ $PLAN -eq 1 ]]; then
+  printf '%-16s %s\n' frontend-check run frontend-unit "$UNIT_PLAN" pp-typecheck run gate-all "$GATE_PLAN" frontend-build run
+  exit 0
 fi
 
 mkdir -p "$LOG_DIR" || exit 1
@@ -58,10 +74,6 @@ run frontend-check "$BUN" run --cwd "$ROOT/frontend" check
 rc=$?
 [[ $rc -eq 0 ]] || exit "$rc"
 
-UNIT_FILE=""
-if [[ -d $ROOT/frontend/src ]]; then
-  UNIT_FILE=$(find "$ROOT/frontend/src" -type f \( -name '*.test.*' -o -name '*.spec.*' \) -print -quit)
-fi
 if [[ -n $UNIT_FILE ]]; then
   run frontend-unit "$BUN" --cwd "$ROOT/frontend" test
   rc=$?
