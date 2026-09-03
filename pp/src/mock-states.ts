@@ -297,6 +297,8 @@ export async function collectStateActions(
   siteFiles: ReadonlySet<string>,
 ): Promise<StateActionResult> {
   const found = await browserActions(page);
+  // 往復は復元の問いが立つ dialog の中でだけ、遷移先ごとに 1 本。root からの往復は link の数だけ探索を伸ばすだけ
+  const backFiles = new Set<string>();
   const candidates: StateActionCandidate[] = found.clicks.flatMap((candidate): StateActionCandidate[] => {
     const action: MockStateAction =
       candidate.href === null
@@ -305,8 +307,10 @@ export async function collectStateActions(
             kind: "click",
             selector: candidate.selector,
           };
-    // 別画面へ出て戻る往復は overlay の復元有無を分ける（辿らないと復元漏れが辺に現れない）
-    if (action.kind !== "navigate") return [{ action, label: candidate.label }];
+    if (action.kind !== "navigate" || !found.dialogSelector || backFiles.has(action.file)) {
+      return [{ action, label: candidate.label }];
+    }
+    backFiles.add(action.file);
     return [
       { action, label: candidate.label },
       { action: { kind: "back" as const, selector: action.selector, file: action.file }, label: `${candidate.label} → 戻る` },
@@ -399,9 +403,10 @@ export const performAction = async (page: Page, action: MockStateAction): Promis
     await swipe(page, action.direction, action.selector);
   } else if (action.kind === "back") {
     await page.locator(action.selector).click();
-    await page.waitForLoadState("load");
+    // 読み込み中に戻ると資産の request が打ち切られ、閉包の欠落と見分けにくい
+    await page.waitForLoadState("networkidle");
     await page.goBack();
-    await page.waitForLoadState("load");
+    await page.waitForLoadState("networkidle");
   } else if (action.kind === "fillAll") {
     for (const fill of action.fills) await fillField(page, fill.selector, fill.value);
   } else {

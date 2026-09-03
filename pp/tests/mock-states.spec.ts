@@ -98,7 +98,7 @@ test("深さ上限で安全に探索を止める", async ({ browser }) => {
 });
 
 test("export 内リンクと外部リンクは遷移せず分類する", async ({ browser }) => {
-  // 別画面と外部サイトへのリンクは行き先だけを辺に残し、往復して戻る back 辺だけが元の状態へ閉じる。
+  // 別画面と外部サイトへのリンクは行き先だけを辺に残す。dialog の無い状態では往復しても復元の問いが無いので back 辺は出ない。
   const context = await browser.newContext();
   await context.route("http://mock.local/**", (route) =>
     route.fulfill({
@@ -121,7 +121,6 @@ test("export 内リンクと外部リンクは遷移せず分類する", async (
   });
   expect(result.edges.map((edge) => [edge.action, edge.to])).toEqual([
     [{ kind: "navigate", selector: "body > a:nth-child(1)", file: "other.html" }, undefined],
-    [{ kind: "back", selector: "body > a:nth-child(1)", file: "other.html" }, "root"],
     [{ kind: "external", selector: "body > a:nth-child(2)", url: "https://example.com/path" }, undefined],
   ]);
   expect(Object.keys(result.states)).toEqual(["root"]);
@@ -294,5 +293,22 @@ test("戻っても overlay が復元されない mock では back 辺が root �
   const back = result.edges.filter((edge) => edge.action.kind === "back");
   expect(back).toHaveLength(1);
   expect([back[0]!.from, back[0]!.to]).toEqual([opened, "root"]);
+  await context.close();
+});
+
+// 往復は link の数だけ探索を伸ばす。復元の問いは dialog ごとに 1 つなので、同じ遷移先は 1 本で足りる
+test("開いた dialog の中で同じ遷移先の link が並んでも back 候補は 1 本", async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.route("http://links.local/**", (route) =>
+    route.fulfill({
+      contentType: "text/html; charset=utf-8",
+      body: `<dialog open><a href="/a.html">会場 A</a><a href="/a.html">地図</a><a href="/b.html">会場 B</a></dialog>`,
+    }),
+  );
+  const page = await context.newPage();
+  await page.goto("http://links.local/root.html");
+  const { candidates } = await collectStateActions(page, "desktop", new Set(["root.html", "a.html", "b.html"]));
+  const backs = candidates.filter((candidate) => candidate.action.kind === "back");
+  expect(backs.map((candidate) => (candidate.action.kind === "back" ? candidate.action.file : ""))).toEqual(["a.html", "b.html"]);
   await context.close();
 });

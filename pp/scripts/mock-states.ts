@@ -9,7 +9,7 @@ import { exploreStates, isolateStorage } from "../src/mock-states";
 import type { MockStateGraph } from "../src/mock-states";
 import { EXPORT_DIR, REFERENCE_PAGES_FILE, SCREENSHOTS_DIR } from "../src/mock-server";
 import { listMockScreens, listSiteScreens, screenSlug, screenshotFile } from "../src/mock-screens";
-import { installNetworkGuard, isEmbedRequest } from "../src/net-block";
+import { installNetworkGuard, isAbortedByNavigation, isEmbedRequest } from "../src/net-block";
 import { STATES_DIR } from "../src/state-walk";
 import { openMock } from "../src/targets/mock-target";
 
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
         const context = await browser.newContext(contextOptions);
         try {
           context.on("requestfailed", (request) => {
-            if (!isEmbedRequest(request)) {
+            if (!isEmbedRequest(request) && !isAbortedByNavigation(request)) {
               unreadable.add(`${viewport} ${screen}: ${request.url()}（${request.failure()?.errorText ?? "failed"}）`);
             }
           });

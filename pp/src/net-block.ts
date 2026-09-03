@@ -19,6 +19,10 @@ export const VENDOR_ROUTES: VendorRoute[] = JSON.parse(
 export const isEmbedRequest = (request: Request): boolean =>
   request.isNavigationRequest() && request.frame().parentFrame() !== null;
 
+// 遷移が読み込み中の request を打ち切ると ERR_ABORTED になる。guard の abort は ERR_FAILED なので区別できる
+export const isAbortedByNavigation = (request: Request): boolean =>
+  request.failure()?.errorText === "net::ERR_ABORTED";
+
 export async function installNetworkGuard(context: BrowserContext): Promise<void> {
   // Playwright の route は後着優先 — 広い catch-all を先に、個別 vendor route を後に登録する
   await context.route("**/*", async (route) => {
