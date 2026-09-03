@@ -52,6 +52,24 @@ model は判定の種類（vision / judgment / 起草）で決め、effort は�
 5. **境界を超える実装は codex に出す。** 呼び忘れ（Claude 本体が 3 file 以上を書いた）は agent-audit が commit の trailer（`Agent:` / `Codex-Job:`）の欠落として警告する
 6. **難易度は script の出力から読む。** 状態数は `states/<slug>.json`、BE route 数は ②′ の表。目視の印象で S にしない
 
+## 強制（逸脱は止める）
+
+基準を文章で持っていても逸脱する（実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本）。止めるのは 3 か所。
+
+1. **発注時点**: subagent を出す `Agent` tool の呼び出しは、prompt に `llm-step: <step> <slug>` の 1 行を含め、`model` を `bun run --cwd pp llm-step -- --expect <step> <slug>` が印字した値にする。PreToolUse hook（`.claude/hooks/block-agent-off-table.sh`）が宣言の無い呼び出し・表と違う model・codex 指定の step を Claude subagent に出す呼び出しを deny する。skill 経由（`screen-review` / `gate-diagnose` / `verify-claims`）は frontmatter が model / effort を固定するので宣言は不要
+2. **成果物**: `bun run --cwd pp agent-audit` が review 記録と検証記録の `agentId` を session transcript で引き、表と違う model / effort（上位も下位も）と親 session が自分で書いた成果物（呼び忘れ）を赤にする。`review:check` と同じく promote 前の hook が見る
+3. **実装 commit**: 委譲境界を超える実装の commit は trailer `Codex-Job: <id>`（codex）か `Agent: <定義名> <agentId>`（fallback）を持つ。agent-audit が commit range に対して欠落を赤にする
+
+## 見直し（実績で直す）
+
+- agent-audit は判定のたびに `pp/artifacts/agent-log.jsonl` へ 1 行（step / tier / executor / model / effort / token / 所要 / 判定）を追記する。fix round 数と後で見つかったバグ数は、分かった時点で人がその行に `fixRounds` / `laterBugs` を書き足す
+- 凍結（mock:freeze）のたびに `bun run --cwd pp llm-steps:review` を回す。cell ごとに「fix round 2 回以上か後発バグ 1 件以上 → 1 段上げる候補」「token が同 step の中央値の 2 倍超で赤 0 → 1 段下げる候補」を出す
+- 採否は下の履歴に日付付きで書き、表と skill の frontmatter を同じ commit で変える
+
+### 表の変更履歴
+
+- 2026-09-03: 初版。iac-web の 1 session（subagent 18 本）の実績から起こした
+
 ## 実測で直す
 
 表は 1 PJ（7 画面、1 session、subagent 18 本）の実績から起こした素案で、token・所要・指摘数の実測が集まったら列を直す。直すときはこの doc の表と skill の frontmatter を同じ commit で変える。

@@ -82,9 +82,11 @@ Exit Criteria:
 - [x] seed が実行 skill として配る step（⑧ screen-review / ⑦ 赤の診断 / 完了主張の独立検証）の frontmatter の model / effort が表と一致する — `fe5db76` / `bba2e66`（3 skill とも opus / high / context: fork。表の L 列 = 上限）
 - [ ] 難易度 S / M / L は人や LLM が選ばず script が出す: `bun run --cwd pp difficulty` が状態数（states json の viewport 最大）・BE route 数（screens.ts の fixture 登録）・history の有無（mock:branches）から画面ごとの段と根拠を `pp/artifacts/difficulty.json` に書く。上げ下げは日付付き理由が要る
 - [ ] 表どおりの model / effort で実行されたかを機械で確かめる: ⑧ の記録と独立検証の報告に `agentId` を必須にし、`bun run --cwd pp agent-audit` が session transcript からその agent の model / effort を引いて表と突合し、親 session の model で書かれた成果物（subagent の呼び忘れ）を赤、表より上位を警告にする
+- [ ] 逸脱は警告でなく止める: agent-audit は表より上位の model / effort も赤にし、発注時点では PreToolUse hook が Agent tool の呼び出しに `llm-step: <step> <slug>` の宣言と表どおりの model を要求して deny する（`bun run --cwd pp llm-step -- --expect <step> <slug>` が写す値を印字）
+- [ ] 表を実績で見直す: agent-audit が `pp/artifacts/agent-log.jsonl` に executor / model / effort / token / 所要 / 判定を追記し、`bun run --cwd pp llm-steps:review` が cell ごとに「上げる候補 / 下げる候補」を出す。採否は日付付きで `seed-docs/llm-steps.md` に残す
 - [ ] iac-web が表どおりに ⑧ と独立検証を走らせ、token・所要・指摘数の実測で表を直した報告を受ける
 
-ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」
+ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」 追補 3 同日 11:08（verbatim）: 「あなた自分で決めたことから逸脱すると思うなら、メカニカルチェックによる強制が必要です。また、モデル・エフォートは時々見直しも必要です。現実にそぐわなければ、意味がありません。バグを作り込みすぎたり、トークンの消費が過剰だったり。」iac-web の実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本。
 
 ### pp の fixture が BE の契約から乖離しても検知されない
 
