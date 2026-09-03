@@ -14,12 +14,13 @@ function sidechain(agentId: string, model: string, effort: string, extra: Record
   return { isSidechain: true, agentId, effort, type: "assistant", message: { model, ...extra } };
 }
 
-const review = (agentId?: string, tier: "S" | "M" | "L" | null = "L"): Artefact => ({
+const review = (agentId?: string, tier: "S" | "M" | "L" | null = "L", at: string | null = "2026-09-03T10:00:00.000Z"): Artefact => ({
   file: "trial.json",
   step: "screen-review",
   slug: "trial",
   tier,
   agentId,
+  at,
 });
 
 test("表どおりの model / effort で回した記録は緑", () => {
@@ -29,10 +30,10 @@ test("表どおりの model / effort で回した記録は緑", () => {
   expect(result.summary).toBe("1 件 / 赤 0 件");
 });
 
-test("agentId の無い記録は赤（どの executor が書いたか辿れない）", () => {
-  const result = auditArtefacts([review()], []);
+test("時刻の無い記録は赤（時刻で帰属を引けない）", () => {
+  const result = auditArtefacts([review(undefined, "L", null)], []);
   expect(result.red).toBe(1);
-  expect(result.rows[0].line).toContain("agentId が無い");
+  expect(result.rows[0].line).toContain("reviewedAt が無い");
 });
 
 test("transcript に sidechain が無い agentId は呼び忘れとして赤", () => {
@@ -76,6 +77,48 @@ test("token と所要は sidechain 行の usage と timestamp から出す", () 
   ];
   expect(agentMetrics(lines)).toEqual({ tokens: 120, durationSeconds: 30 });
   expect(agentMetrics([sidechain("a1", "claude-opus-5", "high")])).toEqual({ tokens: null, durationSeconds: null });
+});
+
+function attributedSidechain(agentId: string, timestamp: string, attributionSkill: string, content: string | { type: string; text: string }[] = "") {
+  return { isSidechain: true, agentId, timestamp, attributionSkill, effort: "high", type: "user", message: { model: "claude-opus-5", content } };
+}
+
+test("不正な agentId でも skill と時刻で transcript の agentId に帰属して緑になる", () => {
+  const at = "2026-09-03T10:00:00.000Z";
+  const result = auditArtefacts([review("screen-review", "L", at)], [attributedSidechain("subagent-1", at, "screen-review", "trial")]);
+  expect(result).toMatchObject({ red: 0, rows: [{ agentId: "subagent-1" }] });
+  expect(result.rows[0].line).toContain("agentId（transcript から: subagent-1）");
+});
+
+test("skill が合っても時刻の範囲外なら赤になる", () => {
+  const result = auditArtefacts(
+    [review("wrong", "L", "2026-09-03T10:06:00.000Z")],
+    [attributedSidechain("subagent-1", "2026-09-03T10:00:00.000Z", "screen-review", "trial")],
+  );
+  expect(result.rows[0].line).toContain("該当する subagent が transcript に無い");
+});
+
+test("時刻が合っても別 skill の束は候補にしない", () => {
+  const at = "2026-09-03T10:00:00.000Z";
+  const result = auditArtefacts([review("wrong", "L", at)], [attributedSidechain("subagent-1", at, "verify-claims", "trial")]);
+  expect(result.rows[0].line).toContain("skill screen-review");
+});
+
+test("複数候補は最初の user 行にある slug で 1 つに絞る", () => {
+  const at = "2026-09-03T10:00:00.000Z";
+  const result = auditArtefacts(
+    [review("wrong", "L", at)],
+    [
+      attributedSidechain("other", at, "screen-review", "別画面"),
+      attributedSidechain("trial-agent", at, "screen-review", [{ type: "text", text: "trial をレビュー" }]),
+    ],
+  );
+  expect(result).toMatchObject({ red: 0, rows: [{ agentId: "trial-agent" }] });
+});
+
+test("帰属を引く時刻が無い記録は候補があっても赤になる", () => {
+  const result = auditArtefacts([review("wrong", "L", null)], [attributedSidechain("subagent-1", "2026-09-03T10:00:00.000Z", "screen-review", "trial")]);
+  expect(result.rows[0].line).toContain("reviewedAt が無い");
 });
 
 const temps: string[] = [];

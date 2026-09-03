@@ -1,5 +1,5 @@
 import type { StepExpectation, StepTier } from "./llm-step.mjs";
-export type Artefact = { file: string; step: string; slug: string | null; tier: StepTier | null; agentId?: string };
+export type Artefact = { file: string; step: string; slug: string | null; tier: StepTier | null; agentId?: string; at: string | null };
 export type AuditRow = {
   file: string;
   step: string;
@@ -16,6 +16,7 @@ export type AuditRow = {
 export type AuditResult = { rows: AuditRow[]; red: number; attribution: "agentId" | "sidechain-set" | "none"; summary: string };
 export const AGENT_LOG: string;
 export function collectArtefacts(reviewDir: string, screens: Record<string, { tier: StepTier }> | null): Artefact[];
+export function resolveAgent(artefact: Artefact, transcriptLines: Record<string, unknown>[]): { agentId: string | null; lines: Record<string, unknown>[]; reason: string | null };
 export function agentMetrics(side: unknown[]): { tokens: number | null; durationSeconds: number | null };
 export function auditArtefacts(
   artefacts: Artefact[],

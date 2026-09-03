@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// LLM step の成果物が表どおりの model / effort で作られたかを session transcript で裏取りし、呼び忘れ（agentId 不在）も捕まえる
+// LLM step の成果物が表どおりの model / effort で作られたかを session transcript で裏取りする
 // 表より上（token の無駄）も表より下（見逃し）と同じく赤
 import fs from 'node:fs';
 import os from 'node:os';
@@ -42,10 +42,10 @@ export function collectArtefacts(reviewDir, screens) {
       }
       if (typeof record?.agentId !== 'string') return [];
       if (name.startsWith('verify-')) {
-        return [{ file: name, step: 'verify-claims', slug: null, tier: 'L', agentId: record.agentId }];
+        return [{ file: name, step: 'verify-claims', slug: null, tier: 'L', agentId: record.agentId, at: typeof record.verifiedAt === 'string' ? record.verifiedAt : null }];
       }
       const slug = typeof record.screen === 'string' && record.screen !== '' ? record.screen : path.basename(name, '.json');
-      return [{ file: name, step: 'screen-review', slug, tier: screens?.[slug]?.tier ?? null, agentId: record.agentId }];
+      return [{ file: name, step: 'screen-review', slug, tier: screens?.[slug]?.tier ?? null, agentId: record.agentId, at: typeof record.reviewedAt === 'string' ? record.reviewedAt : null }];
     });
 }
 
@@ -56,6 +56,44 @@ function attributionMode(lines) {
 
 function linesOf(lines, agentId, mode) {
   return lines.filter((line) => line?.isSidechain === true && (mode === 'agentId' ? line.agentId === agentId : true));
+}
+
+function messageText(content) {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content.map((part) => (typeof part?.text === 'string' ? part.text : '')).join('');
+}
+
+function firstUserText(lines) {
+  const line = lines.find((entry) => entry?.type === 'user' || entry?.message?.role === 'user');
+  return messageText(line?.message?.content);
+}
+
+export function resolveAgent(artefact, lines) {
+  const direct = typeof artefact.agentId === 'string' && artefact.agentId !== '' ? linesOf(lines, artefact.agentId, 'agentId') : [];
+  if (direct.length > 0) return { agentId: artefact.agentId, lines: direct, reason: null };
+  const at = Date.parse(artefact.at ?? '');
+  if (!Number.isFinite(at)) return { agentId: null, lines: [], reason: 'reviewedAt が無い（時刻で帰属を引けない）' };
+  const groups = new Map();
+  for (const line of lines) {
+    if (line?.isSidechain !== true || typeof line.agentId !== 'string' || line.agentId === '') continue;
+    const group = groups.get(line.agentId) ?? [];
+    group.push(line);
+    groups.set(line.agentId, group);
+  }
+  const candidates = [...groups.entries()].filter(([, side]) => {
+    if (!side.some((line) => line?.attributionSkill === artefact.step)) return false;
+    const stamps = side.map((line) => Date.parse(line?.timestamp ?? '')).filter((stamp) => Number.isFinite(stamp));
+    return stamps.length > 0 && at >= Math.min(...stamps) - 5 * 60_000 && at <= Math.max(...stamps) + 5 * 60_000;
+  });
+  if (candidates.length === 1) return { agentId: candidates[0][0], lines: candidates[0][1], reason: null };
+  if (candidates.length === 0) {
+    return { agentId: null, lines: [], reason: `該当する subagent が transcript に無い（skill ${artefact.step} の sidechain が reviewedAt ${artefact.at} の前後に無い — 呼び忘れか、記録の時刻が違う）` };
+  }
+  const slugMatches = artefact.step === 'screen-review' && artefact.slug ? candidates.filter(([, side]) => firstUserText(side).includes(artefact.slug)) : [];
+  if (slugMatches.length === 1) return { agentId: slugMatches[0][0], lines: slugMatches[0][1], reason: null };
+  const ambiguous = slugMatches.length > 1 ? slugMatches : candidates;
+  return { agentId: null, lines: [], reason: `候補が複数（${ambiguous.map(([agentId]) => agentId).join('、')}）` };
 }
 
 // 見直し（llm-steps:review）が cell ごとの token 中央値を出せるよう、実測を記録に残す
@@ -75,26 +113,28 @@ const weakest = (values, rank) => [...values].sort((left, right) => rank(left) -
 export function auditArtefacts(artefacts, transcriptLines, expect = expectFor) {
   const mode = transcriptLines === null ? 'none' : attributionMode(transcriptLines);
   const rows = artefacts.map((artefact) => {
-    const base = { file: artefact.file, step: artefact.step, slug: artefact.slug ?? null, tier: artefact.tier ?? null, agentId: artefact.agentId ?? null };
-    const red = (line) => ({ ...base, level: 'red', model: null, effort: null, expectedModel: null, expectedEffort: null, line: `${artefact.file}: ${line}` });
-    if (typeof artefact.agentId !== 'string' || artefact.agentId === '') {
-      return red('agentId が無い（どの executor が書いたか辿れない）');
-    }
+    const base = (agentId) => ({ file: artefact.file, step: artefact.step, slug: artefact.slug ?? null, tier: artefact.tier ?? null, agentId });
+    const red = (line, agentId = null) => ({ ...base(agentId), level: 'red', model: null, effort: null, expectedModel: null, expectedEffort: null, line: `${artefact.file}: ${line}` });
     if (!artefact.tier) return red('difficulty.json が無い（bun run --cwd pp difficulty を先に）');
     const want = expect(artefact.step, artefact.tier);
     if (transcriptLines === null) return red('transcript が見つからない（$CLAUDE_TRANSCRIPT を渡す）');
-    const side = linesOf(transcriptLines, artefact.agentId, mode);
-    if (side.length === 0) {
-      return red(`${artefact.agentId} の sidechain が transcript に無い（呼び忘れ — 親 session が自分で書いた）`);
-    }
+    const resolved = resolveAgent(artefact, transcriptLines);
+    const side = mode === 'sidechain-set' ? linesOf(transcriptLines, null, mode) : resolved.lines;
+    if (mode !== 'sidechain-set' && resolved.reason) return red(resolved.reason);
+    if (side.length === 0) return red(resolved.reason ?? 'sidechain が transcript に無い');
+    const agentId = mode === 'sidechain-set' ? null : resolved.agentId;
+    const foundBase = base(agentId);
+    const label = mode === 'sidechain-set'
+      ? (typeof artefact.agentId === 'string' && artefact.agentId !== '' ? artefact.agentId : 'agentId 不明')
+      : resolved.agentId === artefact.agentId ? resolved.agentId : `agentId（transcript から: ${resolved.agentId}）`;
     const models = [...new Set(side.map((line) => line?.message?.model).filter((model) => typeof model === 'string'))];
     const efforts = [...new Set(side.map((line) => line?.effort).filter((effort) => typeof effort === 'string'))];
-    if (models.length === 0 || efforts.length === 0) return red(`${artefact.agentId} の model / effort が transcript に無い`);
+    if (models.length === 0 || efforts.length === 0) return red(`${label} の model / effort が transcript に無い`, agentId);
     const model = weakest(models, modelRank);
     const effort = weakest(efforts, effortRank);
     const note = mode === 'sidechain-set' ? '（agentId 単位の帰属が取れないため sidechain 全体で判定）' : '';
-    const head = `${artefact.file}: ${artefact.agentId} ${model}/${effort}`;
-    const found = { ...base, model, effort, expectedModel: want.model, expectedEffort: want.effort };
+    const head = `${artefact.file}: ${label} ${model}/${effort}`;
+    const found = { ...foundBase, model, effort, expectedModel: want.model, expectedEffort: want.effort };
     const gap = `要求は ${want.model}/${want.effort}`;
     const modelGap = modelRank(model) - modelRank(want.model);
     const effortGap = effortRank(effort) - effortRank(want.effort);
@@ -209,7 +249,7 @@ function main(args) {
       verdict: row.level,
       expectedModel: row.expectedModel,
       expectedEffort: row.expectedEffort,
-      ...(lines === null || row.agentId === null ? { tokens: null, durationSeconds: null } : agentMetrics(linesOf(lines, row.agentId, mode))),
+      ...(lines === null || (row.agentId === null && mode !== 'sidechain-set') ? { tokens: null, durationSeconds: null } : agentMetrics(linesOf(lines, row.agentId, mode))),
     })),
   );
   console.log(`agent-audit: ${result.summary}`);
