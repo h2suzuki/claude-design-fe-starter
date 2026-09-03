@@ -11,8 +11,9 @@ usage() {
   cat >&2 <<MSG
 $PROG: this is a Claude Code PreToolUse hook for Bash, not a command-line tool.
 It reads the hook payload from stdin, acts only on commands that match a
-pattern listed in pp/promote-commands.json, runs "node pp/scripts/review-check.mjs",
-and denies the command when that check is red. It never modifies any file.
+pattern listed in pp/promote-commands.json, runs "node pp/scripts/review-check.mjs"
+and then "node pp/scripts/round-record.mjs --check", and denies the command
+when either check is red. It never modifies any file.
 
 Register it in .claude/settings.json under PreToolUse with the matcher "Bash".
 To try it by hand, feed it a payload:
@@ -68,11 +69,8 @@ MSG
   exit 2
 fi
 
-if OUTPUT=$(node "$ROOT/pp/scripts/review-check.mjs" 2>&1); then
-  exit 0
-fi
-
-cat >&2 <<MSG
+if ! OUTPUT=$(node "$ROOT/pp/scripts/review-check.mjs" 2>&1); then
+  cat >&2 <<MSG
 $PROG: denied "$COMMAND" (matched promote pattern: $MATCHED) because the
 screenshot review record is not green. screen-loop step 8 must be done and
 recorded before a promote. Output of review:check:
@@ -83,5 +81,28 @@ Fix: run the screen-review skill for each red screen (writes
 docs/presentation/ui-review/<slug>.json), then re-run
   bun run --cwd pp review:check
 and retry. This hook never modifies any file.
+MSG
+  exit 2
+fi
+
+# 巡の記録の道具が無い版の PJ では review だけを見る
+ROUND="$ROOT/pp/scripts/round-record.mjs"
+[[ -f $ROUND ]] || exit 0
+if OUTPUT=$(node "$ROUND" --check 2>&1); then
+  exit 0
+fi
+
+cat >&2 <<MSG
+$PROG: denied "$COMMAND" (matched promote pattern: $MATCHED) because the
+round record is missing or does not carry the latest gate of every screen.
+Output of round-record --check:
+
+$OUTPUT
+
+Fix: after the gate of each screen run
+  bun run --cwd pp round:record <n>
+(it updates docs/presentation/ui-mock/rounds/<n>.json and <n>.md; the format
+is in seed-docs/round-record.md), commit them, and retry. This hook never
+modifies any file.
 MSG
 exit 2

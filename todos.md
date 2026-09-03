@@ -96,9 +96,9 @@ Work file: `docs/presentation/ui-mock/rounds/<n>.md` と `<n>.json`（案）・`
 
 Exit Criteria:
 
-- [ ] 追跡 file の形式（画面ごとの gate rc / pass・fail / 所要 / skip の内訳 / 状態 parity の到達不能・diff・許容、mock:states の状態数・辺数・反応なし・代表化・上限、凍結の file 数・閉包・integrity・screenshot 数、LLM step の executor / model / effort / token / 所要 / fix round / 後発バグ、本番 smoke の観測値、本番で見つかった不具合と gate が捕れなかった理由）が seed の doc にある
+- [x] 追跡 file の形式（画面ごとの gate rc / pass・fail / 所要 / skip の内訳 / 状態 parity の到達不能・diff・許容、mock:states の状態数・辺数・反応なし・代表化・上限、凍結の file 数・integrity・screenshot 数、LLM step の model / effort / token / 所要 / 判定、本番 smoke の観測値、本番で見つかった不具合と gate が捕れなかった理由）が seed の doc にある — `seed-docs/round-record.md`（閉包の件数と fix round は成果物に残らないので形式から外した）
 - [ ] `bun run --cwd pp round:record <n>` が gate の出力・mock:states の log・agent-log から json を生成し、人が読む md も出す
-- [ ] 凍結と promote の手順に「round:record を更新して同 commit に入れる」があり、無ければ promote hook が止める
+- [ ] 凍結と promote の手順に「round:record を更新して同 commit に入れる」があり、無ければ promote hook が止める — 手順（mock-freeze 10 / README 10 / screen-loop ⑦⑩ / adoption §10）と hook の `--check` 呼び出しは書いた。hook の deny 経路の実測は script 完成後
 - [ ] iac-web の 2 巡目の実測（6 画面 3.0〜5.9 分、trial は OOM 修正後に再計測）がその形式で残る
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「バグが直ったら再評価して、各画面の２巡目チェック実績として残してください。二巡目のいろいろな測定値、将来のために残してね。セッション終わったら忘れ去られないように。主要な統計情報を残すルールが無いようなら、追加してほしい。」

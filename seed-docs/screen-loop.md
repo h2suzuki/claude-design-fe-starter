@@ -78,6 +78,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - 画面が増えると self-baseline の baseline PNG も増える。`pp/tests/*-snapshots/` は追跡対象なので同じ commit に載せる (追跡しないと比較対象が消えて回帰網が空回りする)
 - 状態グラフがある画面では sample-parity / page-parity の状態ごとの test も回す。凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す (所要時間の目安と上限は docs/ui-quality-policy.md)
 - 完了条件: DoD 3 分類の機械側が全て「実行されて緑」。skip 混じりを緑と報告しない
+- 緑になったら `bun run --cwd pp round:record <n>` でこの画面の実測（rc・所要・pass / fail / skip・状態 parity・review・LLM step）を巡の記録 `docs/presentation/ui-mock/rounds/<n>.json` に upsert し、gate と同じ commit に入れる。形式と巡番号の決め方は seed-docs/round-record.md
 
 ### ⑧ LLM スクショ一次レビュー + 人間受入
 
@@ -104,6 +105,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
   2. **保存する状態のリロード**: テーマや言語など localStorage / cookie に保存する状態を切り替えて reload し、初回描画から保存値で出るか (一瞬だけ既定値で出ないか) を見る
   3. **history の往復**: overlay を開いた状態から別 page へ移り「戻る」で overlay が復元されるか、hash / pushState を使う画面は URL を直接開いて同じ状態になるかを見る
 - 完了条件: 3 項目に赤がゼロ。赤が出たら promote を戻すか止め、修正して⑦から回し直す
+- 3 項目の観測値は `docs/presentation/ui-mock/rounds/<n>.json` の `screens.<slug>.smoke` に書く。本番で後から見つかった不具合は同 `escaped` に「何が・なぜ gate が捕れなかったか・どう直したか」を書く（seed-docs/round-record.md）
 
 ## 機械 gate 緑 = 完成ではない
 

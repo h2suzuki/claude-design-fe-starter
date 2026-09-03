@@ -73,6 +73,7 @@ export には、画面ではなく **design system の仕様書 + 見本**にあ
    ```
 
 9. `pp/` で `bun run lint:mock` と provenance テストを実行し、台帳と実体の一致を確認してから commit する。緑の意味は MOCK101〜103 が 0 件であること — MOCK104（重い資産）は凍結を止めず、実装前ヒアリング（`seed-docs/pre-implementation-questions.md` の「重い資産」）へ持ち越す。`lint:mock` が印字するヒアリング文面が、そのまま発注側へ聞く文面になる
+10. 巡の記録を更新する（`bun run --cwd pp round:record <n>`。export file 数・screenshot 数・integrity の件数・状態グラフの数を `rounds/<n>.json` と `<n>.md` に書く。export・台帳と同じ commit に入れる。巡番号の決め方と形式は `seed-docs/round-record.md`）
 
 ## 規律
 

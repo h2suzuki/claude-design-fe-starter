@@ -33,6 +33,8 @@ when_to_use: TRIGGER when the user declares a mock complete, when an export need
 
 9. `pp/` で `bun run lint:mock` と `bun run test:provenance` を実行し、緑を確認してから export と台帳を同一 commit にする。緑の意味は MOCK101〜103 が 0 件であること — MOCK104（重い資産）は凍結を止めず、実装前ヒアリング（`seed-docs/pre-implementation-questions.md` の「重い資産」）へ持ち越す。`lint:mock` が印字するヒアリング文面を、言い換えずそのまま発注側へ聞く
 
+10. 巡の記録を更新する: `bun run --cwd pp round:record <n>`（export file 数・screenshot 数・integrity の件数・状態グラフの数を `docs/presentation/ui-mock/rounds/<n>.json` と `<n>.md` に書く）。export・台帳と同じ commit に入れる。巡番号は全画面を回し直す凍結で +1、同じ巡の再凍結は同じ番号に上書き（`seed-docs/round-record.md`）
+
 ## Rules
 
 - 凍結後の export は直接編集しない — 変更は Claude Design 側 → 再 export → 再凍結
