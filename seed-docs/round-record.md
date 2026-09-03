@@ -57,6 +57,20 @@ screen-loop を全画面ぶん回した 1 回を **1 巡** と呼び、その巡
 
 `<n>.md` は json から毎回全文生成する。直すなら json を直す。
 
+## 複数画面をまとめて回すとき
+
+`playwright-report.json` は run ごとに上書きされる。全画面を続けて回すと、記録に残るのは最後の 1 画面だけになる（適用先が 7 画面を回して 6 画面ぶんを取り直した実測、2026-09-04）。**画面ごとに gate → `round:record <n>` の順で挟む**。`tools/gate-run-all.sh --round <n>` はこれを機械で行い、画面 1 つを緑で終えるたびに記録してから次へ進む。
+
+## 1 画面が 1 run に収まらないとき
+
+状態の多い画面は 1 回の run が長くなり、実行環境の上限に当たる（適用先の実測: 申込み画面の全 gate は約 19 分で、単発 foreground の上限 10 分を超え、background の run も停止された。2026-09-04）。**分割して回し、報告を 1 本にまとめてから記録する**。
+
+1. `--reporter=blob` を付けて分ける（例: 構造 parity 以外 / parity の mobile / parity の desktop の 3 本）
+2. `playwright merge-reports` で 1 本の json にまとめ、`pp/artifacts/playwright-report.json` に置く
+3. その上で `round:record <n>` を回す
+
+まとめた後の spec 数が、分けずに回した他の画面と同じであることを確かめる（適用先の実測では 325 spec / skip は宣言分 1 件のみ）。
+
 ## 巡どうしを比べる
 
 `<n-1>.json` が同じ dir にあれば、md の画面の表に gate 所要の前巡値が並ぶ。見るのは次の 3 つ:

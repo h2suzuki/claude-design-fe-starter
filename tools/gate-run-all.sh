@@ -2,10 +2,25 @@
 # export の画面ごとに gate を実行し、結果を 1 枚の台帳へ集める。
 set -u
 
+PROG=${0##*/}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/.." && pwd)
 LOG_DIR=$ROOT/drafts/gate-logs
 OUT=$LOG_DIR/all-screens.txt
+ROUND=""
+
+usage() {
+  printf 'Usage: %s [--round <n>] [<slug> ...]\n' "$PROG"
+}
+
+if [[ ${1:-} == --round ]]; then
+  ROUND=${2:-}
+  if [[ ! $ROUND =~ ^[0-9]+$ ]]; then
+    usage >&2
+    exit 64
+  fi
+  shift 2
+fi
 
 mkdir -p "$LOG_DIR" || exit 1
 if [[ $# -eq 0 ]]; then
@@ -41,6 +56,13 @@ for screen in "${SCREENS[@]}"; do
   printf '%-24s rc=%s | %s | %s\n' "$slug" "$rc" "${summary:-no result line}" "${skips:-no skip line}" >> "$OUT"
   printf '%-24s rc=%s | %s\n' "$slug" "$rc" "${summary:-no result line}"
   [[ $rc -eq 0 ]] || failed=1
+  # 次の画面の run が report を上書きするので、記録は画面ごとにこの場で取る
+  if [[ -n $ROUND && $rc -eq 0 ]]; then
+    node "$ROOT/pp/scripts/round-record.mjs" "$ROUND" >> "$run_log" 2>&1
+    record_rc=$?
+    printf '%-24s round:record rc=%s\n' "$slug" "$record_rc"
+    [[ $record_rc -eq 0 ]] || failed=1
+  fi
 done
 printf 'summary: %s\n' "$OUT"
 exit "$failed"
