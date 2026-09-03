@@ -75,6 +75,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 
 - 先に `pp/src/screens.ts` へこの画面を登録する (`PP_MOCK_FILE` の slug を key に、route・描画完了セレクタ・操作・fixture)。登録が無い slug で回すと gate は skip でなく error で止まる
 - sample-parity (structural parity) + width-sweep + poststate-sweep + self-baseline スクショ回帰 + mock-provenance を全て実行する
+- 状態の検査には browser console の error と捕まえられなかった例外も含める。
 - `ssr-first-paint` は `prePaintStates` を登録した画面で走る。SSR しない PJ は `pp/gate-not-applicable.json` で宣言する
 - 画面が増えると self-baseline の baseline PNG も増える。`pp/tests/*-snapshots/` は追跡対象なので同じ commit に載せる (追跡しないと比較対象が消えて回帰網が空回りする)
 - 状態グラフがある画面では sample-parity / page-parity の状態ごとの test も回す。凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す (所要時間の目安と上限は docs/ui-quality-policy.md)

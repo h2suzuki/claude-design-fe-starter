@@ -78,3 +78,6 @@ export const APP_MOUNT_SELECTOR = "#app";
 
 // 両側の時計をこの瞬間に固定する。mock 内の日付表現と一致させて差し替える
 export const PP_PINNED_NOW_ISO = "2026-01-01T12:00:00+09:00";
+
+// 既知で無害な出力を理由付きで並べる台帳。既定の空配列では何も見逃さない
+export const CONSOLE_ALLOW: readonly RegExp[] = [];
