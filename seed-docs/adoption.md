@@ -190,6 +190,10 @@ frontend と pp の依存は **install.sh では届かない**。`frontend/packa
 
 `@playwright/test` は `^` なしの完全固定である。上げると同梱 Chromium が変わり、text metrics と anti-aliasing が動いて **pixel gate が全面的に赤くなる**。上げるときは vendor 資産と selector map の再検証、self-baseline の作り直しをセットで行う（`pp/README.md`）。他の依存と同じ commit に混ぜない。
 
+### 候補の列挙
+
+sandbox では home 配下の cache dir に書けないので、cache を repo か `$TMPDIR` 配下に向けて回す: pp は `npm_config_cache=$TMPDIR/npm-cache npm outdated`、frontend は `BUN_INSTALL_CACHE_DIR=$TMPDIR/bun-cache TMPDIR=$TMPDIR bun outdated`。EROFS で止まったら候補が無いのではなく cache の置き場の問題である。単独 land の検証には wanted 内の patch / minor（tsx や svelte の minor 等）が向く。major は peer range（上の「上げ幅の決め方」）を先に見る
+
 ### 上げ幅の決め方
 
 - **`bun --bun` は version を変えない。** 実行 runtime を替えるだけで、どの版が入るかは `package.json` と `bun.lock` が決め、決まるのは `bun install` の時点である
