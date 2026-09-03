@@ -229,6 +229,7 @@ function reviewOf(reviewDir, slug) {
     screenshots: Array.isArray(review.screenshots) ? review.screenshots.length : 0,
     findings: findings.length,
     open: findings.filter((finding) => finding?.disposition === 'open').length,
+    advice: findings.filter((finding) => finding?.kind === 'advice').length,
   };
 }
 
@@ -270,7 +271,7 @@ function parityCell(parity) {
 }
 
 function reviewCell(review) {
-  return review ? `${review.model ?? '—'}/${review.effort ?? '—'}・指摘 ${review.findings}・open ${review.open}` : 'なし';
+  return review ? `${review.model ?? '—'}/${review.effort ?? '—'}・指摘 ${review.findings}（気づき ${review.advice ?? 0}）・open ${review.open}` : 'なし';
 }
 
 function durationCell(gate, previous) {

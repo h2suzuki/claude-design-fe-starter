@@ -104,7 +104,10 @@ function screenshotProblems(screenshotsDir, record, onDisk) {
 function findingProblems(record, ledger) {
   const findings = Array.isArray(record.findings) ? record.findings : [];
   const problems = [];
-  const open = findings.filter((finding) => finding?.disposition === 'open').length;
+  // advice（好み・提案・事実確認）は promote を止めない。kind の無い指摘は defect として扱う
+  const badKinds = findings.map((finding) => finding?.kind).filter((kind) => kind !== undefined && kind !== 'defect' && kind !== 'advice');
+  if (badKinds.length) problems.push(`kind が defect / advice でない指摘 ${badKinds.length} 件（${badKinds.join('、')}）`);
+  const open = findings.filter((finding) => finding?.disposition === 'open' && finding?.kind !== 'advice').length;
   if (open) problems.push(`未裁定の指摘 ${open} 件`);
   for (const finding of findings) {
     const disposition = typeof finding?.disposition === 'string' ? finding.disposition : '';
@@ -113,6 +116,11 @@ function findingProblems(record, ledger) {
     if (fragment.trim() === '' || !ledger.includes(fragment)) problems.push(`台帳に無い keep-impl（${fragment}）`);
   }
   return problems;
+}
+
+function adviceNote(record) {
+  const advice = (Array.isArray(record.findings) ? record.findings : []).filter((finding) => finding?.kind === 'advice').length;
+  return advice ? `、気づき ${advice} 件` : '';
 }
 
 export function checkReviews({ exportDir, screenshotsDir, reviewDir, referencePagesFile, ledgerFile } = DEFAULTS) {
@@ -134,7 +142,7 @@ export function checkReviews({ exportDir, screenshotsDir, reviewDir, referencePa
     }
     const lines = problems.length
       ? problems.map((problem) => `${slug}: ${problem}`)
-      : [`${slug}: レビュー済み（${onDisk.length} 枚、${record.model}/${record.effort}、${record.reviewedAt}）`];
+      : [`${slug}: レビュー済み（${onDisk.length} 枚、${record.model}/${record.effort}、${record.reviewedAt}${adviceNote(record)}）`];
     return { slug, ok: problems.length === 0, problems, lines };
   });
   const red = screens.reduce((sum, screen) => sum + screen.problems.length, 0);

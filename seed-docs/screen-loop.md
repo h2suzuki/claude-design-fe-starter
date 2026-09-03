@@ -89,7 +89,8 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - 動線歩き・スクショ採取には環境で利用可能な browser 自動化 tool (agent-browser 等) を使ってよい。決定性が要る機械 gate (⑦) は Playwright 固定で、ここは置き換えない
 - **飛ばせない**: LLM 一次の結果は `screen-review` skill が `docs/presentation/ui-review/<slug>.json`（対象 screenshot の sha256・指摘と処置・model / effort・日時）に書く。`bun run --cwd pp review:check` が「見本 page 以外の全画面に記録がある・sha256 が今の screenshot と一致・指摘が 0 か台帳 entry を指す」を rc で判定し、`pp/promote-commands.json` に列挙した promote 系 command は hook がこの rc を見て止める。screenshot が変われば記録は外れ、再レビューが要る
 - レビューに使う model / effort は skill 側で固定（難易度 S は `screen-review-s` = opus / medium、M / L は `screen-review` = opus / high）。LLM に任せる step ごとの model / effort と難易度 S / M / L の対応は seed-docs/llm-steps.md
-- 完了条件: 指摘ゼロ、または全指摘が⑨の裁定に載っていること。機械側は `review:check` rc 0
+- 指摘は `kind` で分ける: `defect`（利用者が誤った行動を取る / 操作が意図と違う結果になる）だけが promote を止める。見た目の好み・情報設計の提案・事実確認は `advice` で、記録に残して round record と表の見直しの材料にする。本番で BE の実データに置き換わる見本データの値は指摘しない（文字列の統一は気づきであって不具合ではない、という MOCK204 の裁定と同じ線）
+- 完了条件: defect の指摘ゼロ、または全 defect が⑨の裁定に載っていること。機械側は `review:check` rc 0（advice の open は赤にしない）
 
 ### ⑨ 差分の裁定
 

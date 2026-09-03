@@ -19,6 +19,8 @@ Exit Criteria:
 
 H.S. 2026-08-29:「文字列の統一は、アドバイス・気づきであり、不具合とは限らない。統一することで、見た目や可読性が壊れることがある。それにも関わらず、無条件に強制しようとしていることがバグ」
 
+H.S. 2026-09-03（iac-web セッション経由、verbatim）:「何を言ってるのか全くわからない。mock がと違ったら、なおせ。が基本だが、何で35件もmockを直せと言ってるの？」— ⑧ の LLM 所見 35 件（見本データの食い違い / 見た目の意見 / 事実確認）が全部「mock を直すか台帳か」の裁定になった件。同じ線で、review 記録は defect / advice を分け、advice は promote を止めない
+
 H.S. 2026-08-29:「デザインとコードを一緒にするな。コードは１文字違えば動作しない。デザインは人間が分かりやすいことが１番重要。そうじゃなかったら、1px 光学補正なんて存在しなかったろう？」
 
 ### 実証 2 回目 — mock を更新して反映する流れ
@@ -66,6 +68,8 @@ Exit Criteria:
 - [x] レビュー agent（`.claude/agents` は sandbox の device node で作れないので skill `.claude/skills/screen-review/SKILL.md`。frontmatter に model / effort / context: fork）と選定理由（判断は最上位 model + 高 effort、決定的な検査は LLM に投げない）が docs にある
 - [x] screen-loop ⑧ と adoption §10 に「review:check rc 0 が promote の前提」と書かれている — `fe5db76`
 - [ ] iac-web の 2 巡目で ⑧ を実施し、記録と review:check が緑になった報告を受ける
+
+ユーザー裁定 2026-09-03（iac-web セッション経由、verbatim）: 「何を言ってるのか全くわからない。mock がと違ったら、なおせ。が基本だが、何で35件もmockを直せと言ってるの？」— ⑧ の所見 35 件が全部 open で promote が止まった件。所見は defect（利用者が誤った行動を取る）と advice（好み・提案・事実確認）に分け、defect の open だけが promote を止める。BE の実データに置き換わる見本値は指摘しない
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「必須手順を飛ばせないようなメカニカルチェックが必要です。それから、LLMによるチェックは、どのモデルでどのeffortかは、どうやって選ぶのですか。」背景: 2 巡目で ⑧ を飛ばして promote し、本番で 3 件見つかった。
 
