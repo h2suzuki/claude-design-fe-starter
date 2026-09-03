@@ -67,4 +67,4 @@ screen-loop を全画面ぶん回した 1 回を **1 巡** と呼び、その巡
 
 ## --check
 
-`round:record --check [<n>]` は最新の巡（引数があればその巡）について、(1) json がある (2) `export/` の全画面（`reference-pages.json` の見本 page を除く）に `gate` がある (3) 今の `playwright-report.json` の run（`stats.startTime`）がその画面の `gate.at` と一致する、の 3 つを見て rc を返す。`.claude/hooks/block-promote-without-review.sh` は `review:check` の次にこれを回し、赤なら promote 系 command を止める。
+`round:record --check [<n>]` は最新の巡（引数があればその巡）について、(1) json がある (2) `export/` の全画面（`reference-pages.json` の見本 page を除く）に `gate` がある (3) 今の `playwright-report.json` の run（`stats.startTime`）がその画面の `gate.at` と一致する、の 3 つを見て rc を返す。(3) は report が gate の run（`sample-parity` を含む）のときだけ見る — unit spec だけの run も report を上書きするので、それを「最新 gate」と数えない。`.claude/hooks/block-promote-without-review.sh` は `review:check` の次にこれを回し、赤なら promote 系 command を止める。

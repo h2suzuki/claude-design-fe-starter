@@ -69,7 +69,7 @@ Exit Criteria:
 - [x] promote 系 command（PJ が `pp/promote-commands.json` に列挙）の Bash を、review:check が rc 0 でなければ hook が止める — `fe5db76`（`block-promote-without-review.sh`、settings.json に登録。iac-web での実測待ち）
 - [x] レビュー agent（`.claude/agents` は sandbox の device node で作れないので skill `.claude/skills/screen-review/SKILL.md`。frontmatter に model / effort / context: fork）と選定理由（判断は最上位 model + 高 effort、決定的な検査は LLM に投げない）が docs にある
 - [x] screen-loop ⑧ と adoption §10 に「review:check rc 0 が promote の前提」と書かれている — `fe5db76`
-- [ ] iac-web の 2 巡目で ⑧ を実施し、記録と review:check が緑になった報告を受ける — ⑧ は 7 画面実施済み。`d69007a` の kind 付き記録で review:check は 6 画面「レビュー済み（気づき n 件）」、trial は defect 3 件（前月の枠で決定 / エラー帯の全項目列挙 / 完了画面の「予約あり」）で「未裁定の指摘 3 件」= 7 画面 / 赤 1 件（2026-09-03）。気づき 32 件は promote を止めない。残りは trial の defect 3 件の処置（ユーザー判断）後に緑になる報告
+- [x] iac-web の 2 巡目で ⑧ を実施し、記録と review:check が緑になった — 7 画面 / 赤 0（defect 3 件は裁定で keep-impl、気づき 32 件は残したまま）。promote hook は index の最新 gate 未記録で 1 度 deny し、gate 再走 + round:record で通過 → `vercel promote` 成功（2026-09-03、seed c9c9f00）
 
 ユーザー裁定 2026-09-03（iac-web セッション経由、verbatim）: 「何を言ってるのか全くわからない。mock がと違ったら、なおせ。が基本だが、何で35件もmockを直せと言ってるの？」— ⑧ の所見 35 件が全部 open で promote が止まった件。所見は defect（利用者が誤った行動を取る）と note（気づき: 好み・提案・事実確認・見本データの変化）に分け、defect の open だけが promote を止める
 

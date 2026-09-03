@@ -403,7 +403,10 @@ export function checkRound(rawOptions = {}) {
   if (fs.existsSync(options.report)) {
     const report = readJson(options.report);
     const slug = screenOfReport(report, options.env ?? process.env);
-    if (slugs.includes(slug) && screens[slug]?.gate && screens[slug].gate.at !== report?.stats?.startTime) {
+    // unit spec だけの run も report を上書きする。sample-parity の無い run は gate ではない
+    const specFiles = collectSpecs(report).map((spec) => specName(spec.file));
+    const partialRun = specFiles.length > 0 && !specFiles.includes('sample-parity');
+    if (!partialRun && slugs.includes(slug) && screens[slug]?.gate && screens[slug].gate.at !== report?.stats?.startTime) {
       problems.push(`${slug}: 最新の gate（${report.stats.startTime}）が記録されていない`);
     }
   }

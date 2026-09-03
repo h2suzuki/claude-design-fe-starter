@@ -159,6 +159,17 @@ test("check は記録なし、gate 欠落、古い gate を赤にし、揃えば
   expect(result).toMatchObject({ status: 0, stdout: "round-record: 第 1 巡は最新（1 画面）\n" });
 });
 
+// unit spec だけの run も report を上書きする。sample-parity を含まない run は「最新 gate」と見なさない
+test("check は sample-parity を含まない部分 run の startTime を最新 gate に数えない", () => {
+  const dirs = makeDirs();
+  writeFileSync(path.join(dirs.exportDir, "trial.dc.html"), "<html></html>");
+  writeFileSync(path.join(dirs.roundsDir, "1.json"), JSON.stringify({ screens: { trial: { gate: { at: "2026-09-03T11:00:00.000Z" } } } }));
+  writeReport(dirs, gateReport("trial", "2026-09-03T12:00:00.000Z", [spec("tests/round-record.spec.ts", "expected")]));
+  expect(checkRound({ ...dirs, round: 1 }).ok).toBe(true);
+  writeReport(dirs, gateReport("trial", "2026-09-03T12:00:00.000Z", [spec("tests/sample-parity.spec.ts", "expected")]));
+  expect(checkRound({ ...dirs, round: 1 }).problems).toEqual(["trial: 最新の gate（2026-09-03T12:00:00.000Z）が記録されていない"]);
+});
+
 test("前巡の gate 所要を Markdown に添える", () => {
   const dirs = makeDirs();
   writeFileSync(path.join(dirs.roundsDir, "1.json"), JSON.stringify({ version: "1", round: 1, recordedAt: "old", freeze: null, screens: { trial: { gate: { durationSeconds: 7 } } }, notes: [] }));
