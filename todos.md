@@ -61,7 +61,7 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 
 起票: fable-5 2026-09-03（iac-web session 経由の依頼。ユーザー承認 2026-09-03 逐語: 「OSS自動更新の対応は、Github action で回す必要はありません。PR が来たら、この場所でCIを回して、処理するフローが確立してればよい。…自動化は、セッションを開いた時に、origin をチェックして、PR が来ていたら CI を回す、といった処置を自動提案。私が Go 出したら走り出す。ぐらいで大丈夫。」/ 置き場について「fe-starter に依頼してください。」）
 Goal: dependabot 想定の依存更新 PR を、GitHub Actions でなく作業 checkout の local CI（型検査 → unit → pp typecheck → 全画面 gate → build）で検証し、ユーザーの Go の後に ff-merge / push / branch 削除まで進める流れを、提案 hook・deny hook・手順 skill・CI script として seed に載せる。
-Work file: `drafts/dep-pr-ci-order.md`（codex 発注書）
+Work file: `last-session-handoff.md`（この checkout 限り）、`drafts/dep-pr-ci-order.md`（codex 発注書）
 
 Exit Criteria:
 
