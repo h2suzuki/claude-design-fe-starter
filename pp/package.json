@@ -23,6 +23,7 @@
     "fixture:diff": "tsx scripts/fixture-diff.ts",
     "review:check": "node scripts/review-check.mjs",
     "difficulty": "tsx scripts/difficulty.ts",
+    "screens:list": "tsx scripts/list-screens.ts",
     "llm-step": "node scripts/llm-step.mjs",
     "agent-audit": "node scripts/agent-audit.mjs",
     "round:record": "node scripts/round-record.mjs",

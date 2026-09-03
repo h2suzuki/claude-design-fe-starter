@@ -201,6 +201,13 @@ sandbox では home 配下の cache dir に書けないので、cache を repo �
 - **framework の peer が許さない major へは行かない。** 例: `@sveltejs/kit` の peer は `typescript: ^5.3.3 || ^6.0.0` なので、TypeScript 7 は kit が対応するまで取れない
 - 構成要素・版・依存宣言・制約の一覧は `docs/stack.md`。構成要素の入れ替えは seed 側で扱い、適用先では行わない
 
+### PR が来たときの流れ
+
+`SessionStart` の `suggest-pr-ci.sh` は origin の open PR を提案するだけで、CI は走らせない。
+`dependency-pr` で branch を checkout し、`tools/ci.sh` をこの checkout で実行する。
+PJ では `pp/land-commands.json` に `^git( -C \S+)? merge`、`^gh pr merge`、`^git( -C \S+)? push` を列挙すると緑記録の無い land を止められる。
+merge・push・branch 削除は緑を確認してもユーザーの Go の後に行う。
+
 ## 8. seed への戻し方
 
 この作業中に見つかるのは 2 種類で、扱いが違う。分類の鍵は dir でなく **seed がその file を配っているか**である。
