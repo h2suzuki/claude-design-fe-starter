@@ -98,8 +98,8 @@ Exit Criteria:
 
 - [x] `3f40238` 状態 line に `heap <MB> MB`（`process.memoryUsage().heapUsed`）が出て、状態ごとの増分を実測できる
 - [x] iac-web の trial で状態ごとの heap 実測を受け取った（178 状態で 91〜332 MB、単調増加なし、OOM 再現せず。2026-09-03）。trace の差は seed の probe（失敗 60 状態、DPR3）で trace off 66〜100 MB / retain 91〜106 MB と差が無く、比較 run は不要と判断
-- [ ] 保持の原因が 1 文で言え、seed の修正が main に入る — seed の probe では trace / 失敗数 / page close 時の screenshot 保持のどれも heap を増やさず（`483552f` で状態 test の trace と screenshot は切った）、4 GB の run は再現できていない。次の trial gate を `NODE_OPTIONS` 無しで回して既定 heap で完走すれば「再現不能」として閉じる
-- [ ] iac-web の trial が既定 heap で完走し、`rounds/2.json` に所要と heap 最大が残る
+- [x] 保持の原因は特定できず「再現不能」で閉じる — seed の probe では trace / 失敗数 / page close 時の screenshot 保持のどれも heap を増やさず（`483552f` で状態 test の trace と screenshot は切った）。iac-web の trial を `NODE_OPTIONS` 無しで再走した結果、heap 最大 298 MB で `Reached heap limit` 無し（2026-09-03、seed 054cdd7）
+- [x] iac-web の trial が既定 heap で完走した（288 passed / 1 failed は別原因の freeze の throw、9.4 分、heap 最大 298 MB。2026-09-03）。`rounds/2.json` には trial の upsert 済み（gate 567 秒・状態 parity 145 件）、commit hash は iac-web の次報
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「heap 4095 MB の OOM は、バグですね。」seed 側の再現実験（25 状態 × DPR 3 の screenshot + decode + diff、trace retain-on-failure）では heap 66〜76 MB で増えず、単純 loop では再現しない。
 
@@ -114,7 +114,7 @@ Exit Criteria:
 - [x] 追跡 file の形式（画面ごとの gate rc / pass・fail / 所要 / skip の内訳 / 状態 parity の到達不能・diff・許容、mock:states の状態数・辺数・反応なし・代表化・上限、凍結の file 数・integrity・screenshot 数、LLM step の model / effort / token / 所要 / 判定、本番 smoke の観測値、本番で見つかった不具合と gate が捕れなかった理由）が seed の doc にある — `seed-docs/round-record.md`（閉包の件数と fix round は成果物に残らないので形式から外した）
 - [x] `0879b18` `bun run --cwd pp round:record <n>` が gate の JSON report・states json・mock-integrity・台帳・screenshots・review 記録・agent-log から `rounds/<n>.json` を upsert し、`<n>.md` を生成する（spec 6 pass / typecheck 緑。codex gpt-5.6-terra の実装を受け入れ）
 - [x] `c19a901` / `0879b18` 凍結と promote の手順に「round:record を更新して同 commit に入れる」があり（mock-freeze 10 / README 10 / screen-loop ⑦⑩ / adoption §10）、promote hook が `round-record --check` を回す。手動 payload で実測: 記録なし → rc 2、記録あり → rc 0
-- [ ] iac-web の 2 巡目の実測（6 画面 3.0〜5.9 分、trial は OOM 修正後に再計測）がその形式で残る
+- [x] iac-web の 2 巡目の実測がその形式で残った — iac-web `147de22`（notes / escaped）と `97b2435`（7 画面の gate: 6 画面 179〜391 秒 rc 0、trial 既定 heap 288 passed / 1 failed / 状態 parity 145 / heap 最大 298 MB）。2026-09-03
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「バグが直ったら再評価して、各画面の２巡目チェック実績として残してください。二巡目のいろいろな測定値、将来のために残してね。セッション終わったら忘れ去られないように。主要な統計情報を残すルールが無いようなら、追加してほしい。」
 
