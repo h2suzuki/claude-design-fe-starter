@@ -63,6 +63,7 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - frontend/src/lib/ui/components/ に、token (frontend/src/lib/ui/tokens/tokens.css) 参照で実装する。直書きの色・寸法を持ち込まない
 - states fixture を部品の完成条件にする: default / empty / loading / error / 長文、加えて touch (hover 非存在で操作完結・target 44px)
 - fixture データは API schema 派生の単一データセットとし、mock と test が同源を参照する (二重管理はドリフト源)
+- mock の規則から fixture を作るときは、mock に現れる変化（枠数の最大・会場の切り替わり・時間帯の端・祝日と稽古の重なり）を落とさない。落とすなら responder の隣に理由を 1 行書く。変化を削った fixture では FE の考慮不足が gate をすり抜ける（実例: picker の fixture から第 2 木曜の 3 枠目を外していて、同日 2 会場と受付窓の端の欠陥 2 件が本番手前まで残った）
 - 完了条件: 基準幅 = SELECTOR_MAP 登録 + sample-parity 緑 / 状態 = 全 fixture 状態で挙動一致
 
 ### ⑥ page composition
@@ -89,8 +90,9 @@ walking skeleton (seed-docs/walking-skeleton.md) を一周した後、画面を 
 - 動線歩き・スクショ採取には環境で利用可能な browser 自動化 tool (agent-browser 等) を使ってよい。決定性が要る機械 gate (⑦) は Playwright 固定で、ここは置き換えない
 - **飛ばせない**: LLM 一次の結果は `screen-review` skill が `docs/presentation/ui-review/<slug>.json`（対象 screenshot の sha256・指摘と処置・model / effort・日時）に書く。`bun run --cwd pp review:check` が「見本 page 以外の全画面に記録がある・sha256 が今の screenshot と一致・指摘が 0 か台帳 entry を指す」を rc で判定し、`pp/promote-commands.json` に列挙した promote 系 command は hook がこの rc を見て止める。screenshot が変われば記録は外れ、再レビューが要る
 - レビューに使う model / effort は skill 側で固定（難易度 S は `screen-review-s` = opus / medium、M / L は `screen-review` = opus / high）。LLM に任せる step ごとの model / effort と難易度 S / M / L の対応は seed-docs/llm-steps.md
-- 指摘は `kind` で分ける: `defect`（利用者が誤った行動を取る / 操作が意図と違う結果になる）だけが promote を止める。見た目の好み・情報設計の提案・事実確認は `advice` で、記録に残して round record と表の見直しの材料にする。本番で BE の実データに置き換わる見本データの値は指摘しない（文字列の統一は気づきであって不具合ではない、という MOCK204 の裁定と同じ線）
-- 完了条件: defect の指摘ゼロ、または全 defect が⑨の裁定に載っていること。機械側は `review:check` rc 0（advice の open は赤にしない）
+- 所見は `kind` で分ける: `defect`（利用者が誤った行動を取る / 操作が意図と違う結果になる）だけが promote を止める。見た目の好み・情報設計の提案・事実確認は `note`（気づき）で、記録に残して round record と表の見直しの材料にする
+- 見本データの変化（枠数・会場・時間帯・曜日の違い、見本カレンダーと見本カードの値の差）は、デザイナーが FE に示唆を与えるために選んで入れたもの。整合性の欠陥として書かず、「この変化を FE が扱えるか」の検査項目（⑤ の fixture の case 候補）として気づきに書く。文字列の統一も気づき（MOCK204 の裁定と同じ線）
+- 完了条件: defect ゼロ、または全 defect が⑨の裁定に載っていること。機械側は `review:check` rc 0（note の open は赤にしない）
 
 ### ⑨ 差分の裁定
 

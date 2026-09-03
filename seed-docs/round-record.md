@@ -36,7 +36,7 @@ screen-loop を全画面ぶん回した 1 回を **1 巡** と呼び、その巡
         "specs": { "sample-parity": { "status": "passed", "durationMs": 41000 } },
         "stateParity": { "checked": 9, "unreachable": 0, "diff": 0, "tolerance": 3, "limitHit": false, "heapMaxMB": 76 }
       },
-      "review": { "reviewedAt": "…", "model": "opus", "effort": "high", "screenshots": 11, "findings": 2, "open": 0, "advice": 1 },
+      "review": { "reviewedAt": "…", "model": "opus", "effort": "high", "screenshots": 11, "findings": 2, "open": 0, "notes": 1 },
       "llm": [ { "at": "…", "step": "screen-review", "model": "claude-opus-5", "effort": "high", "expectedModel": "opus", "expectedEffort": "high", "verdict": "green", "tokens": 48210, "durationSeconds": 310 } ],
       "smoke": [ { "item": "api", "result": "green", "note": "満席 2 枠が実データで出た", "at": "2026-09-03" } ],
       "escaped": [ { "at": "2026-09-03", "what": "reload の一瞬だけ既定テーマ", "whyGateMissed": "hydration 後しか比較していなかった", "fix": "ssr-first-paint spec" } ]

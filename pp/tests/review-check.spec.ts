@@ -141,15 +141,15 @@ test("未裁定の指摘があれば赤", () => {
   expect(result.screens[0].lines[0]).toBe("trial: 未裁定の指摘 2 件");
 });
 
-// 好み・提案・事実確認は advice。残っていても promote を止めず、件数だけ緑の行に出す
-test("advice の open は赤にせず、気づきとして数える", () => {
+// 好み・提案・事実確認・見本データの変化は note（気づき）。残っていても promote を止めず、件数だけ緑の行に出す
+test("note の open は赤にせず、気づきとして数える", () => {
   const dirs = makeDirs();
   addScreen(dirs, "trial");
   const sha = addShot(dirs, "trial.mobile.png");
   const record = greenRecord("trial", [{ file: "trial.mobile.png", sha256: sha }]);
   record.findings = [
-    { text: "会場名がリンクに見えない", kind: "advice", disposition: "open" },
-    { text: "写真が無い", kind: "advice", disposition: "open" },
+    { text: "会場名がリンクに見えない", kind: "note", disposition: "open" },
+    { text: "写真が無い", kind: "note", disposition: "open" },
     { text: "月を送っても前月の枠で決定される", kind: "defect", disposition: "fixed" },
   ];
   addRecord(dirs, "trial", record);
@@ -158,7 +158,7 @@ test("advice の open は赤にせず、気づきとして数える", () => {
   expect(result.screens[0].lines[0]).toBe("trial: レビュー済み（1 枚、opus/high、2026-09-03T11:00:00+09:00、気づき 2 件）");
 });
 
-test("kind が defect / advice 以外なら赤", () => {
+test("kind が defect / note 以外なら赤", () => {
   const dirs = makeDirs();
   addScreen(dirs, "trial");
   const sha = addShot(dirs, "trial.mobile.png");
@@ -166,7 +166,7 @@ test("kind が defect / advice 以外なら赤", () => {
   record.findings = [{ text: "余白", kind: "nit", disposition: "fixed" }];
   addRecord(dirs, "trial", record);
   const result = checkReviews(dirs);
-  expect(result.screens[0].lines).toEqual(["trial: kind が defect / advice でない指摘 1 件（nit）"]);
+  expect(result.screens[0].lines).toEqual(["trial: kind が defect / note でない指摘 1 件（nit）"]);
 });
 
 // keep-impl は台帳の裁定を指しているときだけ裁定済み。指し先が無い keep-impl は逃げ道になる
