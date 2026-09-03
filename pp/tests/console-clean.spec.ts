@@ -38,13 +38,19 @@ async function sweepConsole(browser: Browser, options: BrowserContextOptions, vi
       await run(page);
       check(`interaction: ${name}`);
     }
-    for (const { name, run } of CURRENT_SCREEN!.modals) {
-      await run(page);
-      check(`modal: ${name}`);
-    }
-    for (const { name, run } of CURRENT_SCREEN!.edges) {
-      await run(page);
-      check(`edge: ${name}`);
+    await page.close();
+
+    // modal と edge は「初期状態から踏む」契約なので、1 枚に重ねず開き直す（modal-geometry-sweep と同じ）
+    for (const { name, run } of [...CURRENT_SCREEN!.modals, ...CURRENT_SCREEN!.edges]) {
+      const fresh = await openScreen(context, CURRENT_SCREEN!);
+      try {
+        const list = CURRENT_SCREEN!.list;
+        if (list) await fresh.locator(list.rowSelector).first().click();
+        await run(fresh);
+        check(name);
+      } finally {
+        await fresh.close();
+      }
     }
 
     console.log(describeFindings(findings));
