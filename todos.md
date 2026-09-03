@@ -31,8 +31,8 @@ Exit Criteria:
 
 - [ ] 適用先で mock を 1 回更新し、`/mock-freeze` の再凍結手順（前版との棚卸し → 参照スクショ → 台帳）を通す
 - [ ] `ast:refresh` で region と provenance が追従し、`COPY_REVIEW` の指摘が実際の文言変更と対応することを確認する
-- [ ] 更新後の画面で gate が skip ゼロで緑になる（KEEP_IMPL entry がある場合は、それが `page-parity` の判定に効いていることを含む）
-- [ ] 手順どおりに回らなかった箇所を seed 側で直し、2 回目の実測として記録する
+- [x] 更新後の画面で gate が skip ゼロで緑になった — iac-web 2026-09-03、seed `5f04a44`: 7 画面すべて rc 0 / require-no-skips rc 0、trial は 294 passed（13.4 分、状態 parity 178 件・到達不能 0・diff 0・許容 4、heap 最大 320 MB、既定 heap）。KEEP_IMPL の画像除外は page-parity の状態 test で効いている（`describeExcluded` の行）
+- [x] 手順どおりに回らなかった箇所を seed 側で直し、2 回目の実測として記録した — 2026-09-03 に seed で直した 9 件: 画像 mask の座標 / blur の余白と許容（`483552f` で 4） / 状態限定 visualId と祖先 + nth-child / mobile 専用 overlay の実測 / fillAll 辺 / back 辺の ERR_ABORTED / 送信後 smooth scroll の capture race（`3a22aab`） / fake clock 下の timer 掃き（`5f04a44`） / OOM（再現不能、trace と screenshot は off）。実測は iac-web の `rounds/2.json`
 - [ ] 依存の bump（vite 8.2.2 ほか）を **mock 更新より先に単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）
 - [ ] app 配信をしない PJ で「既定に入れる」手当てが無害だと確かめる — `serviceWorkers: "block"` を入れた gate が、iac-web で同じ結果になる（app 配信の追補は二巡目の対象外）
 
