@@ -76,20 +76,6 @@ Exit Criteria:
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」 追補 3 同日 11:08（verbatim）: 「あなた自分で決めたことから逸脱すると思うなら、メカニカルチェックによる強制が必要です。また、モデル・エフォートは時々見直しも必要です。現実にそぐわなければ、意味がありません。バグを作り込みすぎたり、トークンの消費が過剰だったり。」iac-web の実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本。
 
-### pp の fixture が BE の契約から乖離しても検知されない
-
-起票: user 2026-09-02
-Goal: PJ の API fixture を手書きでなく BE route の test 出力（外部 API は mock）から生成する規約と道具を持ち、fixture にあって BE が返せない値を生成時に検知する。
-Work file: `last-session-handoff.md`（同名 section）・`pp/src/fixtures/`・`docs/design-sync.md` 2.3（BE 往復の調整段）・`seed-docs/adoption.md`
-
-Exit Criteria:
-
-- [x] fixture の出所（BE の test 出力）と生成手順が文書にあり、手書き fixture は「生成できない理由」つきの例外になる — `c2a608e`（design-sync 2.3 の 2 段の規約、adoption §5 の置き場 `pp/fixtures/be/`）
-- [x] 生成物と手書きの差（fixture にあって BE に無い key / 値）を機械で出す道具がある — `7f31994`（`bun run --cwd pp fixture:diff`: responder の値と `pp/fixtures/be/*.json` を突合し、fixture にだけある key / 配列要素と BE 出力なしを route ごとに出す。満席枠の実例を unit test で固定。iac-web 実測 2026-09-03 で index 順の突合が 23 件の無意味な差を出したので `30de35a` で key 突合 + 正規化 + 値差の赤 / fixture のみの要素は気づき、に変更）
-- [x] iac-web の /api/schedule で `fixture:diff` を回した — `30de35a` の key 突合で「差分 2 件 / 気づき 11 件 / BE 出力なし 3 件」。差分 2 件は BE test の稽古データと生成 fixture の値の違い（BE の欠落ではない）で、fixture の隣に 1 行注記して運用。満席枠そのものは BE 修正後で再現不能、seed の unit test（`pp/tests/fixture-diff.spec.ts`）が固定（2026-09-03）
-
-実例: iac-web の pp fixture には満席枠があったので gate は緑、BE は満席枠を落としていた。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
-
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
