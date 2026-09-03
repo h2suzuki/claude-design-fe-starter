@@ -53,6 +53,22 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
+### ⑧ の LLM スクショレビューが飛ばせて、使う model / effort の決め方も無い
+
+起票: user 2026-09-03
+Goal: レビュー結果を機械で確認できる記録にし、記録が無い・screenshot と合わない・未裁定の指摘があるときは promote 前の検査と hook が止める。レビューに使う model / effort を agent 定義と選定理由で規定する。
+Work file: `pp/scripts/review-check.mjs`・`docs/presentation/ui-review/<slug>.json`（記録）・`.claude/agents/screen-review.md`・`.claude/hooks/block-promote-without-review.sh`・`pp/promote-commands.json`・`docs/ui-quality-policy.md`・`seed-docs/screen-loop.md` ⑧・`seed-docs/adoption.md` §10
+
+Exit Criteria:
+
+- [ ] レビュー記録の形式（画面 slug / 対象 screenshot と sha256 / 指摘と処置 / model・effort・日時）が決まり、`bun run --cwd pp review:check` が「見本 page 以外の全画面に記録がある・sha256 が今の screenshot と一致・指摘は 0 か台帳 entry を指す」を rc で判定する
+- [ ] promote 系 command（PJ が `pp/promote-commands.json` に列挙）の Bash を、review:check が rc 0 でなければ hook が止める
+- [ ] レビュー agent `.claude/agents/screen-review.md`（model / effort と観点）と選定理由（判断は最上位 model + 高 effort、決定的な検査は LLM に投げない）が docs にある
+- [ ] screen-loop ⑧ と adoption §10 に「review:check rc 0 が promote の前提」と書かれている
+- [ ] iac-web の 2 巡目で ⑧ を実施し、記録と review:check が緑になった報告を受ける
+
+ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「必須手順を飛ばせないようなメカニカルチェックが必要です。それから、LLMによるチェックは、どのモデルでどのeffortかは、どうやって選ぶのですか。」背景: 2 巡目で ⑧ を飛ばして promote し、本番で 3 件見つかった。
+
 ### pp の fixture が BE の契約から乖離しても検知されない
 
 起票: user 2026-09-02
