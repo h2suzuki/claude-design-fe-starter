@@ -12,7 +12,7 @@ import { MOCK_ROOT, UI_AST_SCREENS_DIR } from "../src/mock-server";
 import { installNetworkGuard } from "../src/net-block";
 import { openMock } from "../src/targets/mock-target";
 import { collectNodes, isObject, mockEntryFile, parseBaseline, propStrings } from "../src/ast-refresh";
-import { isolateStorage } from "../src/mock-states";
+import { isolateStorage, waitForScrollRest } from "../src/mock-states";
 import { screenSlug, screenshotFile } from "../src/mock-screens";
 import { loadStateGraph, overlayTargets, STATES_DIR, walkStatesForTargets } from "../src/state-walk";
 
@@ -44,6 +44,7 @@ async function settle(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(SETTLE_MS);
+  await waitForScrollRest(page);
   await freezePage(page);
 }
 

@@ -420,9 +420,25 @@ const fillField = async (page: Page, selector: string, value: string): Promise<v
   else await field.fill(value);
 };
 
+// `scrollTo({behavior:"smooth"})` は freeze の CSS でも止まらず、animation の途中で撮ると app だけ数百 px ずれる
+export const waitForScrollRest = async (page: Page): Promise<void> => {
+  await page.evaluate(async () => {
+    const frame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    let last = `${window.scrollX},${window.scrollY}`;
+    let still = 0;
+    for (let i = 0; i < 120 && still < 2; i += 1) {
+      await frame();
+      const now = `${window.scrollX},${window.scrollY}`;
+      still = now === last ? still + 1 : 0;
+      last = now;
+    }
+  });
+};
+
 export const settle = async (page: Page): Promise<void> => {
   await page.waitForTimeout(SETTLE_MS);
   await page.waitForLoadState("networkidle");
+  await waitForScrollRest(page);
 };
 
 // source は呼び出し元ごとに違う既存の error 文言を保つためだけの引数
