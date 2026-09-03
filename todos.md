@@ -81,21 +81,6 @@ Exit Criteria:
 
 実例: カレンダーから会場ページへ行き「戻る」と modal が戻らない。poststate-sweep は登録操作の直後だけ比べ、離脱→戻るを辿らない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
 
-### SSR の初回描画と hydration 後の差（テーマの一瞬ライト表示）が gate に見えない
-
-起票: user 2026-09-02
-Goal: localStorage の light / dark / system それぞれで、JS を止めた初回描画の背景色・主要色と hydration 後の値を比べる spec を標準に入れ、kickoff の質問票に「描画前に決めるべき状態（テーマ・言語など）」を足す。
-Work file: `last-session-handoff.md`（同名 section）・`pp/tests/ssr-first-paint.spec.ts`・`seed-docs/pre-implementation-questions.md`・`.claude/skills/fe-kickoff/`
-
-Exit Criteria:
-
-- [x] JS 無効の初回描画と hydration 後で背景色・主要色を比べる spec があり、テーマ 3 通りを回す — `7f31994`（`ssr-first-paint`: `screens.ts` の `prePaintStates` ごとに script を止めた初回描画と hydration 後の html / body の色を比べる。probe と比較は `first-paint.ts` で unit test 3 件）
-- [x] SSR を使わない PJ では `gate-not-applicable.json` で宣言できる — `7f31994`（spec 名 `ssr-first-paint` の宣言 skip。未登録時の skip 文言に宣言先を書いた）
-- [x] kickoff の質問票に「描画前に決めるべき状態」の項がある — `8d2836e`（質問票の初回項目、fe-kickoff 手順 5 から `prePaintStates` 登録を参照）
-- [x] iac-web で「一瞬ライト表示」が赤になり、修正後に緑になる — iac-web 実測 2026-09-03: 7 画面に theme light / dark / system の `prePaintStates` を登録し、index で 3 状態とも初回描画と hydration 後が同色（dark は body rgb(35,33,32)）、64 spec pass / require-no-skips rc=0。修正前の赤は先に app を直していたため iac-web では再現できず、赤の側は seed の unit test（外部 script でテーマを決める fixture が差として出る `first-paint.spec.ts`）で担保
-
-実例: テーマを onMount で決めるため SSR がライトで出る。gate は data-ready を待ってから撮るので初回描画を見ない。mock は client 描画なので mock 比較でも出ない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
-
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
