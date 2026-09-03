@@ -53,42 +53,6 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
-### overlay（click で開く dialog）が AST の実測と parity 検査の外にある
-
-起票: user 2026-09-02
-Goal: mock の状態グラフ（root から click・Escape・swipe・代表値入力で辿れる画面状態と辺）を機械探索して凍結し、AST 抽出・`ast:refresh`・parity 検査がそのグラフを歩くことで、overlay を含む全状態が実測と突合の対象になる。
-Work file: `last-session-handoff.md`（同名 section）・`pp/scripts/mock-states.ts`（新規、第 1 段）・`docs/presentation/ui-mock/states/<slug>.json`（凍結出力）・`pp/scripts/ast-refresh.ts`・`pp/tests/sample-parity.spec.ts`・`pp/tests/page-parity.spec.ts`・`.claude/skills/ast-extract/`（状態 json を証拠として写す）・Codex 発注書 `drafts/mock-states-order.md`
-
-Exit Criteria:
-
-- [x] 第 1 段: `bun run --cwd pp mock:states` が画面ごとに状態グラフ（状態 = 文字を除いた可視 DOM の形の hash、辺 = 操作の種類と対象）を探索し、状態 json と状態ごとの viewport 画を凍結物として書く。同じ状態への到達は辺として記録し、反応の無い操作は捨てる — `d193368`（Codex 実装、受け入れ: spec 6 pass・typecheck・既存 38 pass・空 export で rc=0 を発注側で再実行）
-- [x] 第 1 段: 探索の上限（深さ・1 状態あたりの辺数・総状態数）は `pp/src/config.ts` の定数で持ち、到達したら「気づき」として出して先へ進む（落とさない）— `d193368`、`MOCK_STATE_LIMITS`。初期値は仮置き（comment に明記）
-- [x] 上限の初期値の根拠を iac-web の実測（最大深さ・状態数・辺数）で決め、定数の comment に残す — iac-web 実測 2026-09-02（7 画面 × 2 viewport、最大 深さ 5 / 状態 22 / 辺 162、上限到達 0、合計 14.7 分）→ 12 / 100 / 100 に設定、`pp/src/config.ts`
-- [x] 第 1 段: 凍結手順（README・mock-freeze SKILL）に `mock:states` を足す。単体 test（fingerprint・辺の列挙・上限）がある — `d193368`、手順 7b・`pp/tests/mock-states.spec.ts` 6 case
-- [x] 第 2 段: `ast:refresh` が状態 json の辺で overlay を開いてから `source.region` を測り、`40-reconcile-pass.md` の「overlay は省いてよい」を撤回する — `eb2cd91`（`state-walk.ts` の replay、overlay は現れる最初の状態で測り `source.state` と状態の画を記録。Codex 実装を受け入れ、spec 55 pass・typecheck・CLI を発注側で再実行。iac-web の実測は次の criterion で確かめる）
-- [x] 第 2 段: sample-parity / page-parity が状態ごとに両側（mock は状態 json の辺、app は対応表で写した辺）を開いて突合する。overlay 配下の id は base 状態では MISS にならない — `032a44d`（`state-parity.ts`: 辺が押した mock 要素を AST の nodeRef で引き visualId を app selector にする。写せない state は「到達不能」で失敗。Codex 実装を受け入れ、spec 19 pass・parity 2 spec は宣言 skip・typecheck・no-skips self-test を発注側で再実行。iac-web の実測は次の criterion で確かめる）
-- [x] 第 2 段: 深さ 2 以上の状態（dialog の中のタブ切替など）も同じ経路で突合され、iac-web の会場写真 lightbox のタブ 2 枚がその実例として通る — iac-web 実測 2026-09-03（4 画面の状態 parity: index 8 状態 / access 8 / schedule-and-pricing 10（lightbox 含む）/ trial 77 で到達不能 0、style と geometry 0。trial desktop の 3 状態にあった blur 下の角丸輪郭 ±1〜3/255 は `4c90428` で blur 有効時のみ許容）
-- [x] 第 2 段: `mock:integrity` の MOCK206（角丸）も状態グラフの各状態で集め、trial の picker 内の 6 / 11 / 12 / 13 / 16 px が気づきに出る — `efb3606`（desktop の状態でも集める）、iac-web 実測 2026-09-03: mobile 40 状態 + desktop 45 状態で 6 / 11 / 12 / 13 / 16 / 18 / 24 px が出た（rc=0、175 秒）
-- [x] 第 2 段: 辺が `.dp-grid > button:nth-child(N)` のような index 指定の兄弟を押すとき、AST の親 node の visualId + 子 index で app に写せる — `9f0f295`（最寄り祖先の visualId + tag:nth-child の相対 path、spec 3 case。iac-web の再実測待ち）（iac-web 実測 2026-09-03: 日セル 42 件が同じ visualId だと strict mode で落ち、picker 系の状態が全部到達不能）
-- [x] 第 2 段: AST で「状態限定」と宣言した visualId（picker の月送り・閉じる、一時保存 message）は base の「all mapped visual ids」test の突合から外れ、状態 test でだけ見る — `c181140`（`screen.overlays` 配下と `source.state` 付きが宣言、`STATE_ONLY_IDS`。iac-web の再実測待ち）（iac-web 実測 2026-09-03: 付けると緑の test が赤くなるので付けられない。index の overlay 11 node も全部 binding 無しで、月送りの 3 状態が到達不能 → overlay 全般に効くのでこちらが先）
-- [x] 到達不能の失敗行の trigger を末尾 3 段 + 可視 text に丸める（iac-web 実測 2026-09-03: full CSS path 200 文字超が 35 行並ぶ）— `4944ade`、`shortSelector`。同日 `7137b43`（状態 test の画像 mask を viewport 座標に）・`a27e983`（状態 test の app 側を `openScreen` に）も iac-web 報告の bug 修正
-- [x] `ast:refresh` が desktop の状態グラフで測れない overlay node（mobile 専用の一覧など）を mobile の状態グラフでも探す — `6336a55`（`walkStatesForTargets`、`source.viewport` に測れた側を記す。一時 export で mobile 専用 node が mobile の s-open で測れることを通し実行で確認）（iac-web 実測: 14 node 中 10 が desktop で測れ、1 が mobile 専用、3 が送信完了）
-- [x] 記入後の送信（fill 後の submit）が状態グラフに現れない設計の穴を埋める — `e7b7010`（空の可視入力を全部埋める `fillAll` 辺 1 本で `<state>+filled` 状態を作り、そこから submit を探索。parity は入力ごとの fill に写す。spec 151 pass）。fill は DOM の形を変えないので状態にならず、埋めた状態から submit を押す経路が探索されない → 「可視の入力を全部埋めてから続ける」複合辺を足す等（iac-web 実測: 送信完了の 3 node が状態グラフに無い）
-- [x] 状態ごとの parity を「凍結時と deploy 前は必ず回し、赤なら deploy せず修正へ差し戻す」運用として `docs/ui-quality-policy.md` と screen-loop の完了条件に書く。日常の小修正の gate に含めるかは未裁定のまま、`PARITY_STATE_LIMIT` と所要時間（iac-web 実測: trial で 1 本 3.2〜3.7 分 × 4 本、7 画面で +30〜40 分の見積もり）を併記する — `6338f1f`
-- [x] 検査時間の増分を `docs/ui-quality-policy.md` に書く — `6338f1f`（iac-web 実測 2026-09-03: 状態 parity 込みの 7 画面 gate 36 分、導入前 17 分 → 増分 +19 分。状態グラフの大きい trial で +8 分、静的 3 画面は +0.5 分）
-- [x] 第 2 段が入った後、今日 pp/ に足した code（`mock-states` / `state-walk` / MOCK206 / `mock-screenshots` / `mock-lint`）を seed 側で `/simplify` し、spec と typecheck が緑のまま整理されている（install.sh が上書きする file は seed 側で簡素化する、という裁定）— `ef78403`（4 観点 review → 18 項目適用、18 file ±465 行、spec 148 pass / typecheck 緑 / 空 export で mock:states rc=0）
-- [x] iac-web の trial / index / schedule / access で実測し、overlay の部品が structural / pixel の判定に入ることと、探索の最大深さ・状態数を確かめる — iac-web 実測 2026-09-03: 状態 test で lightbox の閉じるアイコン差（68〜95px）と dialog 状態の fixture 差（49%）を検出、到達不能以外の pixel / style / geometry 行は 0。最大深さ 5 / 状態 22 / 辺 162（2026-09-02）
-
-ユーザー裁定 2026-09-02（iac-web セッション経由）: 「overlay が正しく扱えない問題は、fe-starter に改善を依頼してください。挙動については、mock で十分に作り込まれています。overlay も pp 対象に含めるべきです。」
-
-ユーザー裁定 2026-09-02: 土台は「mock の clickable を全部 click して状態の tree を先に作り、同じ状態に戻ればループ、押すものが無ければ葉として記録し、AST 構築前に行う」。操作は click だけでなく swipe 等も含める。探索深度には上限を設け、到達したらユーザーに情報だけ出して先に進む。上限の値（30 と仮に言った）は根拠のある値として扱わない。
-
-ユーザー裁定 2026-09-02（iac-web セッション経由）: 「クリックしてモーダルがでる画面、モーダル上にさらにタブがある画面は、よくある画面なので、正しく扱えないのは大きな制約に感じます。」dialog 内のタブは探索が clickable として拾う前提で、第 2 段の突合対象に含める。
-
-ユーザー裁定 2026-09-03（iac-web セッション経由、verbatim、状態ごとの parity の運用）: 「凍結時とdeploy前には必ず回してください。何かあれば、deploy せずに修正フェーズに差し戻し。」日常の gate に含めるかは発言に無い。
-
-ユーザー裁定 2026-09-02（iac-web セッション経由、verbatim）: 「その提案でよいので、最後に /simplify してください。fe-starter で上書きされるものは、fe-starter 側で /simplify すればいいね。」
-
 ### pp の fixture が BE の契約から乖離しても検知されない
 
 起票: user 2026-09-02
