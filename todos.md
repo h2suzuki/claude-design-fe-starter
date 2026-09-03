@@ -69,7 +69,7 @@ Exit Criteria:
 - [x] PreToolUse hook が、台帳 `pp/land-commands.json` に載る merge / push を、対象 sha の緑記録 `drafts/gate-logs/ci-green.<sha>` が無ければ止める（spec で deny → 通過を固定）— `aa47425`: `block-land-without-ci.sh`、`pp/tests/land-hook.spec.ts` 10 passed（merge / push / `git -C` 形の deny → 記録で通過、abort・delete・空 payload は通す。2026-09-03）
 - [x] `tools/ci.sh` が gate を含む full CI を clean な tree で通したときだけ緑記録を書く — `aa47425`: `--no-gate` と `git status --porcelain --untracked-files=no` が非空のときは「green record not written」で記録しない。seed 本体では frontend/node_modules が無く full run は未実測（消費 PJ で実測する）
 - [x] skill `dependency-pr` に手順（PR 検知 → checkout → ci.sh → Go 待ち → ff-merge → push → branch 削除 → round:record、赤なら PR に comment）と依存方針（playwright 固定 / major 単独 / peer 確認 / patch・minor 1 件ずつ）が書かれている — `aa47425`: `.claude/skills/dependency-pr/SKILL.md` Process 9 段 / Rules 5 行
-- [ ] iac-web が取り込んで PR 1 本を流し、hook の deny → 緑記録で通過を実測した（版通知 2026-09-03 済み、報告待ち）
+- [x] iac-web が取り込んで PR 1 本を流し、hook の deny → 緑記録で通過を実測した — iac-web `c1a919f`（2026-09-04 報告）: install で 17 file、settings の hook 登録は再起動なしで有効、台帳に -C 許容の 3 pattern を記入、land-hook.spec 10 passed。緑記録なしの `git push origin main` を hook が deny（Target SHA と Expected record を印字）→ `tools/ci.sh` full 緑（7 画面 gate rc 0）で `ci-green.c1a919f…` が書かれ同じ push が通過。報告された不具合（unit 検出が frontend/src 限定で frontend/test の bun test を skip）は seed `4a4d501` で bun test と同じ集合に直し、`--plan` で段の計画を spec に固定
 
 ## Medium
 
