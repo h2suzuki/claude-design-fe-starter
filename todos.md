@@ -77,7 +77,7 @@ Exit Criteria:
 
 - [x] 凍結時に URL 状態（hash / history）を使う overlay が機械で列挙される — `393fd39`（`mock:branches` の `history` 種: pushState / replaceState / location.hash 代入 / hashchange / popstate / pageshow を file と行で出す）
 - [x] `mock:states` が overlay 内の navigate 辺に対して「遷移 → goBack」の辺を持ち、復元後の状態が記録される — `393fd39`（`back` 辺: 復元されれば自己ループ、失われれば root 行き。state-parity は app 側で同じ往復を再生。spec 163 pass）
-- [ ] iac-web の稽古カレンダー（#cal<offset> と popstate/pageshow で復元）で、戻った後の modal が状態として出る
+- [x] iac-web の稽古カレンダー（#cal<offset> と popstate/pageshow で復元）で、戻った後の modal が状態として出る — iac-web 実測 2026-09-03: index / schedule-and-pricing の calendar 状態（mobile / desktop とも）から会場 link で出て戻る back 辺が同じ状態への自己ループ、月送り後の depth 2 も自己ループ。副作用 2 点（打ち切り request 89 行が「読めない export」に出る / trial が 600 秒に当たる）は `50e2948` で修正（networkidle 待ち・ERR_ABORTED 除外・back は dialog 開の状態から遷移先ごと 1 本）
 
 実例: カレンダーから会場ページへ行き「戻る」と modal が戻らない。poststate-sweep は登録操作の直後だけ比べ、離脱→戻るを辿らない。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
 
