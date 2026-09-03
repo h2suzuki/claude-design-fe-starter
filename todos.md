@@ -65,11 +65,11 @@ Work file: `drafts/dep-pr-ci-order.md`（codex 発注書）
 
 Exit Criteria:
 
-- [ ] SessionStart hook が origin の open PR を列挙して「CI をここで回すか」を提案し、CI は実行しない（`tools/pr-check.sh`）
-- [ ] PreToolUse hook が、台帳 `pp/land-commands.json` に載る merge / push を、対象 sha の緑記録 `drafts/gate-logs/ci-green.<sha>` が無ければ止める（spec で deny → 通過を固定）
-- [ ] `tools/ci.sh` が gate を含む full CI を clean な tree で通したときだけ緑記録を書く
-- [ ] skill `dependency-pr` に手順（PR 検知 → checkout → ci.sh → Go 待ち → ff-merge → push → branch 削除 → round:record、赤なら PR に comment）と依存方針（playwright 固定 / major 単独 / peer 確認 / patch・minor 1 件ずつ）が書かれている
-- [ ] iac-web が取り込んで PR 1 本を流し、hook の deny → 緑記録で通過を実測した
+- [x] SessionStart hook が origin の open PR を列挙して「CI をここで回すか」を提案し、CI は実行しない（`tools/pr-check.sh`）— `aa47425`: `suggest-pr-ci.sh` は startup / resume だけ `pr-check.sh` を呼び、spec で compact と pr-check 不在の startup が無出力・rc 0 を固定（2026-09-03）
+- [x] PreToolUse hook が、台帳 `pp/land-commands.json` に載る merge / push を、対象 sha の緑記録 `drafts/gate-logs/ci-green.<sha>` が無ければ止める（spec で deny → 通過を固定）— `aa47425`: `block-land-without-ci.sh`、`pp/tests/land-hook.spec.ts` 10 passed（merge / push / `git -C` 形の deny → 記録で通過、abort・delete・空 payload は通す。2026-09-03）
+- [x] `tools/ci.sh` が gate を含む full CI を clean な tree で通したときだけ緑記録を書く — `aa47425`: `--no-gate` と `git status --porcelain --untracked-files=no` が非空のときは「green record not written」で記録しない。seed 本体では frontend/node_modules が無く full run は未実測（消費 PJ で実測する）
+- [x] skill `dependency-pr` に手順（PR 検知 → checkout → ci.sh → Go 待ち → ff-merge → push → branch 削除 → round:record、赤なら PR に comment）と依存方針（playwright 固定 / major 単独 / peer 確認 / patch・minor 1 件ずつ）が書かれている — `aa47425`: `.claude/skills/dependency-pr/SKILL.md` Process 9 段 / Rules 5 行
+- [ ] iac-web が取り込んで PR 1 本を流し、hook の deny → 緑記録で通過を実測した（版通知 2026-09-03 済み、報告待ち）
 
 ## Medium
 
