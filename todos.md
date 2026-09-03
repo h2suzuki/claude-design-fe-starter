@@ -62,7 +62,7 @@ Work file: `last-session-handoff.md`（同名 section）・`pp/src/fixtures/`・
 Exit Criteria:
 
 - [x] fixture の出所（BE の test 出力）と生成手順が文書にあり、手書き fixture は「生成できない理由」つきの例外になる — `c2a608e`（design-sync 2.3 の 2 段の規約、adoption §5 の置き場 `pp/fixtures/be/`）
-- [x] 生成物と手書きの差（fixture にあって BE に無い key / 値）を機械で出す道具がある — `7f31994`（`bun run --cwd pp fixture:diff`: responder の値と `pp/fixtures/be/*.json` を突合し、fixture にだけある key / 配列要素と BE 出力なしを route ごとに出す。満席枠の実例を unit test で固定）
+- [x] 生成物と手書きの差（fixture にあって BE に無い key / 値）を機械で出す道具がある — `7f31994`（`bun run --cwd pp fixture:diff`: responder の値と `pp/fixtures/be/*.json` を突合し、fixture にだけある key / 配列要素と BE 出力なしを route ごとに出す。満席枠の実例を unit test で固定。iac-web 実測 2026-09-03 で index 順の突合が 23 件の無意味な差を出したので `30de35a` で key 突合 + 正規化 + 値差の赤 / fixture のみの要素は気づき、に変更）
 - [ ] iac-web の /api/schedule（満席枠が応答から落ちていた実例）で検知できることを確かめる
 
 実例: iac-web の pp fixture には満席枠があったので gate は緑、BE は満席枠を落としていた。ユーザー裁定 2026-09-02（iac-web セッション経由、5 件の依頼に対して）: 「すべて入れてください」。背景は本番 deploy 後にブラウザで 1 回触っただけで見つかった 3 件（満席枠が出ない / 戻るで modal が戻らない / リロードで一瞬ライト表示）で、いずれも gate の死角。
