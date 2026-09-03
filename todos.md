@@ -57,24 +57,6 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
-### ⑧ の LLM スクショレビューが飛ばせて、使う model / effort の決め方も無い
-
-起票: user 2026-09-03
-Goal: レビュー結果を機械で確認できる記録にし、記録が無い・screenshot と合わない・未裁定の指摘があるときは promote 前の検査と hook が止める。レビューに使う model / effort を agent 定義と選定理由で規定する。
-Work file: `last-session-handoff.md`（同名 section）・`pp/scripts/review-check.mjs`・`docs/presentation/ui-review/<slug>.json`（記録）・`.claude/agents/screen-review.md`・`.claude/hooks/block-promote-without-review.sh`・`pp/promote-commands.json`・`docs/ui-quality-policy.md`・`seed-docs/screen-loop.md` ⑧・`seed-docs/adoption.md` §10
-
-Exit Criteria:
-
-- [x] `4d76755` レビュー記録の形式（画面 slug / 対象 screenshot と sha256 / 指摘と処置 / model・effort・日時）が決まり、`bun run --cwd pp review:check` が「見本 page 以外の全画面に記録がある・sha256 が今の screenshot と一致・指摘は 0 か台帳 entry を指す」を rc で判定する
-- [x] promote 系 command（PJ が `pp/promote-commands.json` に列挙）の Bash を、review:check が rc 0 でなければ hook が止める — `fe5db76`（`block-promote-without-review.sh`、settings.json に登録。iac-web での実測待ち）
-- [x] レビュー agent（`.claude/agents` は sandbox の device node で作れないので skill `.claude/skills/screen-review/SKILL.md`。frontmatter に model / effort / context: fork）と選定理由（判断は最上位 model + 高 effort、決定的な検査は LLM に投げない）が docs にある
-- [x] screen-loop ⑧ と adoption §10 に「review:check rc 0 が promote の前提」と書かれている — `fe5db76`
-- [x] iac-web の 2 巡目で ⑧ を実施し、記録と review:check が緑になった — 7 画面 / 赤 0（defect 3 件は裁定で keep-impl、気づき 32 件は残したまま）。promote hook は index の最新 gate 未記録で 1 度 deny し、gate 再走 + round:record で通過 → `vercel promote` 成功（2026-09-03、seed c9c9f00）
-
-ユーザー裁定 2026-09-03（iac-web セッション経由、verbatim）: 「何を言ってるのか全くわからない。mock がと違ったら、なおせ。が基本だが、何で35件もmockを直せと言ってるの？」— ⑧ の所見 35 件が全部 open で promote が止まった件。所見は defect（利用者が誤った行動を取る）と note（気づき: 好み・提案・事実確認・見本データの変化）に分け、defect の open だけが promote を止める
-
-ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「必須手順を飛ばせないようなメカニカルチェックが必要です。それから、LLMによるチェックは、どのモデルでどのeffortかは、どうやって選ぶのですか。」背景: 2 巡目で ⑧ を飛ばして promote し、本番で 3 件見つかった。
-
 ### screen-loop の LLM step ごとの model / effort が事前に決まっていない
 
 起票: user 2026-09-03
