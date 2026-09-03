@@ -37,8 +37,8 @@ Exit Criteria:
 - [x] `ast:refresh` で region と provenance が追従した — iac-web `a224ffb`（凍結直後に 7 画面）と `94c32f4`（overlay の visualId 追加後に 4 画面再 refresh、trial overlays 12/16）。`COPY_REVIEW` は 3.1 版の差分が角丸 CSS のみで文言差 0 のため追従対象なし（2026-09-03）
 - [x] 更新後の画面で gate が skip ゼロで緑になった — iac-web 2026-09-03、seed `5f04a44`: 7 画面すべて rc 0 / require-no-skips rc 0、trial は 294 passed（13.4 分、状態 parity 178 件・到達不能 0・diff 0・許容 4、heap 最大 320 MB、既定 heap）。KEEP_IMPL の画像除外は page-parity の状態 test で効いている（`describeExcluded` の行）
 - [x] 手順どおりに回らなかった箇所を seed 側で直し、2 回目の実測として記録した — 2026-09-03 に seed で直した 9 件: 画像 mask の座標 / blur の余白と許容（`483552f` で 4） / 状態限定 visualId と祖先 + nth-child / mobile 専用 overlay の実測 / fillAll 辺 / back 辺の ERR_ABORTED / 送信後 smooth scroll の capture race（`3a22aab`） / fake clock 下の timer 掃き（`5f04a44`） / OOM（再現不能、trace と screenshot は off）。実測は iac-web の `rounds/2.json`
-- [ ] 依存の bump（vite 8.2.2 ほか）を **mock 更新より先に単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）
-- [ ] app 配信をしない PJ で「既定に入れる」手当てが無害だと確かめる — `serviceWorkers: "block"` を入れた gate が、iac-web で同じ結果になる（app 配信の追補は二巡目の対象外）
+- [ ] 依存の bump（vite 8.2.2 ほか）を **mock 更新より先に単独で land** し、その前後で gate を回して差の出所を切り分ける（`seed-docs/adoption.md` §7）— 2 巡目では bump 無し（mode-watcher 1.1.0 の追加は theme 置換と同じ commit `85700c9` で単独 land の検証にならない）。sandbox では `npm outdated` / `bun outdated` が EROFS で動かず候補を列挙できないので、host 側で列挙してから次の巡で行う（iac-web 2026-09-03）
+- [x] app 配信をしない PJ で「既定に入れる」手当てが無害だと確かめた — iac-web が `serviceWorkers: "block"` を SHARED に入れ、service worker の登録が無い app で schedule-and-pricing の gate は rc 0（303 passed / 1 declared、4.9 分）のまま。verify-claims の fork の独立再実行も rc 0（2026-09-03）
 
 ユーザー裁定 2026-08-28: 「iac-web を使った実証実験１回目は、完了とします。もう一回、mock のアップデートと反映の流れをやりますので、そのときに再確認しましょう。」
 
@@ -72,7 +72,7 @@ Exit Criteria:
 - [x] `5103bc2` 表どおりの model / effort で実行されたかを機械で確かめる: ⑧ の記録と独立検証の報告に `agentId` を必須にし、`bun run --cwd pp agent-audit` が session transcript からその agent の model / effort を引いて表と突合し、親 session の model で書かれた成果物（subagent の呼び忘れ）を赤、表より上位を警告にする
 - [x] `380e4a3` / `5103bc2` 逸脱は警告でなく止める（hook の deny 経路 7 通りを手動 payload で確認: 宣言なし・model 違い・model 未指定・codex step を subagent に、が rc 2、表どおり・fork が rc 0）: agent-audit は表より上位の model / effort も赤にし、発注時点では PreToolUse hook が Agent tool の呼び出しに `llm-step: <step> <slug>` の宣言と表どおりの model を要求して deny する（`bun run --cwd pp llm-step -- --expect <step> <slug>` が写す値を印字）
 - [x] `5103bc2` 表を実績で見直す: agent-audit が `pp/artifacts/agent-log.jsonl` に executor / model / effort / token / 所要 / 判定を追記し、`bun run --cwd pp llm-steps:review` が cell ごとに「上げる候補 / 下げる候補」を出す。採否は日付付きで `seed-docs/llm-steps.md` に残す
-- [ ] iac-web が表どおりに ⑧ と独立検証を走らせ、token・所要・指摘数の実測で表を直した報告を受ける — ⑧ は 7 画面実施、agent-audit 7 件 / 赤 2 件（赤は skill 分割前に S 画面を high で回した実績、round record の notes に残す）。S 画面の `/screen-review-s` は「表どおり opus/medium」で緑（2026-09-03、seed 976326c）。残りは独立検証（verify-claims）の実測と llm-steps:review の token 実績
+- [x] iac-web が表どおりに ⑧ と独立検証を走らせ、実測で表を直した — ⑧ は 7 画面（agent-audit 8 件 / 赤 2 件、赤は skill 分割前に S 画面を high で回した実績）。S 画面の `/screen-review-s` は「表どおり opus/medium」。独立検証は `/verify-claims`（opus / high）で 2 巡目の完了報告 11 主張を検証し 8 PASS / 2 FAIL / 未確認 1（FAIL は古い数字と notes の矛盾行で、記録を訂正）、audit「表どおり」、142,470 token / 59 tool / 625 秒。表の見直しは S 画面の分割（`62e6073`）として反映済み（2026-09-03）
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」 追補 3 同日 11:08（verbatim）: 「あなた自分で決めたことから逸脱すると思うなら、メカニカルチェックによる強制が必要です。また、モデル・エフォートは時々見直しも必要です。現実にそぐわなければ、意味がありません。バグを作り込みすぎたり、トークンの消費が過剰だったり。」iac-web の実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本。
 

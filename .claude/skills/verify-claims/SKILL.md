@@ -26,6 +26,7 @@ allowed-tools: Read, Bash, Glob, Grep, Write
 
 - 実装した agent の報告を、その agent に検証させない。この skill は常に fresh context で起動する
 - 「動いた」の主張は自分で動かして確かめる。動かせない主張（本番の挙動など）は 未確認 にし、PASS にしない
+- gate を再実行したら直後に `bun run --cwd pp round:record <n>` も回す。再実行は `pp/artifacts/playwright-report.json` を上書きし、promote 前の `round-record --check` が「最新の gate が記録されていない」で止まる
 - model は opus、effort は high。表は seed-docs/llm-steps.md「完了主張の独立検証」
 
 ## Output
