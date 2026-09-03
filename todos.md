@@ -97,8 +97,8 @@ Work file: `last-session-handoff.md`（同名 section）・`pp/tests/page-parity
 Exit Criteria:
 
 - [x] `3f40238` 状態 line に `heap <MB> MB`（`process.memoryUsage().heapUsed`）が出て、状態ごとの増分を実測できる
-- [ ] iac-web の trial で状態ごとの heap 実測（増分が出る状態と、`test.use({ trace: "off" })` を top-level に置いた時の差）を受け取る
-- [ ] 保持の原因（trace の context 記録 / 実 page の replay / PNG decode のどれか）が 1 文で言え、seed の修正が main に入る
+- [x] iac-web の trial で状態ごとの heap 実測を受け取った（178 状態で 91〜332 MB、単調増加なし、OOM 再現せず。2026-09-03）。trace の差は seed の probe（失敗 60 状態、DPR3）で trace off 66〜100 MB / retain 91〜106 MB と差が無く、比較 run は不要と判断
+- [ ] 保持の原因が 1 文で言え、seed の修正が main に入る — seed の probe では trace / 失敗数 / page close 時の screenshot 保持のどれも heap を増やさず（`483552f` で状態 test の trace と screenshot は切った）、4 GB の run は再現できていない。次の trial gate を `NODE_OPTIONS` 無しで回して既定 heap で完走すれば「再現不能」として閉じる
 - [ ] iac-web の trial が既定 heap で完走し、`rounds/2.json` に所要と heap 最大が残る
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「heap 4095 MB の OOM は、バグですね。」seed 側の再現実験（25 状態 × DPR 3 の screenshot + decode + diff、trace retain-on-failure）では heap 66〜76 MB で増えず、単純 loop では再現しない。
