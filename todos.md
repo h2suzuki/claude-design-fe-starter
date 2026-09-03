@@ -88,6 +88,21 @@ Exit Criteria:
 
 ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」 追補 3 同日 11:08（verbatim）: 「あなた自分で決めたことから逸脱すると思うなら、メカニカルチェックによる強制が必要です。また、モデル・エフォートは時々見直しも必要です。現実にそぐわなければ、意味がありません。バグを作り込みすぎたり、トークンの消費が過剰だったり。」iac-web の実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本。
 
+### 巡ごとの主要統計を session 後も残す規則が無い
+
+起票: user 2026-09-03
+Goal: 凍結・gate・mock:states・LLM step・本番 smoke の実測値を巡ごとに追跡 file へ残す形式と規則を seed で決め、凍結と promote の手順に組み込む。
+Work file: `docs/presentation/ui-mock/rounds/<n>.md` と `<n>.json`（案）・`pp/scripts/round-record`（案）・`seed-docs/screen-loop.md`・`.claude/skills/mock-freeze/SKILL.md`・`seed-docs/adoption.md` §10
+
+Exit Criteria:
+
+- [ ] 追跡 file の形式（画面ごとの gate rc / pass・fail / 所要 / skip の内訳 / 状態 parity の到達不能・diff・許容、mock:states の状態数・辺数・反応なし・代表化・上限、凍結の file 数・閉包・integrity・screenshot 数、LLM step の executor / model / effort / token / 所要 / fix round / 後発バグ、本番 smoke の観測値、本番で見つかった不具合と gate が捕れなかった理由）が seed の doc にある
+- [ ] `bun run --cwd pp round:record <n>` が gate の出力・mock:states の log・agent-log から json を生成し、人が読む md も出す
+- [ ] 凍結と promote の手順に「round:record を更新して同 commit に入れる」があり、無ければ promote hook が止める
+- [ ] iac-web の 2 巡目の実測（6 画面 3.0〜5.9 分、trial は OOM 修正後に再計測）がその形式で残る
+
+ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「バグが直ったら再評価して、各画面の２巡目チェック実績として残してください。二巡目のいろいろな測定値、将来のために残してね。セッション終わったら忘れ去られないように。主要な統計情報を残すルールが無いようなら、追加してほしい。」
+
 ### pp の fixture が BE の契約から乖離しても検知されない
 
 起票: user 2026-09-02
