@@ -57,25 +57,6 @@ seed 側の準備は 2026-08-28 に済んだ。二巡目で取り込んで使う
 | 依存を上げる手順 | `seed-docs/adoption.md` §7 | bump は install.sh で届かないので適用先が自分で当てる。単独 commit にして前後で gate を回す |
 | スタックの構成と出典 | `docs/stack.md` | どの層が何を担うか、2026-08 時点の出典 URL つき |
 
-### screen-loop の LLM step ごとの model / effort が事前に決まっていない
-
-起票: user 2026-09-03
-Goal: LLM に任せる step ごとに使う model と effort を、画面の難易度（S / M / L）で幅を持たせて事前に定義し、seed が配る skill の frontmatter と 1 対 1 に対応させる。
-Work file: `last-session-handoff.md`（同名 section）・`seed-docs/llm-steps.md`（対応表と横断規則）・`.claude/skills/screen-review/SKILL.md`・`.claude/skills/gate-diagnose/SKILL.md`・`.claude/skills/verify-claims/SKILL.md`・`docs/ui-quality-policy.md`「レビューに使う LLM の model と effort」
-
-Exit Criteria:
-
-- [x] `fe5db76` 対応表（step × S/M/L → model / effort、備考に根拠）と横断規則（実装した agent は自分を審査しない / 審査側は実装側と同 tier 以上 / effort は難易度、model は判定の種類で決める）が `seed-docs/llm-steps.md` にある
-- [x] 難易度 S/M/L の判定材料（状態数・BE route 数・overlay の有無）と出所（mock:states の json、②′ の表）が同じ doc にある — `fe5db76`
-- [x] seed が実行 skill として配る step（⑧ screen-review / ⑦ 赤の診断 / 完了主張の独立検証）の frontmatter の model / effort が表と一致する — `fe5db76` / `bba2e66`（3 skill とも opus / high / context: fork。表の L 列 = 上限）
-- [x] `5103bc2` 難易度 S / M / L は人や LLM が選ばず script が出す: `bun run --cwd pp difficulty` が状態数（states json の viewport 最大）・BE route 数（screens.ts の fixture 登録）・history の有無（mock:branches）から画面ごとの段と根拠を `pp/artifacts/difficulty.json` に書く。上げ下げは日付付き理由が要る
-- [x] `5103bc2` 表どおりの model / effort で実行されたかを機械で確かめる: ⑧ の記録と独立検証の報告に `agentId` を必須にし、`bun run --cwd pp agent-audit` が session transcript からその agent の model / effort を引いて表と突合し、親 session の model で書かれた成果物（subagent の呼び忘れ）を赤、表より上位を警告にする
-- [x] `380e4a3` / `5103bc2` 逸脱は警告でなく止める（hook の deny 経路 7 通りを手動 payload で確認: 宣言なし・model 違い・model 未指定・codex step を subagent に、が rc 2、表どおり・fork が rc 0）: agent-audit は表より上位の model / effort も赤にし、発注時点では PreToolUse hook が Agent tool の呼び出しに `llm-step: <step> <slug>` の宣言と表どおりの model を要求して deny する（`bun run --cwd pp llm-step -- --expect <step> <slug>` が写す値を印字）
-- [x] `5103bc2` 表を実績で見直す: agent-audit が `pp/artifacts/agent-log.jsonl` に executor / model / effort / token / 所要 / 判定を追記し、`bun run --cwd pp llm-steps:review` が cell ごとに「上げる候補 / 下げる候補」を出す。採否は日付付きで `seed-docs/llm-steps.md` に残す
-- [x] iac-web が表どおりに ⑧ と独立検証を走らせ、実測で表を直した — ⑧ は 7 画面（agent-audit 8 件 / 赤 2 件、赤は skill 分割前に S 画面を high で回した実績）。S 画面の `/screen-review-s` は「表どおり opus/medium」。独立検証は `/verify-claims`（opus / high）で 2 巡目の完了報告 11 主張を検証し 8 PASS / 2 FAIL / 未確認 1（FAIL は古い数字と notes の矛盾行で、記録を訂正）、audit「表どおり」、142,470 token / 59 tool / 625 秒。表の見直しは S 画面の分割（`62e6073`）として反映済み（2026-09-03）
-
-ユーザー指示 2026-09-03（iac-web セッション経由、verbatim）: 「LLMによるステップと、モデル・エフォートの対応付けは、処理内容を鑑みて、事前に定義してほしいです。画面の複雑度やBEとのインタラクションの多さ等により難易度が変わるなら、幅を持たせてもよいです。」素案は iac-web の 1 session の実績（subagent 18 本、重い 1 本は 186 tool / 327k token / 2.9 時間）から。 追補 2026-09-03 11:02（verbatim）: 「幅は持たせてよいが、ある程度の基準をきめて、LLMによるブレを抑えてほしいということです。例えば、sonnet medium で済むレベルの複雑さを fable 5.1 high でやるのはちょっともったいない。（中略）sonnet のサブエージェントを呼び忘れて、fable 5.1 でやってしまうことはあるかもしれない。そのため、チェックが必要に思います。」 追補 3 同日 11:08（verbatim）: 「あなた自分で決めたことから逸脱すると思うなら、メカニカルチェックによる強制が必要です。また、モデル・エフォートは時々見直しも必要です。現実にそぐわなければ、意味がありません。バグを作り込みすぎたり、トークンの消費が過剰だったり。」iac-web の実測: 基準を書いた直後の 18 本のうち基準どおりは 6 本。
-
 ## Medium
 
 ### BE 結合済み実装と Claude Design の往復手順が無い
