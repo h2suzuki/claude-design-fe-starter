@@ -44,15 +44,41 @@ die() {
   exit "${2:-64}"
 }
 
+# --git-common-dir は -C に渡した dir からの相対で返ることがある（git 2.43 で実測）
+git_common_dir() {
+  local out
+  out=$(git -C "$1" rev-parse --git-common-dir 2>/dev/null) || return 1
+  [[ $out == /* ]] || out=$1/$out
+  realpath -e -- "$out" 2>/dev/null
+}
+
+# path が違っても同じ repo なら書き込み先は seed 自身 — worktree と 2 つ目の checkout がこれに当たる
+target_is_seed_repo() {
+  local seed_git target_git
+  command -v git >/dev/null 2>&1 || return 1
+  seed_git=$(git_common_dir "$SEED_ROOT") || return 1
+  target_git=$(git_common_dir "$1") || return 1
+  [[ $seed_git == "$target_git" ]]
+}
+
 # 対象違いは残りの判定を全て無意味にするので、1 file も書かずに正しい呼び方だけ示す
 refuse_seed_target() {
-  local target=$1
-  if [[ $target == "$SEED_ROOT" ]]; then
-    printf '%s: refusing to install into the seed checkout itself (%s).\n\n' "$PROG" "$SEED_ROOT" >&2
-  else
-    printf '%s: refusing to install into %s, which sits inside the seed checkout (%s).\n\n' \
-      "$PROG" "$target" "$SEED_ROOT" >&2
-  fi
+  local target=$1 reason=$2
+  case $reason in
+    self)
+      printf '%s: refusing to install into the seed checkout itself (%s).\n\n' "$PROG" "$SEED_ROOT" >&2
+      ;;
+    inside)
+      printf '%s: refusing to install into %s, which sits inside the seed checkout (%s).\n\n' \
+        "$PROG" "$target" "$SEED_ROOT" >&2
+      ;;
+    repo)
+      printf '%s: refusing to install into %s. The path differs from the seed (%s), but it is\n' \
+        "$PROG" "$target" "$SEED_ROOT" >&2
+      printf 'a checkout of the same git repository -- a worktree or a second checkout of the\n' >&2
+      printf 'seed is still the seed, and installing there rewinds the files you are editing.\n\n' >&2
+      ;;
+  esac
   cat >&2 <<EOF
 The seed is where an install copies from, never what it copies into -- aiming it
 here would overwrite the very files being copied. Run it from the repo that is
@@ -352,8 +378,14 @@ main() {
   [[ -n $target ]] || target=$PWD
   [[ -d $target ]] || die "target directory not found: $target" 66
   target=$(cd -- "$target" && pwd -P)
-  # seed の中を対象にすると配布元を自分で上書きする。subdir 指定でも同じなので配下ごと弾く
-  [[ $target != "$SEED_ROOT" && $target != "$SEED_ROOT"/* ]] || refuse_seed_target "$target"
+  # 配布元へ配ると自分を上書きする。subdir も、path の違う同一 repo も、行き先は同じ seed
+  if [[ $target == "$SEED_ROOT" ]]; then
+    refuse_seed_target "$target" self
+  elif [[ $target == "$SEED_ROOT"/* ]]; then
+    refuse_seed_target "$target" inside
+  elif target_is_seed_repo "$target"; then
+    refuse_seed_target "$target" repo
+  fi
 
   local dir rel src dst
   local -a rels=() collisions=()
