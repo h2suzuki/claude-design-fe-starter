@@ -44,6 +44,34 @@ die() {
   exit "${2:-64}"
 }
 
+# 対象違いは残りの判定を全て無意味にするので、1 file も書かずに正しい呼び方だけ示す
+refuse_seed_target() {
+  local target=$1
+  if [[ $target == "$SEED_ROOT" ]]; then
+    printf '%s: refusing to install into the seed checkout itself (%s).\n\n' "$PROG" "$SEED_ROOT" >&2
+  else
+    printf '%s: refusing to install into %s, which sits inside the seed checkout (%s).\n\n' \
+      "$PROG" "$target" "$SEED_ROOT" >&2
+  fi
+  cat >&2 <<EOF
+The seed is where an install copies from, never what it copies into -- aiming it
+here would overwrite the very files being copied. Run it from the repo that is
+meant to receive the seed:
+
+  cd <your project repo>
+  $SCRIPT_PATH
+
+or name that repo instead of cd-ing into it:
+
+  $SCRIPT_PATH <target-repo-dir>
+
+Nothing was written. To change the seed itself, edit the files in this checkout
+directly; there is nothing to install here. $PROG --help describes what an
+install writes, and README.md here describes how the seed is meant to be adopted.
+EOF
+  exit 64
+}
+
 # seed の追跡ファイルだけを NUL 区切りで列挙する（node_modules 等の混入防止・非 ASCII 名安全）。
 # .git の無いコピーでは find で代替。親 repo の中に置かれた .git 無しコピーを git 経路と誤認しないよう、
 # rev-parse の toplevel が SEED_ROOT 自身であることまで確認する
@@ -324,7 +352,8 @@ main() {
   [[ -n $target ]] || target=$PWD
   [[ -d $target ]] || die "target directory not found: $target" 66
   target=$(cd -- "$target" && pwd -P)
-  [[ $target != "$SEED_ROOT" ]] || die "target is the seed checkout itself"
+  # seed の中を対象にすると配布元を自分で上書きする。subdir 指定でも同じなので配下ごと弾く
+  [[ $target != "$SEED_ROOT" && $target != "$SEED_ROOT"/* ]] || refuse_seed_target "$target"
 
   local dir rel src dst
   local -a rels=() collisions=()
