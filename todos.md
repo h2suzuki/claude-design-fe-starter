@@ -99,3 +99,17 @@ Exit Criteria:
 適用先からの報告（2026-08-24）で 2 件とも確認済み。screen-loop ⑧ の判定基準は mock と意味論で、旧実装と比べる段が無い。adoption.md §1 は main を凍結すると書くが、凍結を解いて作り替えた側を main にする手順が無く、§9「完了の判定」も gate が緑になるところで止まっている。いずれも新規 repo では出ない、既存 repo 適用固有の不足。
 
 2026-08-28 に §2 の突合表と §10 の land 手順を書いた。出典は適用先が実際に通した land（本番アドレスへ promote → 7 route 200・稽古予定 4 回とカレンダー 11 件と祝日 1067 件が旧サイトと同じ実データ・申込み API が不正 method に 405・favicon 200 を本番で確認 → 旧 URL の転送は不要と裁定して転送 commit を revert → 旧 main を `old-main` として残し作業 branch を main へ fast-forward → worktree 削除）。
+
+### install.sh の自己インストール阻止 — 別 clone どうしを塞ぐか未決
+
+起票: opus-5 2026-09-05
+Goal: seed の別 clone を install 先に指定した場合の扱いを決め、決めた側へ実装を揃える。
+Work file: `tools/install.sh`（`target_is_seed_repo` / `refuse_seed_target`）
+着手条件: seed を fork または 2 度 clone して使う運用が実際に現れたとき。
+
+Exit Criteria:
+
+- [ ] 塞ぐか据え置くかを H.S. と決め、理由を残す
+- [ ] 塞ぐと決めた場合は判定を実装し、fork して育てた repo を誤検知しないことを実測で確かめる
+
+ガードは 3 経路（seed 自身・seed 配下・path の違う同一 repo）。3 つ目は `git rev-parse --git-common-dir` の一致で worktree と 2 つ目の checkout を捕捉するが、seed が git checkout のときだけ効く（`.git` の無い copy から rev-parse すると内包側の repo を指すため無効化してある）。別々に clone した 2 つは `.git` が別物なので素通りする。root commit の一致で塞げるものの、seed を fork してプロジェクトを育てている repo まで拒否してしまう。
