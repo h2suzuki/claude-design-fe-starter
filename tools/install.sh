@@ -55,7 +55,8 @@ git_common_dir() {
 # path が違っても同じ repo なら書き込み先は seed 自身 — worktree と 2 つ目の checkout がこれに当たる
 target_is_seed_repo() {
   local seed_git target_git
-  command -v git >/dev/null 2>&1 || return 1
+  # .git を持たない copy から rev-parse すると、それを内包する側の repo を seed と誤認する
+  seed_is_git_root || return 1
   seed_git=$(git_common_dir "$SEED_ROOT") || return 1
   target_git=$(git_common_dir "$1") || return 1
   [[ $seed_git == "$target_git" ]]
